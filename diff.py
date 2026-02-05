@@ -76,7 +76,7 @@ def _generate_changelog(
     full_diff: str,
     output_path: Path,
     model: str = "sonnet",
-    budget: float | None = 0.50,
+    budget: float | None = None,
     force: bool = False,
 ) -> bool:
     """Generate a changelog using Claude Code CLI.
@@ -226,8 +226,8 @@ def main() -> None:
     parser.add_argument(
         "--budget",
         type=float,
-        default=0.50,
-        help="Max budget for changelog generation (default: $0.50)",
+        default=None,
+        help="Max budget for changelog generation (default: no limit)",
     )
     parser.add_argument(
         "--force",
