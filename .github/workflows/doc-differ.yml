@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
     # Allow manual triggering
 
+permissions:
+  contents: write
+
 jobs:
   fetch-and-diff:
     runs-on: ubuntu-latest
@@ -15,8 +18,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Fetch the docs submodule
-          submodules: recursive
           # Need full history for diffing
           fetch-depth: 0
 
@@ -31,9 +32,8 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
 
-      - name: Configure Git for docs repo
+      - name: Configure Git
         run: |
-          cd docs
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -43,7 +43,6 @@ jobs:
       - name: Check for changes
         id: check_changes
         run: |
-          cd docs
           if git diff --quiet && git diff --staged --quiet; then
             echo "changes=false" >> $GITHUB_OUTPUT
           else
@@ -53,8 +52,7 @@ jobs:
       - name: Commit documentation changes
         if: steps.check_changes.outputs.changes == 'true'
         run: |
-          cd docs
-          git add -A
+          git add docs/
           git commit -m "Docs update: $(date -u +%Y-%m-%d\ %H:%M\ UTC)"
 
       - name: Install Claude Code CLI
@@ -69,16 +67,10 @@ jobs:
           # Set CLAUDE_CODE_OAUTH_TOKEN secret in repo settings
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-      - name: Push docs changes
+      - name: Commit changelog and push
         if: steps.check_changes.outputs.changes == 'true'
         run: |
-          cd docs
-          git push
-
-      - name: Commit changelog to main repo
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git add output/
+          git add output/ || true
           git commit -m "Add changelog for $(date -u +%Y-%m-%d)" || true
           git push
 
