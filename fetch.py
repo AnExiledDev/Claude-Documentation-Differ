@@ -4,8 +4,10 @@
 Usage:
     python3 fetch.py                    # Fetch latest docs
     python3 fetch.py --check            # Check for changes without saving
-    python3 fetch.py --changelog        # Fetch and generate changelog if changed
     python3 fetch.py --force            # Fetch even if recently run
+
+Note: This script only fetches documentation. Git commits and changelog
+generation are handled by the GitHub Actions workflow.
 """
 
 from __future__ import annotations
@@ -59,54 +61,6 @@ def _git_has_changes() -> bool:
     return bool(result.stdout.strip())
 
 
-def _git_commit(message: str) -> bool:
-    """Commit all changes in docs/."""
-    try:
-        # Add all changes
-        subprocess.run(
-            ["git", "add", "-A"],
-            cwd=str(_DOCS_DIR),
-            check=True,
-            capture_output=True,
-        )
-
-        # Check if there's anything to commit
-        result = subprocess.run(
-            ["git", "diff", "--staged", "--quiet"],
-            cwd=str(_DOCS_DIR),
-        )
-
-        if result.returncode == 0:
-            # No changes to commit
-            return False
-
-        # Commit
-        subprocess.run(
-            ["git", "commit", "-m", message],
-            cwd=str(_DOCS_DIR),
-            check=True,
-            capture_output=True,
-        )
-        return True
-
-    except subprocess.CalledProcessError as e:
-        print(
-            f"  Git error: {e.stderr if hasattr(e, 'stderr') else e}", file=sys.stderr
-        )
-        return False
-
-
-def _run_changelog() -> None:
-    """Run diff.py --changelog to generate a changelog."""
-    diff_script = _SCRIPT_DIR / "diff.py"
-    if diff_script.exists():
-        print("\nGenerating changelog...")
-        subprocess.run(
-            [sys.executable, str(diff_script), "--changelog"],
-            cwd=str(_SCRIPT_DIR),
-        )
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Fetch Claude Code documentation and track changes."
@@ -115,11 +69,6 @@ def main() -> None:
         "--check",
         action="store_true",
         help="Dry run - fetch and show what would change without saving",
-    )
-    parser.add_argument(
-        "--changelog",
-        action="store_true",
-        help="Generate changelog after fetching if changes detected",
     )
     parser.add_argument(
         "--force",
@@ -192,20 +141,9 @@ def main() -> None:
     metadata["failed"] = summary.failed
     _save_metadata(metadata)
 
-    # Check for changes and commit
+    # Report if changes were detected (commit is handled by workflow)
     if _git_has_changes():
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        commit_msg = f"Docs update: {timestamp}"
-
-        print(f"\nChanges detected, committing...")
-        if _git_commit(commit_msg):
-            print(f"  Committed: {commit_msg}")
-
-            # Generate changelog if requested
-            if args.changelog:
-                _run_changelog()
-        else:
-            print("  No changes to commit (files unchanged)")
+        print("\nChanges detected in docs/ (ready for commit)")
     else:
         print("\nNo changes detected")
 
