@@ -57,6 +57,10 @@ jobs:
           git add -A
           git commit -m "Docs update: $(date -u +%Y-%m-%d\ %H:%M\ UTC)"
 
+      - name: Install Claude Code CLI
+        if: steps.check_changes.outputs.changes == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
       - name: Generate changelog
         if: steps.check_changes.outputs.changes == 'true'
         run: python3 diff.py --changelog --force
