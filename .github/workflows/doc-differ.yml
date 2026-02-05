@@ -1,0 +1,96 @@
+name: Documentation Differ
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  fetch-and-diff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch the docs submodule
+          submodules: recursive
+          # Need full history for diffing
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+
+      - name: Configure Git for docs repo
+        run: |
+          cd docs
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch documentation
+        run: python3 fetch.py --force
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          cd docs
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit documentation changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          cd docs
+          git add -A
+          git commit -m "Docs update: $(date -u +%Y-%m-%d\ %H:%M\ UTC)"
+
+      - name: Generate changelog
+        if: steps.check_changes.outputs.changes == 'true'
+        run: python3 diff.py --changelog --force
+        env:
+          # Use OAuth token for Claude Code authentication
+          # Set CLAUDE_CODE_OAUTH_TOKEN secret in repo settings
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Push docs changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          cd docs
+          git push
+
+      - name: Commit changelog to main repo
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git add output/
+          git commit -m "Add changelog for $(date -u +%Y-%m-%d)" || true
+          git push
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.check_changes.outputs.changes }}" == "true" ]; then
+            echo "## Documentation Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "New documentation has been fetched and a changelog has been generated." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            if [ -f output/*_changelog.md ]; then
+              echo "### Latest Changelog" >> $GITHUB_STEP_SUMMARY
+              cat output/*_changelog.md | head -100 >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "## No Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Documentation is up to date." >> $GITHUB_STEP_SUMMARY
+          fi
