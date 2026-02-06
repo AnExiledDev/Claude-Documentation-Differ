@@ -2,10 +2,12 @@
 """Analyze documentation changes and generate changelogs.
 
 Usage:
-    python3 diff.py                     # Analyze uncommitted changes
-    python3 diff.py HEAD~1 HEAD         # Compare two commits
-    python3 diff.py --changelog         # Generate AI-powered changelog
-    python3 diff.py --since 2026-02-01  # Changes since date
+    python3 diff.py                           # Analyze all sources (uncommitted)
+    python3 diff.py --source claude-code      # Analyze Claude Code docs only
+    python3 diff.py --source api              # Analyze Claude API docs only
+    python3 diff.py HEAD~1 HEAD               # Compare two commits
+    python3 diff.py --changelog               # Generate AI-powered changelog
+    python3 diff.py --since 2026-02-01        # Changes since date
 """
 
 from __future__ import annotations
@@ -22,10 +24,22 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lib.differ import analyze_changes, get_full_diff, DiffReport
+from sources import get_source, get_all_sources, Source
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _DOCS_DIR = _SCRIPT_DIR / "docs"
 _OUTPUT_DIR = _SCRIPT_DIR / "output"
+
+
+def _get_source_paths(source: Source) -> tuple[Path, Path]:
+    """Get paths for a source.
+
+    Returns:
+        (docs_dir, output_dir)
+    """
+    docs_dir = _DOCS_DIR / source.docs_dir
+    output_dir = _OUTPUT_DIR / source.output_dir
+    return docs_dir, output_dir
 
 
 def _has_commits(repo_dir: Path) -> bool:
@@ -72,6 +86,7 @@ def _prepare_changelog_workspace(
 
 
 def _generate_changelog(
+    source: Source,
     report: DiffReport,
     full_diff: str,
     output_path: Path,
@@ -111,15 +126,15 @@ def _generate_changelog(
 
     _prepare_changelog_workspace(report, full_diff, workspace)
 
-    # Find system prompt
-    system_prompt = _SCRIPT_DIR / "lib" / "changelog_prompt.md"
+    # Find system prompt (source-specific)
+    system_prompt = _SCRIPT_DIR / source.prompt_file
     if not system_prompt.exists():
         print(f"  ERROR: System prompt not found: {system_prompt}", file=sys.stderr)
         return False
 
     # Build CLI command
     user_prompt = (
-        f"Generate a changelog for documentation changes. "
+        f"Generate a changelog for {source.name} documentation changes. "
         f"Workspace: {workspace.resolve()}. "
         f"Write output to: {output_path.resolve()}"
     )
@@ -180,6 +195,94 @@ def _generate_changelog(
             shutil.rmtree(workspace)
 
 
+def _process_source(
+    source: Source,
+    old_ref: str,
+    new_ref: str,
+    args: argparse.Namespace,
+) -> bool:
+    """Process a single source for diffs and optional changelog.
+
+    Returns:
+        True if changes were found, False otherwise.
+    """
+    docs_dir, output_dir = _get_source_paths(source)
+
+    # Check if docs repo exists and has commits
+    if not docs_dir.exists():
+        print(
+            f"ERROR: {docs_dir}/ directory not found. Run fetch.py first.",
+            file=sys.stderr,
+        )
+        return False
+
+    if not _has_commits(_SCRIPT_DIR):  # Check at repo level, not source level
+        print("ERROR: No commits in repository yet.", file=sys.stderr)
+        print("Run fetch.py to populate documentation first.", file=sys.stderr)
+        return False
+
+    print(f"Analyzing {source.name} changes: {old_ref} → {new_ref}")
+    print(f"  Source: {docs_dir}")
+
+    # Analyze changes (relative to docs/source_key/ directory)
+    try:
+        # We need to tell git to only look at files in docs/source_key/
+        report = analyze_changes(
+            _SCRIPT_DIR, old_ref, new_ref, path_filter=f"docs/{source.key}/"
+        )
+    except Exception as e:
+        print(f"ERROR: Failed to analyze changes: {e}", file=sys.stderr)
+        return False
+
+    print()
+    print(f"Changes found:")
+    print(f"  New pages:      {len(report.new_pages)}")
+    print(f"  Removed pages:  {len(report.removed_pages)}")
+    print(f"  Modified pages: {len(report.page_changes)}")
+
+    if report.total_changes == 0:
+        print("\nNo changes detected.")
+        return False
+
+    # Ensure output directory exists
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate output filename
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    base_name = args.output or f"{date_str}_diff"
+
+    # Write reports
+    if args.format in ("json", "both"):
+        json_path = output_dir / f"{base_name}.json"
+        json_path.write_text(json.dumps(report.to_dict(), indent=2))
+        print(f"\n  Written: {json_path}")
+
+    if args.format in ("markdown", "both"):
+        md_path = output_dir / f"{base_name}.md"
+        md_path.write_text(report.to_markdown())
+        print(f"  Written: {md_path}")
+
+    # Generate changelog if requested
+    if args.changelog:
+        print(f"\nGenerating AI-powered changelog for {source.name}...")
+        full_diff = get_full_diff(
+            _SCRIPT_DIR, old_ref, new_ref, path_filter=f"docs/{source.key}/"
+        )
+        changelog_path = output_dir / f"{date_str}_changelog.md"
+
+        _generate_changelog(
+            source=source,
+            report=report,
+            full_diff=full_diff,
+            output_path=changelog_path,
+            model=args.model,
+            budget=args.budget,
+            force=args.force,
+        )
+
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Analyze documentation changes and generate changelogs."
@@ -195,6 +298,13 @@ def main() -> None:
         nargs="?",
         default="HEAD",
         help="New commit reference (default: HEAD)",
+    )
+    parser.add_argument(
+        "--source",
+        "-s",
+        choices=["claude-code", "api", "all"],
+        default="all",
+        help="Source to analyze (default: all)",
     )
     parser.add_argument(
         "--changelog",
@@ -236,79 +346,39 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Check if docs repo exists and has commits
-    if not _DOCS_DIR.exists():
-        print("ERROR: docs/ directory not found. Run fetch.py first.", file=sys.stderr)
-        sys.exit(1)
-
-    if not _has_commits(_DOCS_DIR):
-        print("ERROR: No commits in docs/ repository yet.", file=sys.stderr)
-        print("Run fetch.py to populate documentation first.", file=sys.stderr)
-        sys.exit(1)
-
     # Resolve refs
     old_ref = args.old_ref
     new_ref = args.new_ref
 
     if args.since:
-        since_commit = _get_commit_for_date(_DOCS_DIR, args.since)
+        since_commit = _get_commit_for_date(_SCRIPT_DIR, args.since)
         if since_commit:
             old_ref = f"{since_commit}~1" if since_commit else "HEAD~1"
         else:
             print(f"WARNING: No commits found since {args.since}", file=sys.stderr)
 
-    print(f"Analyzing changes: {old_ref} → {new_ref}")
-    print(f"  Repository: {_DOCS_DIR}")
+    # Determine which sources to process
+    if args.source == "all":
+        sources = get_all_sources()
+    else:
+        sources = [get_source(args.source)]
 
-    # Analyze changes
-    try:
-        report = analyze_changes(_DOCS_DIR, old_ref, new_ref)
-    except Exception as e:
-        print(f"ERROR: Failed to analyze changes: {e}", file=sys.stderr)
-        sys.exit(1)
+    # Process each source
+    any_changes = False
+    for i, source in enumerate(sources):
+        if i > 0:
+            print("\n" + "=" * 60 + "\n")
 
-    print()
-    print(f"Changes found:")
-    print(f"  New pages:      {len(report.new_pages)}")
-    print(f"  Removed pages:  {len(report.removed_pages)}")
-    print(f"  Modified pages: {len(report.page_changes)}")
+        has_changes = _process_source(source, old_ref, new_ref, args)
+        any_changes = any_changes or has_changes
 
-    if report.total_changes == 0:
-        print("\nNo changes detected.")
-        return
-
-    # Ensure output directory exists
-    _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Generate output filename
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    base_name = args.output or f"{date_str}_diff"
-
-    # Write reports
-    if args.format in ("json", "both"):
-        json_path = _OUTPUT_DIR / f"{base_name}.json"
-        json_path.write_text(json.dumps(report.to_dict(), indent=2))
-        print(f"\n  Written: {json_path}")
-
-    if args.format in ("markdown", "both"):
-        md_path = _OUTPUT_DIR / f"{base_name}.md"
-        md_path.write_text(report.to_markdown())
-        print(f"  Written: {md_path}")
-
-    # Generate changelog if requested
-    if args.changelog:
-        print("\nGenerating AI-powered changelog...")
-        full_diff = get_full_diff(_DOCS_DIR, old_ref, new_ref)
-        changelog_path = _OUTPUT_DIR / f"{date_str}_changelog.md"
-
-        _generate_changelog(
-            report=report,
-            full_diff=full_diff,
-            output_path=changelog_path,
-            model=args.model,
-            budget=args.budget,
-            force=args.force,
-        )
+    # Final summary
+    if len(sources) > 1:
+        print("\n" + "=" * 60)
+        if any_changes:
+            print("Changes detected in one or more sources.")
+        else:
+            print("No changes detected in any source.")
 
 
 if __name__ == "__main__":

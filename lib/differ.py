@@ -203,29 +203,35 @@ def analyze_changes(
     repo_dir: Path,
     old_ref: str = "HEAD~1",
     new_ref: str = "HEAD",
+    path_filter: str | None = None,
 ) -> DiffReport:
     """Analyze changes between two Git refs.
 
     Args:
-        repo_dir: Path to the git repository (docs/)
+        repo_dir: Path to the git repository
         old_ref: Old commit reference (default: HEAD~1)
         new_ref: New commit reference (default: HEAD)
+        path_filter: Optional path prefix to filter changes (e.g., "docs/claude-code/")
 
     Returns:
         DiffReport with detailed change information
     """
     timestamp = datetime.now(timezone.utc).isoformat()
 
+    # Build git diff args with optional path filter
+    base_args = ["diff"]
+    path_args = ["--", path_filter] if path_filter else []
+
     # Get list of changed files with stats
     numstat = _run_git(
-        ["diff", "--numstat", old_ref, new_ref],
+        base_args + ["--numstat", old_ref, new_ref] + path_args,
         repo_dir,
     )
     file_stats = _parse_diff_stat(numstat)
 
     # Get list of files by change type
     name_status = _run_git(
-        ["diff", "--name-status", old_ref, new_ref],
+        base_args + ["--name-status", old_ref, new_ref] + path_args,
         repo_dir,
     )
 
@@ -299,6 +305,7 @@ def get_full_diff(
     old_ref: str = "HEAD~1",
     new_ref: str = "HEAD",
     word_diff: bool = True,
+    path_filter: str | None = None,
 ) -> str:
     """Get the full diff text between two refs.
 
@@ -307,6 +314,7 @@ def get_full_diff(
         old_ref: Old commit reference
         new_ref: New commit reference
         word_diff: Use word-level diff (better for prose)
+        path_filter: Optional path prefix to filter changes
 
     Returns:
         Full diff text
@@ -315,5 +323,7 @@ def get_full_diff(
     if word_diff:
         args.append("--word-diff")
     args.extend([old_ref, new_ref])
+    if path_filter:
+        args.extend(["--", path_filter])
 
     return _run_git(args, repo_dir)

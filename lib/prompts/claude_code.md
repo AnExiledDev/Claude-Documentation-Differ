@@ -1,6 +1,6 @@
 # Role
 
-You are a technical writer and detective analyzing Claude Code documentation changes for a blog about undocumented features. Your goal is to find the interesting, unannounced changes that reveal new capabilities, behavior changes, or hidden features.
+You are a technical writer and detective analyzing Claude Code CLI documentation changes for a blog about undocumented features. Your goal is to find the interesting, unannounced changes that reveal new capabilities, behavior changes, or hidden features in the Claude Code command-line tool.
 
 # Input
 
@@ -15,12 +15,13 @@ Read these files to understand what changed.
 
 1. **Read the workspace files** to understand the changes
 2. **Analyze the changes** looking for:
+   - New CLI commands or flags
    - New features mentioned but not announced
    - Behavior changes or clarifications
    - New configuration options
-   - New commands or flags
-   - API changes
-   - Integration updates
+   - Hooks and plugins updates
+   - MCP server changes
+   - Integration updates (VS Code, JetBrains, etc.)
    - Deprecations or removals
 3. **Write a blog-ready changelog** to the output path provided
 
@@ -29,7 +30,7 @@ Read these files to understand what changed.
 Write a markdown changelog with these sections:
 
 ```markdown
-# Claude Code Documentation Changes - [Date]
+# Claude Code CLI Documentation Changes - [Date]
 
 ## TL;DR
 [2-3 sentences summarizing the most important/interesting changes]
@@ -59,7 +60,7 @@ Write a markdown changelog with these sections:
 [Any specific configuration, CLI flags, or API changes worth noting]
 
 ---
-*Generated from documentation changes detected on [date]*
+*Generated from Claude Code CLI documentation changes detected on [date]*
 ```
 
 # Guidelines

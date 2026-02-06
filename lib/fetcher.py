@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Playwright-based documentation fetcher for Claude Code docs.
+"""Playwright-based documentation fetcher.
 
-Fetches documentation from https://code.claude.com/docs/en/ using the
-llms.txt index file to discover all available pages.
+Fetches documentation from various sources using their llms.txt index file
+to discover all available pages.
 """
 
 from __future__ import annotations
@@ -12,11 +12,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright, Page, Browser
-
-BASE_URL = "https://code.claude.com/docs"
-INDEX_URL = f"{BASE_URL}/llms.txt"
+from playwright.async_api import async_playwright, Page
 
 
 @dataclass
@@ -24,7 +22,9 @@ class FetchResult:
     """Result of fetching a single page."""
 
     url: str
-    filename: str
+    relative_path: (
+        str  # Relative path under the docs directory (e.g., "en/overview.md")
+    )
     content: str | None
     success: bool
     error: str | None = None
@@ -44,12 +44,42 @@ class FetchSummary:
         return self.failed == 0
 
 
-async def fetch_index(page: Page) -> list[str]:
+def extract_relative_path(url: str, base_url: str) -> str:
+    """Extract relative path from URL.
+
+    For https://code.claude.com/docs/en/overview.md with base https://code.claude.com/docs
+    returns "en/overview.md"
+
+    For https://platform.claude.com/docs/en/api/messages/create.md with base https://platform.claude.com
+    returns "docs/en/api/messages/create.md" -> we want just "en/api/messages/create.md"
+
+    We always want the path starting from "en/" for consistency.
+    """
+    # Parse the URL to get the path
+    parsed = urlparse(url)
+    path = parsed.path
+
+    # Find the "en/" part and take everything from there
+    en_match = re.search(r"(en/.*)", path)
+    if en_match:
+        return en_match.group(1)
+
+    # Fallback: just use the filename
+    return path.split("/")[-1]
+
+
+async def fetch_index(page: Page, index_url: str, url_pattern: str) -> list[str]:
     """Fetch and parse llms.txt to get all page URLs.
 
-    Returns list of full URLs to .md files.
+    Args:
+        page: Playwright page instance
+        index_url: URL to the llms.txt index file
+        url_pattern: Regex pattern to match page URLs
+
+    Returns:
+        List of full URLs to .md files
     """
-    response = await page.goto(INDEX_URL)
+    response = await page.goto(index_url)
     if not response or response.status != 200:
         raise RuntimeError(
             f"Failed to fetch index: HTTP {response.status if response else 'no response'}"
@@ -57,12 +87,13 @@ async def fetch_index(page: Page) -> list[str]:
 
     content = await page.content()
 
-    # Extract URLs from the page content
-    # The llms.txt contains URLs like https://code.claude.com/docs/en/overview.md
-    urls = re.findall(r"https://code\.claude\.com/docs/en/[\w-]+\.md", content)
+    # Extract URLs matching the pattern
+    urls = re.findall(url_pattern, content)
 
     if not urls:
-        raise RuntimeError("No documentation URLs found in llms.txt")
+        raise RuntimeError(
+            f"No documentation URLs found matching pattern: {url_pattern}"
+        )
 
     # Deduplicate while preserving order
     seen = set()
@@ -75,18 +106,21 @@ async def fetch_index(page: Page) -> list[str]:
     return unique_urls
 
 
-async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
+async def fetch_page(
+    page: Page, url: str, base_url: str, retries: int = 3
+) -> FetchResult:
     """Fetch a single markdown page.
 
     Args:
         page: Playwright page instance
         url: Full URL to the .md file
+        base_url: Base URL for extracting relative paths
         retries: Number of retry attempts
 
     Returns:
         FetchResult with content or error
     """
-    filename = url.split("/")[-1]
+    relative_path = extract_relative_path(url, base_url)
 
     for attempt in range(retries):
         try:
@@ -98,7 +132,7 @@ async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
             if response.status == 404:
                 return FetchResult(
                     url=url,
-                    filename=filename,
+                    relative_path=relative_path,
                     content=None,
                     success=False,
                     error="Page not found (404)",
@@ -110,7 +144,7 @@ async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
                     continue
                 return FetchResult(
                     url=url,
-                    filename=filename,
+                    relative_path=relative_path,
                     content=None,
                     success=False,
                     error=f"HTTP {response.status}",
@@ -126,7 +160,7 @@ async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
                     continue
                 return FetchResult(
                     url=url,
-                    filename=filename,
+                    relative_path=relative_path,
                     content=None,
                     success=False,
                     error="Content too short or empty",
@@ -134,7 +168,7 @@ async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
 
             return FetchResult(
                 url=url,
-                filename=filename,
+                relative_path=relative_path,
                 content=content.strip(),
                 success=True,
             )
@@ -145,7 +179,7 @@ async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
                 continue
             return FetchResult(
                 url=url,
-                filename=filename,
+                relative_path=relative_path,
                 content=None,
                 success=False,
                 error=str(e),
@@ -153,7 +187,7 @@ async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
 
     return FetchResult(
         url=url,
-        filename=filename,
+        relative_path=relative_path,
         content=None,
         success=False,
         error="Max retries exceeded",
@@ -162,6 +196,9 @@ async def fetch_page(page: Page, url: str, retries: int = 3) -> FetchResult:
 
 async def fetch_all_pages(
     output_dir: Path,
+    index_url: str,
+    url_pattern: str,
+    base_url: str,
     rate_limit: float = 1.0,
     progress_callback: Callable[[int, int, str], None] | None = None,
     dry_run: bool = False,
@@ -169,7 +206,10 @@ async def fetch_all_pages(
     """Fetch all documentation pages.
 
     Args:
-        output_dir: Directory to write .md files to
+        output_dir: Directory to write .md files to (source-specific, e.g., docs/claude-code)
+        index_url: URL to the llms.txt index file
+        url_pattern: Regex pattern to match page URLs
+        base_url: Base URL for the documentation site
         rate_limit: Seconds to wait between requests
         progress_callback: Called with (current, total, filename) for progress
         dry_run: If True, fetch but don't write files
@@ -188,7 +228,7 @@ async def fetch_all_pages(
             if progress_callback:
                 progress_callback(0, 0, "Fetching index...")
 
-            urls = await fetch_index(page)
+            urls = await fetch_index(page, index_url, url_pattern)
             total = len(urls)
 
             if progress_callback:
@@ -196,17 +236,20 @@ async def fetch_all_pages(
 
             # Fetch each page
             for i, url in enumerate(urls):
-                filename = url.split("/")[-1]
+                relative_path = extract_relative_path(url, base_url)
+                display_name = relative_path.split("/")[-1]  # Just filename for display
 
                 if progress_callback:
-                    progress_callback(i + 1, total, filename)
+                    progress_callback(i + 1, total, display_name)
 
-                result = await fetch_page(page, url)
+                result = await fetch_page(page, url, base_url)
                 results.append(result)
 
                 # Write to file if successful and not dry run
                 if result.success and result.content and not dry_run:
-                    output_path = output_dir / filename
+                    output_path = output_dir / result.relative_path
+                    # Create parent directories for nested paths (e.g., en/api/messages/)
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
                     output_path.write_text(result.content)
 
                 # Rate limiting
@@ -227,12 +270,12 @@ async def fetch_all_pages(
     )
 
 
-async def fetch_single_page(url: str) -> FetchResult:
+async def fetch_single_page(url: str, base_url: str) -> FetchResult:
     """Fetch a single page (convenience function for testing)."""
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
         try:
-            return await fetch_page(page, url)
+            return await fetch_page(page, url, base_url)
         finally:
             await browser.close()
