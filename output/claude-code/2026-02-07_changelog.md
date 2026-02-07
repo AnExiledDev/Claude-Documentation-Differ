@@ -1,178 +1,122 @@
 # Claude Code CLI Documentation Changes - February 7, 2026
 
 ## TL;DR
-Major new capabilities revealed: Auto Memory system for persistent learnings across sessions, two new hook events (`TeammateIdle` and `TaskCompleted`) for enforcing quality gates in agent teams, conversation summarization as an alternative to rewinding, and enhanced subagent control with spawning restrictions and per-subagent MCP servers.
+Claude Code has introduced **Fast Mode**, a new research preview feature that delivers faster Opus 4.6 responses at a higher token cost. Users can now toggle between speed-optimized and cost-optimized modes using the `/fast` command, with fast mode offering lower latency for interactive work at premium pricing ($30/150 MTok, discounted 50% until Feb 16).
 
 ## New Features & Capabilities
 
-### **Auto Memory - Claude's Persistent Learning System**
-Claude Code can now automatically save learnings, patterns, and insights across sessions in a dedicated memory directory. This is a significant shift from the previous ephemeral-only model:
+### **Fast Mode for Opus 4.6**
+A game-changing new feature that lets users trade cost for speed in real-time:
 
-> **Auto memory** is a persistent directory where Claude records learnings, patterns, and insights as it works. Unlike CLAUDE.md files that contain instructions you write for Claude, auto memory contains notes Claude writes for itself based on what it discovers during sessions.
+> "Fast mode delivers faster Opus 4.6 responses at a higher cost per token. Toggle it on with `/fast` when you need speed for interactive work like rapid iteration or live debugging, and toggle it off when cost matters more than latency."
 
-**What gets saved:**
-- Project patterns (build commands, test conventions, code style)
-- Debugging insights (solutions to tricky problems, common error causes)
-- Architecture notes (key files, module relationships, important abstractions)
-- Your preferences (communication style, workflow habits, tool choices)
+**Key characteristics:**
+- Same model quality, just faster API configuration
+- Toggle via `/fast` command or `"fastMode": true` in settings
+- Automatic model switch to Opus 4.6 when enabled
+- Visual indicator: `↯` icon appears next to prompt
+- Persists across sessions
 
-**Technical details:**
-- Stored per-project at `~/.claude/projects/<project>/memory/`
-- Main entrypoint is `MEMORY.md` (first 200 lines loaded at session start)
-- Additional topic files (e.g., `debugging.md`, `api-conventions.md`) loaded on demand
-- Gradual rollout; opt-in with `CLAUDE_CODE_DISABLE_AUTO_MEMORY=0`
-- Control via `/memory` command or direct instructions like "remember that we use pnpm, not npm"
+**Pricing structure:**
+- Fast mode (<200K): $30 input / $150 output per MTok
+- Fast mode (>200K): $60 input / $225 output per MTok
+- Limited-time 50% discount for all plans until February 16, 2026
+- Compatible with 1M token extended context window
 
-### **Agent Team Quality Gates - TeammateIdle and TaskCompleted Hooks**
-Two new hook events enable enforcement of quality requirements before teammates stop working or tasks complete:
-
-**`TeammateIdle` hook:**
-> Runs when an [agent team](/en/agent-teams) teammate is about to go idle after finishing its turn. Use this to enforce quality gates before a teammate stops working, such as requiring passing lint checks or verifying that output files exist.
->
-> When a `TeammateIdle` hook exits with code 2, the teammate receives the stderr message as feedback and continues working instead of going idle.
-
-**`TaskCompleted` hook:**
-> Runs when a task is being marked as completed. This fires in two situations: when any agent explicitly marks a task as completed through the TaskUpdate tool, or when an [agent team](/en/agent-teams) teammate finishes its turn with in-progress tasks.
->
-> When a `TaskCompleted` hook exits with code 2, the task is not marked as completed and the stderr message is fed back to the model as feedback.
-
-**Example use cases:**
-- Enforce passing tests before task completion
-- Verify build artifacts exist before teammate goes idle
-- Require lint checks to pass
-- Ensure documentation is updated
-
-Both hooks use exit code control only (not JSON decision control) and receive teammate/task context in their JSON input.
-
-### **Conversation Summarization - Targeted Context Management**
-A new "Summarize from here" option in the rewind menu provides targeted context compression as an alternative to full conversation/code restoration:
-
-> **Summarize from here**: compress the conversation from this point forward into a summary, freeing context window space
-
-**How it differs from restore:**
-- Messages before selected message stay intact
-- Selected message and subsequent messages get replaced with AI-generated summary
-- No files on disk are changed
-- Original messages preserved in session transcript for reference
-- Can provide optional instructions to guide summary focus
-
-This is similar to `/compact` but targeted - keep early context in full detail and only compress parts using too much space. Useful for:
-> Freeing context space: summarize a verbose debugging session from the midpoint forward, keeping your initial instructions intact
-
-### **Enhanced Subagent Control**
-
-**Restrict which subagents can be spawned:**
-New `Task(agent_type)` syntax in the `tools` field allows allowlisting which subagent types can be spawned:
-
-```yaml
-tools: Task(worker, researcher), Read, Bash
-```
-
-> This is an allowlist: only the `worker` and `researcher` subagents can be spawned. If the agent tries to spawn any other type, the request fails and the agent sees only the allowed types in its prompt.
-
-**Per-subagent MCP servers:**
-Subagents can now have their own MCP server configurations via the `mcpServers` frontmatter field:
-
-> [MCP servers](/en/mcp) available to this subagent. Each entry is either a server name referencing an already-configured server (e.g., `"slack"`) or an inline definition with the server name as key and a full [MCP server config](/en/mcp#configure-mcp-servers) as value
-
-**Additional subagent configuration options:**
-- `maxTurns`: Maximum number of agentic turns before stopping
-- `skills`: Preload specific skills into subagent context at startup
-- `delegate` permission mode: Coordination-only mode for agent team leads (restricts to team management tools)
-
-### **Skills from Additional Directories**
-Skills can now be loaded from directories added via `--add-dir`:
-
-> Skills defined in `.claude/skills/` within directories added via `--add-dir` are loaded automatically and picked up by live change detection, so you can edit them during a session without restarting.
+> "Fast mode is not a different model. It uses the same Opus 4.6 with a different API configuration that prioritizes speed over cost efficiency. You get identical quality and capabilities, just faster responses."
 
 ## Behavior Changes
 
-### **Session Memory Model Clarification**
-Updated documentation now clarifies that sessions are "independent" rather than "ephemeral":
+### **Fast Mode Context Repricing**
+Switching to fast mode mid-conversation has cost implications:
 
-- **Before:** "Sessions are ephemeral. Unlike claude.ai, Claude Code has no persistent memory between sessions. Each new session starts fresh."
-- **After:** "Sessions are independent. Each new session starts with a fresh context window, without the conversation history from previous sessions. Claude can persist learnings across sessions using auto memory."
+> "When you switch into fast mode mid-conversation, you pay the full fast mode uncached input token price for the entire conversation context. This costs more than if you had enabled fast mode from the start."
 
-### **SubagentStop Hook Matcher Support**
-`SubagentStop` hooks now support matchers to target specific agent types:
+This encourages users to decide on fast mode at session start rather than toggling mid-stream.
 
-- **Before:** "SubagentStop fires for all subagent completions regardless of matcher values"
-- **After:** Both `SubagentStart` and `SubagentStop` support matchers on agent type name
+### **Model Persistence After Disabling**
+When disabling fast mode, the behavior differs from typical mode toggles:
 
-### **Dynamic Skill Character Budget**
-The skill metadata character budget is now dynamic rather than static:
-
-- **Before:** "Maximum number of characters for skill metadata (default: 15000)"
-- **After:** "The budget scales dynamically at 2% of the context window, with a fallback of 16,000 characters"
-
-The `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable now "overrides" rather than simply setting the limit.
-
-## Removed Content
-
-### **Bedrock Output Token Configuration**
-An entire section on recommended output token settings for Amazon Bedrock has been removed:
-
-**Removed section:**
-- "5. Output token configuration"
-- Recommended settings: `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096` and `MAX_THINKING_TOKENS=1024`
-- Detailed explanation of why these values were recommended for Bedrock's throttling behavior
-
-This suggests either:
-1. Bedrock's throttling behavior has changed, making these recommendations unnecessary
-2. Claude Code now handles this configuration automatically
-3. The recommendations were causing confusion or were no longer accurate
+> "When you disable fast mode with `/fast` again, you remain on Opus 4.6. The model does not revert to your previous model. To switch to a different model, use `/model`."
 
 ## Hidden Gems
 
-### **New Session End Reason**
-The `SessionEnd` hook matcher now includes a new session end reason: `bypass_permissions_disabled`. This suggests there's a bypass permissions mode that can be enabled/disabled, and sessions terminate when it gets disabled.
+### **Automatic Rate Limit Fallback**
+Fast mode includes intelligent degradation handling:
 
-### **Auto Memory Rollout Control**
-The double-negative environment variable naming (`CLAUDE_CODE_DISABLE_AUTO_MEMORY=0` to enable) suggests this was initially planned as an opt-out feature that became opt-in. The gradual rollout mechanism indicates this is a significant feature being carefully deployed.
+> "Fast mode has separate rate limits from standard Opus 4.6. When you hit the fast mode rate limit or run out of extra usage credits: 1. Fast mode automatically falls back to standard Opus 4.6 2. The `↯` icon turns gray to indicate cooldown 3. You continue working at standard speed and pricing 4. When the cooldown expires, fast mode automatically re-enables"
 
-### **Conversation Forking vs. Summarization**
-Documentation now explicitly distinguishes between forking (creating a new branch) and summarizing (staying in same session):
+This suggests sophisticated rate limiting infrastructure that can dynamically switch configurations without interrupting user workflow.
 
-> If you want to branch off and try a different approach while preserving the original session intact, use [fork](/en/how-claude-code-works#resume-or-fork-sessions) instead (`claude --continue --fork-session`).
+### **Fast Mode vs Effort Level Combinations**
+The documentation reveals you can stack optimizations:
 
-This clarifies two distinct use cases for managing session state.
+> "You can combine both: use fast mode with a lower [effort level](/en/model-config#adjust-effort-level) for maximum speed on straightforward tasks."
+
+This implies fast mode is orthogonal to the existing effort level system - opening up interesting optimization strategies.
+
+### **Third-Party Cloud Provider Limitations**
+An important restriction revealed:
+
+> "Not available on third-party cloud providers: fast mode is not available on Amazon Bedrock, Google Vertex AI, or Microsoft Azure Foundry. Fast mode is available through the Anthropic Console API and for Claude subscription plans using extra usage."
+
+This suggests fast mode requires specific Anthropic infrastructure that isn't available through partner cloud providers.
 
 ## Technical Details
 
-### **Hook Input Schema Additions**
-New JSON input fields for hooks:
+### **Requirements & Access Control**
+Fast mode has specific enablement requirements:
 
-**TeammateIdle:**
-- `teammate_name`: Name of teammate about to go idle
-- `team_name`: Name of the team
+- **Extra usage required**: Must be enabled in billing settings
+- **Teams/Enterprise gating**: Admins must explicitly enable fast mode
+  - Console API customers: [Claude Code preferences](https://platform.claude.com/claude-code/preferences)
+  - Teams/Enterprise: [Admin Settings > Claude Code](https://claude.ai/admin-settings/claude-code)
+- **Usage billing**: Fast mode tokens billed to extra usage immediately, don't count against plan's included usage
+- **Organization controls**: Admins can disable for entire organizations
 
-**TaskCompleted:**
-- `task_id`: Identifier of task being completed
-- `task_subject`: Title of the task
-- `task_description`: Detailed description (may be absent)
-- `teammate_name`: Name of teammate completing task (may be absent)
-- `team_name`: Name of team (may be absent)
+> "If your admin has not enabled fast mode for your organization, the `/fast` command will show 'Fast mode has been disabled by your organization.'"
 
-### **CLI Agent Flag Enhancements**
-The `--agents` flag now supports these additional fields:
-- `disallowedTools`: Array of tool names to explicitly deny
-- `skills`: Array of skill names to preload into subagent context
-- `mcpServers`: Array of MCP servers for the subagent
-- `maxTurns`: Maximum agentic turns limit
+### **Recommended Use Cases**
+The documentation provides clear guidance on when to use each mode:
 
-The documentation notes that `tools` now "Supports [`Task(agent_type)`](/en/sub-agents#restrict-which-subagents-can-be-spawned) syntax" for spawn restrictions.
+**Fast mode best for:**
+- Rapid iteration on code changes
+- Live debugging sessions
+- Time-sensitive work with tight deadlines
 
-### **Memory File Loading Behavior**
-Clarified hierarchy for CLAUDE.md file loading:
+**Standard mode better for:**
+- Long autonomous tasks where speed matters less
+- Batch processing or CI/CD pipelines
+- Cost-sensitive workloads
 
-> CLAUDE.md files in the directory hierarchy above the working directory are loaded in full at launch. CLAUDE.md files in child directories load on demand when Claude reads files in those directories. Auto memory loads only the first 200 lines of `MEMORY.md`.
+### **Research Preview Status**
+Important caveat for production users:
 
-### **Delegate Permission Mode**
-New `delegate` permission mode added to the permission modes table:
+> "Fast mode is a research preview feature. This means: The feature may change based on feedback, Availability and pricing are subject to change, The underlying API configuration may evolve"
 
-> Coordination-only mode for [agent team](/en/agent-teams) leads. Restricts to team management tools
+## New Documentation Pages
 
-This wasn't previously documented as a distinct permission mode.
+### `docs/claude-code/en/fast-mode.md`
+A comprehensive 131-line guide covering:
+- How to toggle fast mode on/off
+- Detailed cost tradeoff analysis
+- Decision framework for when to use fast mode
+- Requirements and access control
+- Rate limit behavior and automatic fallback
+- Comparison with effort level adjustments
+- Organization admin enablement instructions
+
+This is a fully-fledged feature launch with complete documentation, not just an experimental add-on.
+
+## Integration Notes
+
+The `/fast` command is available in both:
+- Claude Code CLI (primary focus of this documentation)
+- Claude Code VS Code Extension
+
+This suggests coordinated feature rollout across the entire Claude Code ecosystem.
 
 ---
 *Generated from Claude Code CLI documentation changes detected on February 7, 2026*
+
+*Total pages in documentation: 55 (up from 54)*
