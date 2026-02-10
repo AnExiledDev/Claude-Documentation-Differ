@@ -1,9 +1,40 @@
 # Claude Code CLI Documentation Changes - February 10, 2026
 
 ## TL;DR
-The Claude Code overview documentation received a major restructure focused on real-world use cases and developer workflows. The changes reveal **CLI composability with Unix pipes**, **agent teams for parallel work**, explicit mentions of the **Agent SDK for custom workflows**, and clarification around **Enterprise seat types**. The documentation shifts from marketing-style "why choose us" content to practical "here's what you can do" examples.
+**Latest Update (6:28 AM):** Claude Code Desktop now officially supports **Act mode** - a fully autonomous execution mode that bypasses all permission checks for both file edits and terminal commands.
+
+**Earlier Update (12:28 AM):** The Claude Code overview documentation received a major restructure focused on real-world use cases and developer workflows. The changes reveal **CLI composability with Unix pipes**, **agent teams for parallel work**, explicit mentions of the **Agent SDK for custom workflows**, and clarification around **Enterprise seat types**.
 
 ## New Features & Capabilities
+
+### **Act Mode - Fully Autonomous Execution** ⚡ NEW (6:28 AM)
+A new execution mode has been added to Claude Code Desktop that enables completely autonomous operation without permission prompts.
+
+> **Act**: Claude runs without permission checks, automatically executing file edits and terminal commands. Only use this mode in trusted environments.
+
+**Why it matters:** This represents the most autonomous mode available in Claude Code, going beyond even "Code" mode (which still asks for terminal command approval). It's designed for scenarios where maximum speed and automation are needed, such as CI/CD pipelines, containerized development environments, or sandboxed testing scenarios.
+
+**Safety & Access Controls:**
+The documentation includes a prominent warning:
+
+> Act runs in `bypassPermissions` mode, which disables all permission checks and should only be used in isolated environments like containers or VMs where Claude Code cannot cause damage. This mode is disabled by default. For personal accounts, enable it in [Claude Code personal settings](https://claude.ai/settings/claude-code). For Team and Enterprise plans, admins must enable it in [Claude Code admin settings](https://claude.ai/admin-settings/claude-code). Act mode does not persist across sessions.
+
+**Access Control Layers:**
+- Disabled by default across all account types
+- Personal accounts: Must enable in Claude Code personal settings
+- Team/Enterprise: Requires admin enablement in admin settings
+- Mode does **not persist** across sessions (must be re-enabled each time)
+
+**Mode Comparison Matrix:**
+
+| Mode | File Edits | Terminal Commands | Use Case |
+|------|------------|-------------------|----------|
+| **Ask** | Manual approval | Manual approval | Recommended for new users |
+| **Code** | Auto-approved | Manual approval | Faster iteration with trust |
+| **Plan** | Manual approval (after planning) | Manual approval | Complex tasks needing review |
+| **Act** | Auto-approved | Auto-approved | ⚠️ Isolated environments only |
+
+---
 
 ### **Unix Philosophy & CLI Composability**
 The documentation now explicitly showcases Claude Code's scriptability with real Unix-style examples that weren't previously highlighted:
@@ -63,6 +94,12 @@ This reveals that not all Enterprise users automatically get web access - specif
 
 ## Hidden Gems
 
+### **Container/VM-First Positioning** 🔍 NEW (6:28 AM)
+The emphasis on "isolated environments like containers or VMs" for Act mode suggests Claude Code is being positioned for use in cloud development environments, DevContainers, and similar sandboxed setups - aligning with the industry trend toward cloud-based IDEs and ephemeral development environments.
+
+### **Multi-Layer Governance Model** 🔍 NEW (6:28 AM)
+The combination of admin settings + user settings + session non-persistence shows a thoughtful security model. Even if accidentally enabled at the admin level, users must still opt-in, and it resets every session. This reveals enterprise-grade governance thinking.
+
 ### **Chrome Integration Mention**
 Buried in the "Use Claude Code everywhere" table is a reference to Chrome integration:
 
@@ -104,6 +141,16 @@ These new sections represent a shift toward practical examples:
 
 ## Technical Details
 
+### **Act Mode Implementation** 🔧 NEW (6:28 AM)
+- **Internal name:** `bypassPermissions` mode
+- **Capabilities:** Auto-executes both file edits AND terminal commands
+- **Persistence:** Does not persist across sessions (safety feature)
+- **Access control layers:**
+  1. Global default: Disabled
+  2. Admin level: Must be enabled in organization settings (Team/Enterprise)
+  3. User level: Individual opt-in required in personal settings
+  4. Session level: Must be selected per session (no persistence)
+
 ### **Third-Party Provider Support**
 The installation section now explicitly mentions third-party integrations for certain surfaces:
 
@@ -135,7 +182,22 @@ This is important for teams that want to standardize configuration - a `CLAUDE.m
 
 ---
 
-**Analysis:** This documentation update represents a maturation from "why you should try this" to "here's how to use it effectively." The emphasis on Unix composability, multi-agent workflows, and the Agent SDK suggests Anthropic is positioning Claude Code as infrastructure for automation, not just an interactive coding assistant. The explicit examples of piping logs and chaining with git commands indicate serious production use cases are emerging.
+## Strategic Implications
+
+### Act Mode Release (6:28 AM update)
+The addition of Act mode reveals several strategic directions:
+
+1. **Automation-first workflows**: Claude Code is moving toward supporting fully automated development workflows where human-in-the-loop would be a bottleneck.
+
+2. **Enterprise security posture**: The granular permission controls and explicit warnings show Anthropic is thinking about enterprise security requirements and compliance frameworks.
+
+3. **DevOps integration potential**: Act mode enables integration with CI/CD pipelines, automated testing frameworks, and infrastructure-as-code workflows where manual approvals aren't feasible.
+
+4. **Safety-by-default philosophy**: Despite adding a powerful autonomous mode, it's opt-in at multiple levels and doesn't persist - showing commitment to safe defaults even as capabilities expand.
+
+### Overview Restructure (12:28 AM update)
+This documentation update represents a maturation from "why you should try this" to "here's how to use it effectively." The emphasis on Unix composability, multi-agent workflows, and the Agent SDK suggests Anthropic is positioning Claude Code as infrastructure for automation, not just an interactive coding assistant. The explicit examples of piping logs and chaining with git commands indicate serious production use cases are emerging.
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-02-10*
+*Two updates: 12:28 AM (overview restructure) and 6:28 AM (Act mode addition)*
