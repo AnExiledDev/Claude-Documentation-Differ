@@ -1,7 +1,7 @@
 # Claude Code CLI Documentation Changes - February 11, 2026
 
 ## TL;DR
-Anthropic has added **server-managed settings** to Claude Code, enabling centralized configuration for Teams and Enterprise customers without requiring MDM infrastructure. Fast mode now officially benchmarks at 2.5x faster than standard Opus 4.6. The new server-managed settings system delivers configurations from Anthropic's servers directly to authenticated clients, complementing the existing endpoint-managed settings approach.
+Two significant updates today: Anthropic added **server-managed settings** for centralized enterprise configuration and expanded Chrome integration to support **Microsoft Edge**. Server-managed settings enable Teams/Enterprise admins to push configurations without MDM, while Edge support broadens browser automation options for all users.
 
 ## New Features & Capabilities
 
@@ -21,6 +21,22 @@ A major new enterprise feature allowing administrators to centrally configure Cl
 > "When both are present, server-managed settings take precedence and the local `managed-settings.json` file is not used."
 
 This means server-managed settings outrank even endpoint-managed settings deployed via MDM.
+
+### **Microsoft Edge Support for Browser Integration**
+The Chrome integration feature (previously Chrome-only) now works with Microsoft Edge. Claude Code can control and automate tasks in Edge using the same Claude in Chrome extension, which is available in the Chrome Web Store for both browsers.
+
+> "Chrome integration is in beta and currently works with Google Chrome and Microsoft Edge."
+
+Requirements now include:
+> "Google Chrome or Microsoft Edge browser"
+>
+> "Claude in Chrome extension version 1.0.36 or higher, available in the Chrome Web Store for both browsers"
+
+**What this means:**
+- Users who prefer Edge over Chrome can now use Claude Code's browser automation features
+- Cross-platform support: Edge works on macOS, Linux, and Windows (same as Chrome)
+- Same extension, multiple browsers via Chrome Web Store
+- Other Chromium browsers (Brave, Arc) remain unsupported
 
 ### **Security Approval Dialogs**
 New security mechanism for potentially dangerous settings:
@@ -109,31 +125,55 @@ The page includes practical examples like enforcing permission deny lists for se
 
 ## Technical Details
 
-### **Version Requirements**
-- **Minimum version**: Claude Code 2.1.30
-- **Network requirement**: Direct access to `api.anthropic.com`
-- **Plan requirement**: Claude for Teams or Claude for Enterprise
+### **Server-Managed Settings**
+**Version Requirements:**
+- Minimum version: Claude Code 2.1.30
+- Network requirement: Direct access to `api.anthropic.com`
+- Plan requirement: Claude for Teams or Claude for Enterprise
 
-### **Polling and Update Behavior**
+**Polling and Update Behavior:**
 - Settings fetched at startup
 - Hourly polling during active sessions
 - Most settings apply automatically without restart
 - OpenTelemetry configuration requires full restart
 
-### **Role-Based Access Control**
+**Role-Based Access Control:**
 Only these roles can manage server-managed settings:
 - Primary Owner
 - Owner
 
-### **Current Beta Limitations**
+**Current Beta Limitations:**
 - Uniform application to all users (no per-group configurations yet)
 - MCP server configurations cannot be distributed via server-managed settings
 
-### **Managed-Only Settings Support**
+**Managed-Only Settings Support:**
 Server-managed settings support all regular settings plus managed-only settings like:
 - `disableBypassPermissionsMode`
 - Permission deny lists
 - Shell command restrictions
+
+### **Edge Native Messaging Host Configuration**
+
+Edge-specific paths for the native messaging host configuration file that enables communication between Claude Code and the browser:
+
+**macOS**:
+- Chrome: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json`
+- Edge: `~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json`
+
+**Linux**:
+- Chrome: `~/.config/google-chrome/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json`
+- Edge: `~/.config/microsoft-edge/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json`
+
+**Windows Registry**:
+- Chrome: `HKCU\Software\Google\Chrome\NativeMessagingHosts\`
+- Edge: `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\`
+
+These paths are useful for troubleshooting connection issues between Claude Code and the browser extension.
+
+**Browser Requirements:**
+- Minimum required versions: extension v1.0.36+, Claude Code v2.0.73+
+- Direct Anthropic plan (Pro, Max, Team, or Enterprise) required
+- WSL (Windows Subsystem for Linux) not supported
 
 ---
 *Generated from Claude Code CLI documentation changes detected on February 11, 2026*
