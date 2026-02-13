@@ -40,20 +40,43 @@ jobs:
       - name: Fetch Claude Code documentation
         run: python3 fetch.py --source claude-code --force
 
-      - name: Check for changes
+      - name: Check for content changes
         id: check_changes
         run: |
-          if git diff --quiet docs/claude-code/ && git diff --staged --quiet docs/claude-code/; then
-            echo "changes=false" >> $GITHUB_OUTPUT
-          else
+          # Only detect actual .md file changes, not metadata.json timestamp updates
+          MD_CHANGES=$(git diff --name-only -- 'docs/claude-code/en/*.md' 'docs/claude-code/en/**/*.md' | wc -l)
+          STAGED_MD=$(git diff --staged --name-only -- 'docs/claude-code/en/*.md' 'docs/claude-code/en/**/*.md' | wc -l)
+          TOTAL=$((MD_CHANGES + STAGED_MD))
+
+          if [ "$TOTAL" -gt 0 ]; then
             echo "changes=true" >> $GITHUB_OUTPUT
+            echo "count=$TOTAL" >> $GITHUB_OUTPUT
+            echo "Found $TOTAL changed .md files"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "count=0" >> $GITHUB_OUTPUT
+            echo "No .md file changes detected (metadata-only update)"
           fi
+
+      - name: Count change types
+        if: steps.check_changes.outputs.changes == 'true'
+        id: count_changes
+        run: |
+          NEW=$(git diff --name-only --diff-filter=A -- 'docs/claude-code/en/*.md' 'docs/claude-code/en/**/*.md' | wc -l)
+          MODIFIED=$(git diff --name-only --diff-filter=M -- 'docs/claude-code/en/*.md' 'docs/claude-code/en/**/*.md' | wc -l)
+          DELETED=$(git diff --name-only --diff-filter=D -- 'docs/claude-code/en/*.md' 'docs/claude-code/en/**/*.md' | wc -l)
+          echo "new=$NEW" >> $GITHUB_OUTPUT
+          echo "modified=$MODIFIED" >> $GITHUB_OUTPUT
+          echo "deleted=$DELETED" >> $GITHUB_OUTPUT
 
       - name: Commit documentation changes
         if: steps.check_changes.outputs.changes == 'true'
         run: |
           git add docs/claude-code/
-          git commit -m "Claude Code docs update: $(date -u +%Y-%m-%d\ %H:%M\ UTC)"
+          NEW=${{ steps.count_changes.outputs.new || 0 }}
+          MOD=${{ steps.count_changes.outputs.modified || 0 }}
+          DEL=${{ steps.count_changes.outputs.deleted || 0 }}
+          git commit -m "Claude Code docs update: $(date -u +%Y-%m-%d\ %H:%M\ UTC) (${MOD} modified, ${NEW} new, ${DEL} removed)"
 
       - name: Install Claude Code CLI
         if: steps.check_changes.outputs.changes == 'true'
@@ -61,32 +84,41 @@ jobs:
 
       - name: Generate changelog
         if: steps.check_changes.outputs.changes == 'true'
-        run: python3 diff.py --source claude-code --changelog --force
+        run: python3 diff.py --source claude-code --changelog --force --since-last-changelog
         env:
-          # Use OAuth token for Claude Code authentication
-          # Set CLAUDE_CODE_OAUTH_TOKEN secret in repo settings
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
       - name: Commit changelog and push
         if: steps.check_changes.outputs.changes == 'true'
         run: |
           git add output/claude-code/ || true
-          git commit -m "Add Claude Code changelog for $(date -u +%Y-%m-%d)" || true
+          git commit -m "Add changelog for $(date -u +%Y-%m-%d)" || true
           git push
+
+      - name: Push metadata-only update
+        if: steps.check_changes.outputs.changes == 'false'
+        run: |
+          # Commit metadata.json separately so it doesn't pollute the changelog history
+          if ! git diff --quiet docs/claude-code/metadata.json; then
+            git add docs/claude-code/metadata.json
+            git commit -m "Update Claude Code metadata: $(date -u +%Y-%m-%d\ %H:%M\ UTC) (no content changes)"
+            git push
+          fi
 
       - name: Summary
         run: |
           if [ "${{ steps.check_changes.outputs.changes }}" == "true" ]; then
             echo "## Claude Code Documentation Changes Detected" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "New documentation has been fetched and a changelog has been generated." >> $GITHUB_STEP_SUMMARY
+            echo "**${{ steps.check_changes.outputs.count }}** pages changed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            if [ -f output/claude-code/*_changelog.md ]; then
+            CHANGELOG=$(ls output/claude-code/*_changelog.md 2>/dev/null | head -1)
+            if [ -n "$CHANGELOG" ]; then
               echo "### Latest Changelog" >> $GITHUB_STEP_SUMMARY
-              cat output/claude-code/*_changelog.md | head -100 >> $GITHUB_STEP_SUMMARY
+              head -100 "$CHANGELOG" >> $GITHUB_STEP_SUMMARY
             fi
           else
-            echo "## No Claude Code Documentation Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo "## No Content Changes Detected" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Claude Code documentation is up to date." >> $GITHUB_STEP_SUMMARY
+            echo "Claude Code documentation content is up to date. Metadata timestamp updated." >> $GITHUB_STEP_SUMMARY
           fi

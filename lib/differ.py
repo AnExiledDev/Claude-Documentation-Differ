@@ -304,7 +304,7 @@ def get_full_diff(
     repo_dir: Path,
     old_ref: str = "HEAD~1",
     new_ref: str = "HEAD",
-    word_diff: bool = True,
+    word_diff: bool = False,
     path_filter: str | None = None,
 ) -> str:
     """Get the full diff text between two refs.
@@ -313,7 +313,7 @@ def get_full_diff(
         repo_dir: Path to the git repository
         old_ref: Old commit reference
         new_ref: New commit reference
-        word_diff: Use word-level diff (better for prose)
+        word_diff: Use word-level diff (default: False for cleaner parsing)
         path_filter: Optional path prefix to filter changes
 
     Returns:
@@ -327,3 +327,168 @@ def get_full_diff(
         args.extend(["--", path_filter])
 
     return _run_git(args, repo_dir)
+
+
+def get_last_changelog_commit(
+    repo_dir: Path,
+    source_name: str,
+    max_age_days: int = 7,
+) -> str | None:
+    """Find the commit that last added a changelog for this source.
+
+    Searches git log for commits with "Add changelog" or "Add <source> changelog"
+    in the message, within the max_age_days window.
+
+    Args:
+        repo_dir: Path to the git repository
+        source_name: Source name to search for (e.g., "Claude Code", "Claude API")
+        max_age_days: Maximum age in days to search back
+
+    Returns:
+        Commit hash, or None if no changelog commit found within window
+    """
+    result = subprocess.run(
+        [
+            "git",
+            "log",
+            f"--since={max_age_days} days ago",
+            "--format=%H",
+            "-1",
+            "--grep",
+            f"Add.*changelog",
+        ],
+        cwd=str(repo_dir),
+        capture_output=True,
+        text=True,
+    )
+    commit = result.stdout.strip()
+    return commit if commit else None
+
+
+def get_file_content(repo_dir: Path, filepath: str) -> str | None:
+    """Read file content from the current working tree.
+
+    Args:
+        repo_dir: Path to the git repository
+        filepath: Relative path to the file
+
+    Returns:
+        File content, or None if file doesn't exist
+    """
+    full_path = repo_dir / filepath
+    if full_path.exists():
+        return full_path.read_text()
+    return None
+
+
+def build_url_manifest(
+    report: DiffReport,
+    base_url: str,
+    docs_prefix: str,
+) -> dict[str, str]:
+    """Build a mapping of doc file paths to their source URLs.
+
+    Args:
+        report: DiffReport with changed files
+        base_url: Base URL for the documentation (e.g., "https://code.claude.com/docs")
+        docs_prefix: Prefix in git paths to strip (e.g., "docs/claude-code/")
+
+    Returns:
+        Dict mapping relative paths to full URLs
+    """
+    manifest = {}
+
+    all_paths = (
+        report.new_pages + report.removed_pages + [c.path for c in report.page_changes]
+    )
+
+    for path in all_paths:
+        # Strip the docs prefix to get the relative URL path
+        rel = path
+        if rel.startswith(docs_prefix):
+            rel = rel[len(docs_prefix) :]
+
+        url = f"{base_url}/{rel}"
+        manifest[path] = url
+
+    return manifest
+
+
+# API docs category mapping based on path prefix
+API_CATEGORIES: dict[str, str] = {
+    "about-claude": "About Claude",
+    "agent-sdk": "Agent SDK",
+    "agents-and-tools": "Agents & Tools",
+    "build-with-claude": "Building with Claude",
+    "administration": "Administration",
+    "resources": "Resources",
+    "sdks": "SDKs",
+    "api": "API Reference",
+    "release-notes": "Release Notes",
+    "test-and-evaluate": "Testing & Evaluation",
+}
+
+
+def categorize_changes(
+    report: DiffReport,
+    docs_prefix: str,
+) -> dict[str, DiffReport]:
+    """Split a DiffReport into category-based sub-reports.
+
+    Categories are determined by the first path segment after docs_prefix/en/.
+    E.g., "docs/api/en/agent-sdk/overview.md" → "agent-sdk" → "Agent SDK"
+
+    Args:
+        report: Full DiffReport to split
+        docs_prefix: Prefix in git paths (e.g., "docs/api/")
+
+    Returns:
+        Dict mapping category key to DiffReport for that category
+    """
+
+    def _get_category(filepath: str) -> str:
+        """Extract category from a file path."""
+        rel = filepath
+        if rel.startswith(docs_prefix):
+            rel = rel[len(docs_prefix) :]
+        # Strip leading en/
+        if rel.startswith("en/"):
+            rel = rel[3:]
+        # First path segment is the category
+        parts = rel.split("/")
+        if len(parts) > 1:
+            return parts[0]
+        return "_root"
+
+    # Group all changes by category
+    categories: dict[str, dict] = {}
+
+    for path in report.new_pages:
+        cat = _get_category(path)
+        categories.setdefault(cat, {"new": [], "removed": [], "modified": []})
+        categories[cat]["new"].append(path)
+
+    for path in report.removed_pages:
+        cat = _get_category(path)
+        categories.setdefault(cat, {"new": [], "removed": [], "modified": []})
+        categories[cat]["removed"].append(path)
+
+    for change in report.page_changes:
+        cat = _get_category(change.path)
+        categories.setdefault(cat, {"new": [], "removed": [], "modified": []})
+        categories[cat]["modified"].append(change)
+
+    # Build sub-reports
+    sub_reports = {}
+    for cat_key, data in categories.items():
+        cat_name = API_CATEGORIES.get(cat_key, cat_key.replace("-", " ").title())
+        sub_reports[cat_key] = DiffReport(
+            old_ref=report.old_ref,
+            new_ref=report.new_ref,
+            timestamp=report.timestamp,
+            new_pages=data["new"],
+            removed_pages=data["removed"],
+            page_changes=data["modified"],
+        )
+
+    return sub_reports

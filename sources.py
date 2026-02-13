@@ -46,7 +46,7 @@ SOURCES: Dict[str, Source] = {
         index_url="https://platform.claude.com/llms.txt",
         url_pattern=r"https://platform\.claude\.com/docs/en/[\w/-]+\.md",
         prompt_file="lib/prompts/api.md",
-        base_url="https://platform.claude.com",
+        base_url="https://platform.claude.com/docs",
     ),
 }
 

@@ -8,6 +8,7 @@ Usage:
     python3 diff.py HEAD~1 HEAD               # Compare two commits
     python3 diff.py --changelog               # Generate AI-powered changelog
     python3 diff.py --since 2026-02-01        # Changes since date
+    python3 diff.py --since-last-changelog    # Changes since last changelog commit
 """
 
 from __future__ import annotations
@@ -23,12 +24,26 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.differ import analyze_changes, get_full_diff, DiffReport
+from lib.differ import (
+    analyze_changes,
+    build_url_manifest,
+    categorize_changes,
+    get_file_content,
+    get_full_diff,
+    get_last_changelog_commit,
+    DiffReport,
+    API_CATEGORIES,
+)
 from sources import get_source, get_all_sources, Source
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _DOCS_DIR = _SCRIPT_DIR / "docs"
 _OUTPUT_DIR = _SCRIPT_DIR / "output"
+
+# Max lines per page to include in workspace (prevents context overflow)
+_MAX_PAGE_LINES = 500
+# Max categories for split changelogs
+_MAX_CATEGORIES = 5
 
 
 def _get_source_paths(source: Source) -> tuple[Path, Path]:
@@ -64,25 +79,83 @@ def _get_commit_for_date(repo_dir: Path, date_str: str) -> str | None:
     return commits[0] if commits and commits[0] else None
 
 
+def _truncate_content(content: str, max_lines: int = _MAX_PAGE_LINES) -> str:
+    """Truncate content to max_lines, adding a truncation note."""
+    lines = content.split("\n")
+    if len(lines) <= max_lines:
+        return content
+    truncated = "\n".join(lines[:max_lines])
+    truncated += f"\n\n[... truncated, {len(lines) - max_lines} more lines ...]"
+    return truncated
+
+
 def _prepare_changelog_workspace(
+    source: Source,
     report: DiffReport,
     full_diff: str,
     workspace_dir: Path,
 ) -> None:
-    """Prepare workspace files for Claude changelog generation."""
+    """Prepare workspace files for Claude changelog generation.
+
+    Creates an enriched workspace with full page content, URL manifest,
+    and structured diff data to give Claude maximum context.
+    """
     workspace_dir.mkdir(parents=True, exist_ok=True)
 
     # Write summary JSON
     summary_path = workspace_dir / "summary.json"
     summary_path.write_text(json.dumps(report.to_dict(), indent=2))
 
-    # Write full diff
+    # Write full diff (unified format)
     diff_path = workspace_dir / "full_diff.txt"
     diff_path.write_text(full_diff)
 
     # Write markdown report
     report_path = workspace_dir / "report.md"
     report_path.write_text(report.to_markdown())
+
+    # Build and write URL manifest
+    docs_prefix = f"docs/{source.key}/"
+    manifest = build_url_manifest(report, source.base_url, docs_prefix)
+    manifest_path = workspace_dir / "url_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+
+    # Write full content of new pages
+    docs_prefix_str = docs_prefix
+    new_pages_dir = workspace_dir / "new_pages"
+    if report.new_pages:
+        new_pages_dir.mkdir(parents=True, exist_ok=True)
+        for page_path in report.new_pages:
+            content = get_file_content(_SCRIPT_DIR, page_path)
+            if content:
+                # Use path relative to docs prefix, replacing / with _
+                # to avoid collisions (e.g., api/create.md and sdks/create.md)
+                rel = page_path
+                if rel.startswith(docs_prefix_str):
+                    rel = rel[len(docs_prefix_str) :]
+                safe_name = rel.replace("/", "_")
+                out = new_pages_dir / safe_name
+                out.write_text(_truncate_content(content))
+
+    # Write current content of modified pages
+    modified_pages_dir = workspace_dir / "modified_pages"
+    if report.page_changes:
+        modified_pages_dir.mkdir(parents=True, exist_ok=True)
+        # Sort by change magnitude (most changed first)
+        sorted_changes = sorted(
+            report.page_changes,
+            key=lambda c: c.additions + c.deletions,
+            reverse=True,
+        )
+        for change in sorted_changes:
+            content = get_file_content(_SCRIPT_DIR, change.path)
+            if content:
+                rel = change.path
+                if rel.startswith(docs_prefix_str):
+                    rel = rel[len(docs_prefix_str) :]
+                safe_name = rel.replace("/", "_")
+                out = modified_pages_dir / safe_name
+                out.write_text(_truncate_content(content))
 
 
 def _generate_changelog(
@@ -124,7 +197,7 @@ def _generate_changelog(
     if workspace.exists():
         shutil.rmtree(workspace)
 
-    _prepare_changelog_workspace(report, full_diff, workspace)
+    _prepare_changelog_workspace(source, report, full_diff, workspace)
 
     # Find system prompt (source-specific)
     system_prompt = _SCRIPT_DIR / source.prompt_file
@@ -195,6 +268,137 @@ def _generate_changelog(
             shutil.rmtree(workspace)
 
 
+def _generate_category_changelogs(
+    source: Source,
+    report: DiffReport,
+    old_ref: str,
+    new_ref: str,
+    output_dir: Path,
+    date_str: str,
+    model: str = "sonnet",
+    budget: float | None = None,
+    force: bool = False,
+) -> bool:
+    """Generate split changelogs by category for large diffs.
+
+    Creates a master changelog that references category-specific changelogs.
+    Each category gets its own Claude invocation with a focused diff.
+
+    Returns True if any changelogs were generated.
+    """
+    docs_prefix = f"docs/{source.key}/"
+    sub_reports = categorize_changes(report, docs_prefix)
+
+    if not sub_reports:
+        return False
+
+    # Sort categories by total changes (most active first)
+    sorted_cats = sorted(
+        sub_reports.items(),
+        key=lambda kv: kv[1].total_changes,
+        reverse=True,
+    )
+
+    # Merge small categories into "other" if we have too many
+    if len(sorted_cats) > _MAX_CATEGORIES:
+        keep = sorted_cats[: _MAX_CATEGORIES - 1]
+        merge = sorted_cats[_MAX_CATEGORIES - 1 :]
+
+        # Merge the remaining into an "other" report
+        other_new = []
+        other_removed = []
+        other_modified = []
+        for _, sub in merge:
+            other_new.extend(sub.new_pages)
+            other_removed.extend(sub.removed_pages)
+            other_modified.extend(sub.page_changes)
+
+        other_report = DiffReport(
+            old_ref=report.old_ref,
+            new_ref=report.new_ref,
+            timestamp=report.timestamp,
+            new_pages=other_new,
+            removed_pages=other_removed,
+            page_changes=other_modified,
+        )
+        sorted_cats = keep + [("other", other_report)]
+
+    # Generate a changelog for each category
+    category_files = []
+    any_success = False
+
+    for cat_key, sub_report in sorted_cats:
+        if sub_report.total_changes == 0:
+            continue
+
+        cat_name = API_CATEGORIES.get(cat_key, cat_key.replace("-", " ").title())
+        cat_filename = f"{date_str}_{cat_key}_changelog.md"
+        cat_path = output_dir / cat_filename
+
+        print(f"\n  Category: {cat_name} ({sub_report.total_changes} changes)")
+
+        # Get category-specific diff
+        cat_diff = get_full_diff(
+            _SCRIPT_DIR,
+            old_ref,
+            new_ref,
+            path_filter=f"docs/{source.key}/en/{cat_key}/",
+        )
+
+        success = _generate_changelog(
+            source=source,
+            report=sub_report,
+            full_diff=cat_diff,
+            output_path=cat_path,
+            model=model,
+            budget=budget,
+            force=force,
+        )
+
+        if success:
+            any_success = True
+            category_files.append((cat_name, cat_filename, sub_report))
+
+    # Generate master changelog that references category changelogs
+    if category_files:
+        master_path = output_dir / f"{date_str}_changelog.md"
+        master_lines = [
+            f"# {source.name} Documentation Changes — {date_str}",
+            "",
+            "## Summary",
+            "",
+            f"- **{report.total_changes}** total changes across"
+            f" **{len(category_files)}** categories",
+            f"- {len(report.new_pages)} new pages,"
+            f" {len(report.removed_pages)} removed,"
+            f" {len(report.page_changes)} modified",
+            "",
+            "## Category Changelogs",
+            "",
+        ]
+
+        for cat_name, cat_filename, sub in category_files:
+            master_lines.append(
+                f"- **[{cat_name}]({cat_filename})**: "
+                f"{sub.total_changes} changes "
+                f"({len(sub.new_pages)} new, {len(sub.page_changes)} modified)"
+            )
+
+        master_lines.extend(
+            [
+                "",
+                "---",
+                f"*Generated from {source.name} documentation changes detected on"
+                f" {date_str}*",
+            ]
+        )
+
+        master_path.write_text("\n".join(master_lines))
+        print(f"\n  Master changelog: {master_path.name}")
+
+    return any_success
+
+
 def _process_source(
     source: Source,
     old_ref: str,
@@ -216,7 +420,7 @@ def _process_source(
         )
         return False
 
-    if not _has_commits(_SCRIPT_DIR):  # Check at repo level, not source level
+    if not _has_commits(_SCRIPT_DIR):
         print("ERROR: No commits in repository yet.", file=sys.stderr)
         print("Run fetch.py to populate documentation first.", file=sys.stderr)
         return False
@@ -226,7 +430,6 @@ def _process_source(
 
     # Analyze changes (relative to docs/source_key/ directory)
     try:
-        # We need to tell git to only look at files in docs/source_key/
         report = analyze_changes(
             _SCRIPT_DIR, old_ref, new_ref, path_filter=f"docs/{source.key}/"
         )
@@ -268,17 +471,35 @@ def _process_source(
         full_diff = get_full_diff(
             _SCRIPT_DIR, old_ref, new_ref, path_filter=f"docs/{source.key}/"
         )
-        changelog_path = output_dir / f"{date_str}_changelog.md"
 
-        _generate_changelog(
-            source=source,
-            report=report,
-            full_diff=full_diff,
-            output_path=changelog_path,
-            model=args.model,
-            budget=args.budget,
-            force=args.force,
-        )
+        # Use category splitting for large diffs (API docs)
+        if source.key == "api" and report.total_changes > 10:
+            print(
+                f"  Large diff detected ({report.total_changes} changes) —"
+                " splitting by category"
+            )
+            _generate_category_changelogs(
+                source=source,
+                report=report,
+                old_ref=old_ref,
+                new_ref=new_ref,
+                output_dir=output_dir,
+                date_str=date_str,
+                model=args.model,
+                budget=args.budget,
+                force=args.force,
+            )
+        else:
+            changelog_path = output_dir / f"{date_str}_changelog.md"
+            _generate_changelog(
+                source=source,
+                report=report,
+                full_diff=full_diff,
+                output_path=changelog_path,
+                model=args.model,
+                budget=args.budget,
+                force=args.force,
+            )
 
     return True
 
@@ -317,6 +538,11 @@ def main() -> None:
         help="Compare from first commit after DATE (e.g., 2026-02-01)",
     )
     parser.add_argument(
+        "--since-last-changelog",
+        action="store_true",
+        help="Compare from the last changelog commit (accumulates changes)",
+    )
+    parser.add_argument(
         "--format",
         "-f",
         choices=["json", "markdown", "both"],
@@ -350,12 +576,26 @@ def main() -> None:
     old_ref = args.old_ref
     new_ref = args.new_ref
 
-    if args.since:
+    if args.since_last_changelog:
+        # Find the last changelog commit and diff from there
+        last_cl = get_last_changelog_commit(_SCRIPT_DIR, "changelog")
+        if last_cl:
+            old_ref = last_cl
+            print(f"Using last changelog commit as base: {old_ref[:8]}")
+        else:
+            print(
+                "No previous changelog commit found (within 7 days), using HEAD~1",
+                file=sys.stderr,
+            )
+    elif args.since:
         since_commit = _get_commit_for_date(_SCRIPT_DIR, args.since)
         if since_commit:
             old_ref = f"{since_commit}~1" if since_commit else "HEAD~1"
         else:
-            print(f"WARNING: No commits found since {args.since}", file=sys.stderr)
+            print(
+                f"WARNING: No commits found since {args.since}",
+                file=sys.stderr,
+            )
 
     # Determine which sources to process
     if args.source == "all":
