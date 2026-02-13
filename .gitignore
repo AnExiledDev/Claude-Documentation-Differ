@@ -11,6 +11,9 @@ output/.changelog_workspace/
 # OS
 .DS_Store
 
+# Linting/formatting cache
+.ruff_cache/
+
 # IDE
 .idea/
 .vscode/
