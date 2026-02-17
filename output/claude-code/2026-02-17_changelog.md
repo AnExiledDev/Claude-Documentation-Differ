@@ -2,80 +2,83 @@
 
 ## Summary
 
-Three documentation pages received updates focused on plugin marketplace management and version control. The most significant changes introduce new capabilities for plugin versioning, release channel management, and marketplace-level component control through strict mode configuration.
+This update promotes Claude Sonnet 4.6 as the new default primary model across all Claude Code documentation, replacing Sonnet 4.5 (previously referenced as `claude-sonnet-4-5-20250929`). The most substantive functional addition is a new MCP section documenting how Claude.ai-configured MCP servers are automatically available in Claude Code sessions. A notable account-tier clarification also revises how the `default` model alias resolves for Pro and Team Standard plans.
 
 ## Significant Changes
 
-### Plugin Marketplace Configuration
+### MCP Integration
 
-- **Strict mode documentation expanded**: The `strict` field now has comprehensive documentation explaining how it controls component authority between `plugin.json` and marketplace entries.
-  > `strict: true` (default): `plugin.json` is the authority. The marketplace entry can supplement it with additional components, and both sources are merged.
-  > `strict: false`: The marketplace entry is the entire definition. If the plugin also has a `plugin.json` that declares components, that's a conflict and the plugin fails to load.
-  - *Implication*: Marketplace operators can now choose between allowing plugin authors to control components (strict mode on) or taking full control themselves (strict mode off). This enables curated marketplaces that restructure plugins differently than authors intended.
-  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+- **Claude.ai MCP servers now available in Claude Code**: A new section documents that MCP servers configured in a Claude.ai account are automatically surfaced in Claude Code when the user is logged in with a Claude.ai account.
+  > If you've logged into Claude Code with a [Claude.ai](https://claude.ai) account, MCP servers you've added in Claude.ai are automatically available in Claude Code.
 
-- **Plugin source types formalized in table**: Documentation now includes a comprehensive table showing all five plugin source types with their fields and notes.
-  > | Source | Type | Fields | Notes |
-  > | Relative path | `string` (e.g. `"./my-plugin"`) | — | Local directory within the marketplace repo. Must start with `./` |
-  > | `github` | object | `repo`, `ref?`, `sha?` | |
-  > | `url` | object | `url` (must end .git), `ref?`, `sha?` | Git URL source |
-  > | `npm` | object | `package`, `version?`, `registry?` | Installed via `npm install` |
-  > | `pip` | object | `package`, `version?`, `registry?` | Installed via pip |
-  - *Implication*: Developers now have clear guidance on all supported plugin distribution methods and their specific requirements.
-  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+  > Add servers at [claude.ai/settings/connectors](https://claude.ai/settings/connectors). On Team and Enterprise plans, only admins can add servers.
 
-- **Marketplace vs plugin source distinction clarified**: New note explicitly differentiates between marketplace sources (where the catalog lives) and plugin sources (where individual plugins are fetched from).
-  > **Marketplace source** — where to fetch the `marketplace.json` catalog itself. Set when users run `/plugin marketplace add` or in `extraKnownMarketplaces` settings. Supports `ref` (branch/tag) but not `sha`.
-  > **Plugin source** — where to fetch an individual plugin listed in the marketplace. Set in the `source` field of each plugin entry inside `marketplace.json`. Supports both `ref` (branch/tag) and `sha` (exact commit).
-  - *Implication*: This resolves potential confusion about pinning behavior at different levels of the plugin distribution system.
-  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+  > Claude.ai servers appear in the list with indicators showing they come from Claude.ai.
 
-### Version Resolution and Release Channels
+  - *Implication*: Users on Team/Enterprise plans should be aware that MCP server management is admin-controlled via Claude.ai and those servers propagate into Claude Code sessions automatically. The `/mcp` command within Claude Code now shows both locally configured and Claude.ai-sourced servers in a single list.
+  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
 
-- **New release channel setup documentation**: Comprehensive new section explaining how to create "stable" and "latest" release channels using multiple marketplaces pointing to different refs.
-  > To support "stable" and "latest" release channels for your plugins, you can set up two marketplaces that point to different refs or SHAs of the same repo. You can then assign the two marketplaces to different user groups through managed settings.
-  - *Implication*: Organizations can now implement sophisticated rollout strategies with early-access and stable tracks for different user groups. This requires the plugin's `plugin.json` to declare different versions at each ref or commit.
-  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+### Model Version Promotion: Sonnet 4.5 → Sonnet 4.6
 
-- **Version precedence warning added**: New warning clarifies that `plugin.json` version always wins over marketplace version.
-  > When possible, avoid setting the version in both places. The plugin manifest always wins silently, which can cause the marketplace version to be ignored. For relative-path plugins, set the version in the marketplace entry. For all other plugin sources, set it in the plugin manifest.
-  - *Implication*: Developers should choose one location for version declarations to avoid silent conflicts and ensure updates work correctly.
-  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+- **Default primary model updated to `claude-sonnet-4-6`**: All references to the previous default (`claude-sonnet-4-5-20250929`) have been replaced with `claude-sonnet-4-6` across provider integrations (Bedrock, Vertex AI, Microsoft Foundry), CI/CD configuration (GitHub Actions, GitLab CI/CD), CLI examples, settings, hooks, and monitoring docs.
+  > `Primary model | global.anthropic.claude-sonnet-4-6` (Amazon Bedrock defaults table)
 
-### Plugin Caching and File Resolution
+  > `Primary model | claude-sonnet-4-6` (Google Vertex AI defaults table)
 
-- **Simplified external dependency guidance**: Documentation removed "Option 2: Restructure your marketplace" approach, leaving only symlinks as the recommended solution.
-  - *Removed content*: The previous documentation suggested setting plugin source to `"./"` with `strict: false` to copy the entire marketplace root, giving plugins access to sibling directories.
-  - *Implication*: This simplification suggests symlinks are the preferred pattern for sharing files across plugins. The restructuring approach may have been deprecated or found to be less maintainable.
-  - *Source*: [Plugins Reference](https://code.claude.com/docs/en/plugins-reference.md)
+  > `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` (git commit attribution)
 
-- **Plugin definition clarified**: New introductory sentence provides clear terminology.
-  > A **plugin** is a self-contained directory of components that extends Claude Code with custom functionality. Plugin components include skills, agents, hooks, MCP servers, and LSP servers.
-  - *Implication*: Sets clear expectations about plugin scope and capabilities upfront.
-  - *Source*: [Plugins Reference](https://code.claude.com/docs/en/plugins-reference.md)
+  - *Implication*: Developers using the `sonnet` alias or the documented default model IDs now target Sonnet 4.6. Hardcoded model strings in CI pipelines, settings files, or automation scripts should be reviewed. Note that `claude-haiku-4-5` remains unchanged as the small/fast model across all providers — Haiku is **not** automatically upgraded.
+  - *Sources*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md) · [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai.md) · [Microsoft Foundry](https://code.claude.com/docs/en/microsoft-foundry.md) · [GitHub Actions](https://code.claude.com/docs/en/github-actions.md) · [GitLab CI/CD](https://code.claude.com/docs/en/gitlab-ci-cd.md) · [CLI Reference](https://code.claude.com/docs/en/cli-reference.md) · [Settings](https://code.claude.com/docs/en/settings.md) · [Monitoring & Usage](https://code.claude.com/docs/en/monitoring-usage.md) · [Hooks](https://code.claude.com/docs/en/hooks.md)
 
-- **Caching behavior documentation condensed**: Removed detailed explanation of five source types from caching section (now covered in plugin sources section).
-  - *Implication*: Reduces duplication between plugin-marketplaces.md and plugins-reference.md documentation.
-  - *Source*: [Plugins Reference](https://code.claude.com/docs/en/plugins-reference.md)
+- **Bedrock model ID format simplified**: The guidance note on Bedrock model IDs has been updated to drop references to version suffixes.
+  > Previously: "The model ID format for Bedrock includes the region prefix (e.g., `us.anthropic.claude...`) and version suffix."
 
-- **Version management warning in plugin reference**: New warning emphasizes the importance of version bumping for cache invalidation.
-  > Claude Code uses the version to determine whether to update your plugin. If you change your plugin's code but don't bump the version in `plugin.json`, your plugin's existing users won't see your changes due to caching.
-  - *Implication*: Plugin developers must remember to bump versions or users won't receive updates due to caching behavior.
-  - *Source*: [Plugins Reference](https://code.claude.com/docs/en/plugins-reference.md)
+  > Now: "The model ID format for Bedrock includes a region prefix (for example, `us.anthropic.claude-sonnet-4-6`)."
+
+  - *Implication*: The new `claude-sonnet-4-6` model ID on Bedrock does not require a dated version suffix or `:v1:0` postfix, simplifying configuration. This same simplified format is reflected across GitLab CI/CD examples and the Bedrock defaults table.
+  - *Sources*: [GitHub Actions](https://code.claude.com/docs/en/github-actions.md) · [GitLab CI/CD](https://code.claude.com/docs/en/gitlab-ci-cd.md) · [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md)
+
+### Model Configuration & Account Tiers
+
+- **`default` model alias behavior revised for Pro and Team plans**: The table describing how the `default` alias resolves has been rewritten to distinguish between Team Premium and Team Standard.
+
+  | Plan (before) | Default model |
+  |---|---|
+  | Max and Teams | Opus 4.6 |
+  | Pro | Opus 4.6 |
+
+  | Plan (after) | Default model |
+  |---|---|
+  | Max and Team Premium | Opus 4.6 |
+  | Pro and Team Standard | Sonnet 4.6 |
+
+  - *Implication*: Pro users and Team Standard subscribers will now default to Sonnet 4.6 (not Opus 4.6) when using the `default` model alias. Teams that relied on Opus-level capability by default on these plans should explicitly set the model in their configuration.
+  - *Source*: [Model Configuration](https://code.claude.com/docs/en/model-config.md)
 
 ## Notable Details
 
-- **Code block formatting cleaned up**: The overview.md file had duplicate `theme={null}` attributes removed from bash, PowerShell, batch, and shell code blocks. This appears to be a formatting cleanup with no functional impact.
-- **Relative path plugin installation note refined**: Removed suggestion to "restructure your marketplace so the shared directory is inside the plugin source path" from the installation note, keeping only the symlinks recommendation.
-- **Plugin cache location documented**: Explicitly states that marketplace plugins are copied to `~/.claude/plugins/cache` for versioning and security.
+- The `sonnet` model alias entry in `model-config.md` now reads "currently Sonnet 4.6" (was "currently Sonnet 4.5"), confirming the alias tracks the latest Sonnet release.
+- The example value for the `model` setting in `settings.md` changed from `"claude-sonnet-4-5-20250929"` to `"claude-sonnet-4-6"` — this serves as the canonical reference for the new simplified model string format.
+- The `[1m]` context window example in `model-config.md` is updated: `/model claude-sonnet-4-6[1m]` (was `/model claude-sonnet-4-5-20250929[1m]`). The 1M context window note in `google-vertex-ai.md` is also updated to reference Sonnet 4.6.
+- The `SessionStart` hook payload example in `hooks.md` now shows `"model": "claude-sonnet-4-6"`, relevant for teams inspecting hook event data.
+- The costs page now references Sonnet 4.6 in its ~$100-200/developer/month estimate.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| plugin-marketplaces.md | Modified | +132/-15 | Added strict mode documentation, version resolution/release channels section, plugin source types table, and marketplace vs plugin source clarification |
-| plugins-reference.md | Modified | +13/-44 | Simplified external dependency guidance to symlinks-only, removed duplicate caching documentation, added version management warning |
-| overview.md | Modified | +5/-5 | Cleaned up duplicate theme attributes in code blocks |
+| mcp.md | Modified | +25 / -0 | New section: Use MCP servers from Claude.ai |
+| google-vertex-ai.md | Modified | +7 / -7 | Default primary model updated to `claude-sonnet-4-6`; 1M context note updated |
+| amazon-bedrock.md | Modified | +6 / -6 | Default primary model updated to `claude-sonnet-4-6`; model ID format simplified |
+| github-actions.md | Modified | +6 / -6 | Model examples updated to `claude-sonnet-4-6`; Bedrock model ID format note simplified |
+| model-config.md | Modified | +4 / -4 | `sonnet` alias updated to Sonnet 4.6; `default` tier breakdown revised for Pro/Team Standard |
+| monitoring-usage.md | Modified | +4 / -4 | Model identifier examples in metrics attributes updated to `claude-sonnet-4-6` |
+| settings.md | Modified | +2 / -2 | `model` setting example and git commit attribution updated to Sonnet 4.6 |
+| microsoft-foundry.md | Modified | +1 / -1 | `ANTHROPIC_DEFAULT_SONNET_MODEL` example updated to `claude-sonnet-4-6` |
+| cli-reference.md | Modified | +1 / -1 | `--model` flag example updated to `claude-sonnet-4-6` |
+| costs.md | Modified | +1 / -1 | Cost estimate reference model updated to Sonnet 4.6 |
+| gitlab-ci-cd.md | Modified | +1 / -1 | Bedrock model ID example updated to `claude-sonnet-4-6` |
+| hooks.md | Modified | +1 / -1 | `SessionStart` hook payload model example updated to `claude-sonnet-4-6` |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-02-17*
