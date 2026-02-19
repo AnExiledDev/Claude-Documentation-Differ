@@ -4,6 +4,8 @@
 
 This update removes `delegate` permission mode from Claude Code across all documentation, simplifies agent team navigation from bidirectional `Shift+Up/Down` to unidirectional `Shift+Down` cycling, and introduces comprehensive model version pinning guidance for Bedrock, Vertex AI, and Foundry deployments. OpenTelemetry monitoring receives several attribute additions and renames, including a new `prompt.id` correlation attribute and `last_assistant_message` field for `Stop` and `SubagentStop` hooks.
 
+A subsequent documentation update (same day) clarified the semantics of the `user.id` OpenTelemetry attribute — see the updated entry under [OpenTelemetry Monitoring](#opentelemetry-monitoring-attribute-additions-and-renames) below.
+
 ---
 
 ## Significant Changes
@@ -87,6 +89,13 @@ Several attribute-level changes to the OTel schema — relevant to teams with ex
   - *Implication*: Telemetry pipelines may now receive user email addresses for OAuth-authenticated sessions. Organizations with privacy requirements should plan to filter this field.
   - *Source*: [Monitoring usage](https://code.claude.com/docs/en/monitoring-usage.md)
 
+- **`user.id` description clarified as a per-installation identifier** *(subsequent update)*: The `user.id` attribute description was updated to make explicit that it tracks devices/installations, not individual user accounts.
+  > Before: `user.id` — "Anonymous user identifier"
+  >
+  > After: `user.id` — "Anonymous device/installation identifier, generated per Claude Code installation"
+  - *Implication*: `user.id` is scoped to a Claude Code installation on a given machine — one person using Claude Code on two devices will have two distinct `user.id` values. Use `user.account_uuid` (available when authenticated) to correlate activity across devices for a single user.
+  - *Source*: [Monitoring usage](https://code.claude.com/docs/en/monitoring-usage.md)
+
 - **New `prompt.id` event correlation attribute**: A UUID v4 that links all events (user prompt, API requests, tool results) produced while processing a single user prompt.
   > When a user submits a prompt, Claude Code may make multiple API calls and run several tools. The `prompt.id` attribute lets you tie all of those events back to the single prompt that triggered them.
   >
@@ -141,7 +150,7 @@ Several attribute-level changes to the OTel schema — relevant to teams with ex
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| monitoring-usage.md | Modified | +75 / -49 | New `prompt.id` correlation, `user.id`/`user.email` attributes, temporality preference env var, attribute renames, `speed` field on API events |
+| monitoring-usage.md | Modified | +84 / -58 | New `prompt.id` correlation, `user.id`/`user.email` attributes, temporality preference env var, attribute renames, `speed` field on API events; `user.id` clarified as device/installation identifier |
 | model-config.md | Modified | +37 / -7 | New "Pin models for third-party deployments" section; extended context expanded to Sonnet 4.6 and subscribers |
 | google-vertex-ai.md | Modified | +23 / -19 | "Model configuration" → "Pin model versions" with Warning; consolidated region/endpoint notes |
 | microsoft-foundry.md | Modified | +17 / -4 | New "Pin model versions" section with Warning; setup step clarified |
