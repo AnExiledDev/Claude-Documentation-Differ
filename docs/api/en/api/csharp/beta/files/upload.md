@@ -1,26 +1,18 @@
-## Delete
+## Upload
 
-`VersionDeleteResponse Beta.Skills.Versions.Delete(VersionDeleteParamsparameters, CancellationTokencancellationToken = default)`
+`FileMetadata Beta.Files.Upload(FileUploadParamsparameters, CancellationTokencancellationToken = default)`
 
-**delete** `/v1/skills/{skill_id}/versions/{version}`
+**post** `/v1/files`
 
-Delete Skill Version
+Upload File
 
 ### Parameters
 
-- `VersionDeleteParams parameters`
+- `FileUploadParams parameters`
 
-  - `required string skillID`
+  - `required string file`
 
-    Path param: Unique identifier for the skill.
-
-    The format and length of IDs may change over time.
-
-  - `required string version`
-
-    Path param: Version identifier for the skill.
-
-    Each version is identified by a Unix epoch timestamp (e.g., "1759178010641129").
+    Body param: The file to upload
 
   - `IReadOnlyList<AnthropicBeta> betas`
 
@@ -68,30 +60,46 @@ Delete Skill Version
 
 ### Returns
 
-- `class VersionDeleteResponse:`
+- `class FileMetadata:`
 
   - `required string ID`
 
-    Version identifier for the skill.
+    Unique object identifier.
 
-    Each version is identified by a Unix epoch timestamp (e.g., "1759178010641129").
+    The format and length of IDs may change over time.
 
-  - `required string Type`
+  - `required DateTimeOffset CreatedAt`
 
-    Deleted object type.
+    RFC 3339 datetime string representing when the file was created.
 
-    For Skill Versions, this is always `"skill_version_deleted"`.
+  - `required string Filename`
+
+    Original filename of the uploaded file.
+
+  - `required string MimeType`
+
+    MIME type of the file.
+
+  - `required Long SizeBytes`
+
+    Size of the file in bytes.
+
+  - `JsonElement Type "file"constant`
+
+    Object type.
+
+    For files, this is always `"file"`.
+
+  - `Boolean Downloadable`
+
+    Whether the file can be downloaded.
 
 ### Example
 
 ```csharp
-VersionDeleteParams parameters = new()
-{
-    SkillID = "skill_id",
-    Version = "version",
-};
+FileUploadParams parameters = new() { File = Encoding.UTF8.GetBytes("text") };
 
-var version = await client.Beta.Skills.Versions.Delete(parameters);
+var fileMetadata = await client.Beta.Files.Upload(parameters);
 
-Console.WriteLine(version);
+Console.WriteLine(fileMetadata);
 ```

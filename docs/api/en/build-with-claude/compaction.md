@@ -17,11 +17,16 @@ Compaction extends the effective context length for long-running conversations a
 Compaction is currently in beta. Include the [beta header](/docs/en/api/beta-headers) `compact-2026-01-12` in your API requests to use this feature.
 </Note>
 
+<Note>
+Compaction is eligible for [Zero Data Retention (ZDR)](/docs/en/build-with-claude/zero-data-retention) arrangements.
+</Note>
+
 ## Supported models
 
 Compaction is supported on the following models:
 
 - Claude Opus 4.6 (`claude-opus-4-6`)
+- Claude Sonnet 4.6 (`claude-sonnet-4-6`)
 
 ## How compaction works
 

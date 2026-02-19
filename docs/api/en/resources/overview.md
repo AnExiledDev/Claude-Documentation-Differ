@@ -7,6 +7,10 @@
       Detailed documentation of Claude Opus 4.6.
     </Card>
 
+    <Card title="Claude Sonnet 4.6 System Card" icon="file" href="https://www.anthropic.com/claude-sonnet-4-6-system-card">
+      Detailed documentation of Claude Sonnet 4.6.
+    </Card>
+
     <Card title="Claude Opus 4.5 System Card" icon="file" href="https://www.anthropic.com/claude-opus-4-5-system-card">
       Detailed documentation of Claude Opus 4.5.
     </Card>
@@ -43,7 +47,7 @@
   
 
     <Card title="Quickstarts" icon="lightning" href="https://github.com/anthropics/anthropic-quickstarts">
-      Deployable applications built with our API.
+      Deployable applications built with the API.
     </Card>
 
     <Card title="Courses" icon="graduation-cap" href="https://anthropic.skilljar.com/">

@@ -5,7 +5,7 @@
 Prompt leaks can expose sensitive information that you expect to be "hidden" in your prompt. While no method is foolproof, the strategies below can significantly reduce the risk.
 
 ## Before you try to reduce prompt leak
-We recommend using leak-resistant prompt engineering strategies only when **absolutely necessary**. Attempts to leak-proof your prompt can add complexity that may degrade performance in other parts of the task due to increasing the complexity of the LLM’s overall task.
+Consider using leak-resistant prompt engineering strategies only when **absolutely necessary**. Attempts to leak-proof your prompt can add complexity that may degrade performance in other parts of the task due to increasing the complexity of the LLM’s overall task.
 
 If you decide to implement leak-resistant techniques, be sure to test your prompts thoroughly to ensure that the added complexity does not negatively impact the model’s performance or the quality of its outputs.
 
@@ -16,7 +16,7 @@ If you decide to implement leak-resistant techniques, be sure to test your promp
 ## Strategies to reduce prompt leak
 
 - **Separate context from queries:**
-You can try using system prompts to isolate key information and context from user queries. You can emphasize key instructions in the `User` turn, then reemphasize those instructions by prefilling the `Assistant` turn. (Note: prefilling is deprecated and not supported on Claude Opus 4.6 and Sonnet 4.5.)
+You can try using system prompts to isolate key information and context from user queries. You can emphasize key instructions in the `User` turn, then reemphasize those instructions by prefilling the `Assistant` turn. (Note: prefilling is deprecated and not supported on Claude Opus 4.6, Sonnet 4.6, and Sonnet 4.5.)
 
 <section title="Example: Safeguarding proprietary analytics">
 

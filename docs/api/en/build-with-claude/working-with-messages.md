@@ -6,6 +6,10 @@ Practical patterns and examples for using the Messages API effectively
 
 This guide covers common patterns for working with the Messages API, including basic requests, multi-turn conversations, prefill techniques, and vision capabilities. For complete API specifications, see the [Messages API reference](/docs/en/api/messages).
 
+<Note>
+This feature is [Zero Data Retention (ZDR)](/docs/en/build-with-claude/zero-data-retention) eligible. When your organization has a ZDR arrangement, data sent through this feature is not stored after the API response is returned.
+</Note>
+
 ## Basic request and response
 
 <CodeGroup>
@@ -75,7 +79,7 @@ This guide covers common patterns for working with the Messages API, including b
 
 ## Multiple conversational turns
 
-The Messages API is stateless, which means that you always send the full conversational history to the API. You can use this pattern to build up a conversation over time. Earlier conversational turns don't necessarily need to actually originate from Claude — you can use synthetic `assistant` messages.
+The Messages API is stateless, which means that you always send the full conversational history to the API. You can use this pattern to build up a conversation over time. Earlier conversational turns don't necessarily need to actually originate from Claude. You can use synthetic `assistant` messages.
 
 <CodeGroup>
 ```bash Shell
@@ -227,12 +231,12 @@ You can pre-fill part of Claude's response in the last position of the input mes
 ```
 
 <Warning>
-Prefilling is deprecated and not supported on Claude Opus 4.6 and Claude Sonnet 4.5. Use [structured outputs](/docs/en/build-with-claude/structured-outputs) or system prompt instructions instead.
+Prefilling is deprecated and not supported on Claude Opus 4.6, Claude Sonnet 4.6, and Claude Sonnet 4.5. Use [structured outputs](/docs/en/build-with-claude/structured-outputs) or system prompt instructions instead.
 </Warning>
 
 ## Vision
 
-Claude can read both text and images in requests. We support both `base64` and `url` source types for images, and the `image/jpeg`, `image/png`, `image/gif`, and `image/webp` media types. See our [vision guide](/docs/en/build-with-claude/vision) for more details.
+Claude can read both text and images in requests. Both `base64` and `url` source types are supported for images, along with the `image/jpeg`, `image/png`, `image/gif`, and `image/webp` media types. See the [vision guide](/docs/en/build-with-claude/vision) for more details.
 
 <CodeGroup>
   ```bash Shell
@@ -425,6 +429,6 @@ Claude can read both text and images in requests. We support both `base64` and `
 
 ## Tool use and computer use
 
-See our [guide](/docs/en/agents-and-tools/tool-use/overview) for examples of how to use tools with the Messages API.
-See our [computer use guide](/docs/en/agents-and-tools/tool-use/computer-use-tool) for examples of how to control desktop computer environments with the Messages API.
+See the [tool use guide](/docs/en/agents-and-tools/tool-use/overview) for examples of how to use tools with the Messages API.
+See the [computer use guide](/docs/en/agents-and-tools/tool-use/computer-use-tool) for examples of how to control desktop computer environments with the Messages API.
 For guaranteed JSON output, see [Structured Outputs](/docs/en/build-with-claude/structured-outputs).
