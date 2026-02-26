@@ -2,54 +2,77 @@
 
 ## Summary
 
-Two pages were modified in this update. The most significant change is to the auto memory feature: it is now enabled by default (previously under gradual rollout), with new toggle controls in `/memory`, `settings.json`, and a clarified explanation of environment variable precedence. The `/copy` command also received an updated description reflecting a new interactive code block picker.
+One page was modified: the "Claude Code on the web" page. The primary change removes the `&` prefix syntax for launching remote web sessions from the terminal, replacing it entirely with the `--remote` flag. Associated terminology, section names, and code examples were updated throughout.
 
 ## Significant Changes
 
-### Features
+### Features / CLI Interface
 
-- **`/copy` command now supports interactive code block selection**: The description for `/copy` was updated to reflect new behavior when code blocks are present in the last response.
-  > Copy the last response to clipboard. When code blocks are present, shows an interactive picker to select individual code blocks or the full response
-  - *Implication*: Developers can now selectively copy individual code blocks rather than the entire assistant response, reducing friction when working with multi-block outputs.
-  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
+- **`&` prefix syntax removed; `--remote` is now the sole terminal-to-web method**: The `&` message prefix for spawning remote web sessions from within Claude Code has been dropped. All documentation now directs users to `claude --remote "<task>"` as the canonical way to start a web session from the terminal.
 
-- **Auto memory is now enabled by default**: The gradual rollout phase has ended. The documentation note was updated from an opt-in instruction to a statement of default availability.
-  > Auto memory is enabled by default. To toggle it on or off, use `/memory` and select the auto-memory toggle.
-  - *Implication*: Users who previously had no auto memory because they were not in the rollout will now have it active. Those who want to disable it must do so explicitly.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+  Old approach:
+  > `& Fix the authentication bug in src/auth/login.ts`
 
-### Configuration
-
-- **`autoMemoryEnabled` setting added to `settings.json`**: Auto memory can now be disabled globally (user settings) or per-project (project settings) via a new `autoMemoryEnabled` key.
-  > Disable auto memory for all projects by adding `autoMemoryEnabled` to your user settings:
-  > ```json
-  > // ~/.claude/settings.json
-  > { "autoMemoryEnabled": false }
+  New approach:
+  > ```bash
+  > claude --remote "Fix the authentication bug in src/auth/login.ts"
   > ```
-  > Disable auto memory for a single project by adding `autoMemoryEnabled` to the project settings:
-  > ```json
-  > // .claude/settings.json
-  > { "autoMemoryEnabled": false }
-  > ```
-  - *Implication*: Teams can now disable auto memory at the project level via committed configuration, giving consistent behavior across contributors without relying on per-user environment variables.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
 
-- **`CLAUDE_CODE_DISABLE_AUTO_MEMORY` environment variable precedence clarified**: The variable now explicitly takes precedence over both the `/memory` toggle and `settings.json`. The old confusing "double-negative logic" explanation (`DISABLE=0` meaning "don't disable") was removed.
-  > Override all other settings with the `CLAUDE_CODE_DISABLE_AUTO_MEMORY` environment variable. This takes precedence over both the `/memory` toggle and `settings.json`, making it useful for CI or managed environments.
-  - *Implication*: CI pipelines and managed environments can reliably suppress auto memory writes using the environment variable, regardless of what any settings file specifies.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+  - *Implication*: Developers using the `&` shorthand in scripts or workflows will need to migrate to `claude --remote`. The `--remote` flag was already documented as an alternative; it is now the only supported path.
+  - *Source*: [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+
+- **"Tips for background tasks" section renamed to "Tips for remote tasks"**: The subsection containing workflow tips (plan-locally-execute-remotely, parallel task runs) was renamed to reflect the shift away from `&`-prefix "background" framing toward explicit `--remote` invocations.
+
+  > Old: `#### Tips for background tasks` → New: `#### Tips for remote tasks`
+
+  - *Implication*: The rename signals a conceptual clarification — these are remote cloud sessions, not background processes attached to a local terminal session.
+  - *Source*: [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+
+- **Session handoff note updated**: The note clarifying one-way session handoff was reworded to remove the `&` reference and reframe scope.
+
+  Old:
+  > `The [`&` prefix](#from-terminal-to-web) creates a *new* web session with your current conversation context.`
+
+  New:
+  > `The `--remote` flag creates a *new* web session for your current repository.`
+
+  - *Implication*: The phrasing change also shifts the framing — the new session is scoped to a *repository*, not a conversation context, which may indicate that `--remote` does not carry over local conversation history the way `&` previously did.
+  - *Source*: [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+
+- **Parallel task example updated**: The parallel tasks tip previously showed `&` prefix commands run from within Claude Code; it now uses three separate `claude --remote` shell invocations.
+
+  Old:
+  > ```
+  > & Fix the flaky test in auth.spec.ts
+  > & Update the API documentation
+  > & Refactor the logger to use structured output
+  > ```
+
+  New:
+  > ```bash
+  > claude --remote "Fix the flaky test in auth.spec.ts"
+  > claude --remote "Update the API documentation"
+  > claude --remote "Refactor the logger to use structured output"
+  > ```
+
+  - *Implication*: Each remote task is now a discrete shell command, which integrates more naturally into scripts and CI pipelines than the in-REPL `&` prefix.
+  - *Source*: [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
 ## Notable Details
 
-- The `/memory` file selector now also exposes an **auto-memory toggle** directly in the UI, complementing the settings file and environment variable controls. This gives three discrete control layers with a clear precedence order: environment variable > `settings.json` > UI toggle.
-- The old documentation described `CLAUDE_CODE_DISABLE_AUTO_MEMORY=0` as the opt-in mechanism during gradual rollout. That instruction has been removed entirely, reflecting that the feature is no longer gated behind a rollout.
+- **"iOS app" → "mobile app"**: Two references to "the Claude iOS app" were changed to "the Claude mobile app", broadening the language to include Android users (the Android app was already mentioned in the page intro). No functional change.
+
+- **`/remote-env` note cleaned up**: The note about selecting a default environment from the terminal previously referenced both `&` and `--remote`; it now references only `--remote`. This keeps the `/remote-env` documentation consistent with the removal of `&`.
+
+- **Plan-then-execute example is now self-contained**: The code example for the "plan locally, execute remotely" pattern previously used `& Execute the migration plan we discussed` — referencing the current conversation as context. The new example uses `claude --remote "Execute the migration plan in docs/migration-plan.md"`, pointing to a specific file path. This reflects that `--remote` starts a fresh session without conversation history, so the task prompt must be self-contained.
+
+- **Intro paragraph reworded**: The summary description of the terminal↔web workflow changed from `send tasks from your terminal to run on the web with the & prefix` to `kick off new tasks on the web from your terminal with --remote`, consistently retiring the `&` framing across the entire page.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| `interactive-mode.md` | Modified | +1 / -1 | Updated `/copy` command description to document interactive code block picker |
-| `memory.md` | Modified | +19 / -3 | Auto memory now default-enabled; added `autoMemoryEnabled` settings key; clarified env var precedence; added `/memory` UI toggle |
+| `claude-code-on-the-web.md` | Modified | +17 / -23 | Removed `&` prefix syntax throughout; `--remote` flag is now the sole method for launching remote web sessions from the terminal; tips section renamed from "background tasks" to "remote tasks" |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-02-26*
