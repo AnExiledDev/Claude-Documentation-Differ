@@ -2,11 +2,11 @@
 
 ## Summary
 
-28 pages were modified across the Claude Code documentation with no pages added or removed across two update runs. The most substantive changes are a terminology shift from "headless mode" to "non-interactive mode" (aligning with the Agent SDK framing), the addition of a plugin marketplace submission portal, new environment variables for disabling adaptive reasoning and fast mode, and broad code block formatting standardization across dozens of pages.
+Two update runs were detected on 2026-02-27. The first run captured 28 modified pages with substantive changes (terminology shifts, new environment variables, plugin marketplace submission). The second run detected a single trivial markup cleanup in `quickstart.md` with no content changes.
 
 ---
 
-## Significant Changes
+## Run 1 — Significant Changes
 
 ### Terminology
 
@@ -47,7 +47,7 @@
 
 ---
 
-## Notable Details
+## Run 1 — Notable Details
 
 - **VS Code docs: capitalization and intro text**: The VS Code extension page standardized bullet list items to sentence case throughout ("Click" → "click", "Available" → "available", etc.) and added a brief "Before installing, make sure you have:" intro sentence before the prerequisites list. These are editorial, not functional.
 
@@ -61,7 +61,7 @@
 
 ---
 
-## Changes by Page
+## Run 1 — Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
@@ -92,6 +92,21 @@
 | statusline.md | Modified | +1/-1 | Minor edit |
 | troubleshooting.md | Modified | +2/-2 | Minor edits |
 | claude-code-on-the-web.md | Modified | +1/-1 | Minor edit |
+
+---
+
+## Run 2 — Changes by Page
+
+This run detected a single trivial markup cleanup with no content changes. No new features, commands, or behavior were documented.
+
+| Page | Type | Lines Changed | Summary |
+|------|------|---------------|---------|
+| quickstart.md | Modified | +5/-5 | Deduplicated repeated `theme={null}` attributes on code block fences |
+
+## Run 2 — Notable Details
+
+- **Code block attribute deduplication in quickstart**: Each of the five installation code blocks (macOS/Linux/WSL `bash`, Windows `powershell`, Windows `batch`, Homebrew `bash`, WinGet `powershell`) previously carried `theme={null}` repeated nine times on the opening fence (e.g., `` ```bash theme={null} theme={null} ... ``). These were collapsed to a single occurrence. The actual install commands are unchanged.
+  - *Source*: [Quickstart](https://code.claude.com/docs/en/quickstart.md)
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-02-27*
