@@ -2,7 +2,7 @@
 
 ## Summary
 
-26 pages were modified across the Claude Code documentation with no pages added or removed. The most substantive changes are a terminology shift from "headless mode" to "non-interactive mode" (aligning with the Agent SDK framing), the addition of a plugin marketplace submission portal, a new environment variable for disabling adaptive reasoning, and broad code block formatting standardization across dozens of pages.
+28 pages were modified across the Claude Code documentation with no pages added or removed across two update runs. The most substantive changes are a terminology shift from "headless mode" to "non-interactive mode" (aligning with the Agent SDK framing), the addition of a plugin marketplace submission portal, new environment variables for disabling adaptive reasoning and fast mode, and broad code block formatting standardization across dozens of pages.
 
 ---
 
@@ -23,6 +23,11 @@
   - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
 
 ### Configuration
+
+- **New `CLAUDE_CODE_DISABLE_FAST_MODE` environment variable**: Setting `CLAUDE_CODE_DISABLE_FAST_MODE=1` disables fast mode entirely at the environment level. This supplements the existing admin-level controls in the Console and Claude AI admin settings.
+  > `"Another option to disable fast mode entirely is to set CLAUDE_CODE_DISABLE_FAST_MODE=1. See Environment variables."`
+  - *Implication*: Operators can now disable fast mode without admin UI access — useful for CI environments, LLM gateway setups, or scripted deployments where fast mode behavior is undesirable.
+  - *Source*: [fast-mode.md](https://code.claude.com/docs/en/fast-mode.md), [settings.md](https://code.claude.com/docs/en/settings.md)
 
 - **New `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` environment variable documented**: The model configuration page gained explicit documentation for disabling adaptive reasoning on Opus 4.6 and Sonnet 4.6, reverting to the fixed thinking budget controlled by `MAX_THINKING_TOKENS`.
   > `"To disable adaptive reasoning on Opus 4.6 and Sonnet 4.6 and revert to the previous fixed thinking budget, set CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1. When disabled, these models use the fixed budget controlled by MAX_THINKING_TOKENS."`
@@ -71,7 +76,8 @@
 | cli-reference.md | Modified | +8/-6 | "REPL" → "session" terminology; added intro sentence; capitalization fixes |
 | model-config.md | Modified | +3/-1 | Added `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` env var documentation |
 | discover-plugins.md | Modified | +6/-1 | Official marketplace submission forms documented |
-| settings.md | Modified | +4/-3 | Minor edits (exact changes minor) |
+| settings.md | Modified | +5/-3 | Added `CLAUDE_CODE_DISABLE_FAST_MODE` to env vars table; minor edits |
+| fast-mode.md | Modified | +2/-0 | Added note on `CLAUDE_CODE_DISABLE_FAST_MODE=1` as opt-out option |
 | skills.md | Modified | +7/-7 | Code block formatting standardization |
 | hooks-guide.md | Modified | +4/-4 | Code block formatting standardization |
 | desktop.md | Modified | +2/-0 | Minor additions |
