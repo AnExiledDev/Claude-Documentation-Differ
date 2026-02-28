@@ -91,3 +91,31 @@ Five pages were updated in this batch. The most substantive changes are to sandb
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-02-28*
+
+---
+
+# Claude Code Documentation Changes — 2026-02-28 (Update 2)
+
+## Summary
+
+One page was modified in this run. The Remote Control feature's availability note was updated to confirm that Pro plan access has fully rolled out, removing the prior "coming soon" language.
+
+## Significant Changes
+
+### Features
+
+- **Remote Control now available on Pro plans**: The availability note for Remote Control dropped the "rolling out to Pro plans soon" qualifier and now states the feature is available on both Max and Pro plans.
+  > Before: "Remote Control is available as a research preview on Max plans and will be rolling out to Pro plans soon. It is not available on Team or Enterprise plans."
+
+  > After: "Remote Control is available as a research preview on Max and Pro plans. It is not available on Team or Enterprise plans."
+  - *Implication*: Pro plan subscribers can now use Remote Control to continue Claude Code sessions from a phone, tablet, or any browser via claude.ai/code or the Claude mobile app. Team and Enterprise plans remain excluded from this feature.
+  - *Source*: [remote-control.md](https://code.claude.com/docs/en/remote-control.md)
+
+## Changes by Page
+
+| Page | Type | Lines Changed | Summary |
+|------|------|---------------|---------|
+| `docs/claude-code/en/remote-control.md` | Modified | +1/-1 | Remote Control plan availability updated: Pro plan rollout confirmed, "coming soon" language removed |
+
+---
+*Generated from Claude Code CLI documentation changes detected on 2026-02-28 (18:08 UTC)*
