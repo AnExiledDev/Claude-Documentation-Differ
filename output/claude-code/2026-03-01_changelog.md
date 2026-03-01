@@ -2,99 +2,156 @@
 
 ## Summary
 
-14 pages were modified across the Claude Code documentation, with the largest change being a significant reorganization of the memory/CLAUDE.md reference page. A new HTTP hook type was added to the hooks guide, two built-in bundled skills (`/simplify` and `/batch`) are now documented, and the `Task` tool used in subagent spawning was officially renamed to `Agent` as of version 2.1.63.
+Six pages were modified with no additions or removals. The most substantial change is a near-complete rewrite of the `interactive-mode.md` built-in commands reference, expanding it from ~25 entries to a comprehensive 50+ command reference with aliases and improved descriptions. A third bundled skill (`/debug`) is now documented, and a consistent terminology shift from "slash commands" to "commands" runs across all six pages.
+
+---
 
 ## Significant Changes
 
-### Memory & CLAUDE.md
+### Interactive Mode Commands Reference Overhaul
 
-- **Memory documentation overhauled**: The page was retitled from "Manage Claude's memory" to "How Claude remembers your project" and restructured around two core concepts — CLAUDE.md files (user-written) and auto memory (Claude-written). A new comparison table leads the page to help developers choose the right mechanism.
-  > "Claude Code has two complementary memory systems. Both are loaded at the start of every conversation. Claude treats them as context, not enforced configuration. The more specific and concise your instructions, the more consistently Claude follows them."
-  - *Implication*: Developers should review the new scope table for CLAUDE.md file locations (Managed policy, Project, User, Local) and note that each scope now includes Windows paths explicitly (e.g., `C:\Program Files\ClaudeCode\CLAUDE.md`).
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+- **Built-in commands table comprehensively expanded**: The `interactive-mode.md` commands reference was rewritten. The previous version was described as covering "commonly used commands but not all available options." The new version is framed as a complete reference, with the caveat that some commands are conditionally visible.
 
-- **Auto memory controls now documented**: The `autoMemoryEnabled` setting and `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` environment variable are documented for toggling auto memory on or off.
-  > "Auto memory is on by default. To toggle it, open `/memory` in a session and use the auto memory toggle, or set `autoMemoryEnabled` in your project settings: `{ \"autoMemoryEnabled\": false }`. To disable auto memory via environment variable, set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`."
-  - *Implication*: Teams that want to prevent Claude from accumulating session notes can now disable auto memory via settings file or environment variable — both are now first-class supported mechanisms.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+  > "Type `/` in Claude Code to see all available commands, or type `/` followed by any letters to filter. Not all commands are visible to every user. Some depend on your platform, plan, or environment. For example, `/desktop` only appears on macOS and Windows, `/upgrade` and `/privacy-settings` are only available on Pro and Max plans, and `/terminal-setup` is hidden when your terminal natively supports its keybindings."
 
-- **MEMORY.md 200-line loading limit clarified**: The auto memory entrypoint file `MEMORY.md` is loaded only up to 200 lines at session start. Content beyond line 200 is not loaded; Claude is expected to keep `MEMORY.md` concise by offloading detail into topic files.
-  > "The first 200 lines of `MEMORY.md` are loaded at the start of every conversation. Content beyond line 200 is not loaded at session start. Claude keeps `MEMORY.md` concise by moving detailed notes into separate topic files."
-  - *Implication*: This limit applies only to `MEMORY.md`, not to CLAUDE.md files (which load in full). Developers building workflows that rely on auto memory should be aware of what Claude will and won't see at startup.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+  Argument notation is now explicit: `<arg>` for required, `[arg]` for optional.
+  - *Implication*: Developers can now reference the docs instead of running `/` in the CLI to discover available commands. Platform- and plan-gated commands are explicitly identified.
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-- **New troubleshooting section**: Four common failure modes are now documented with debugging steps: instructions not being followed, unclear what auto memory saved, CLAUDE.md files growing too large, and instructions seeming lost after `/compact`.
-  > "CLAUDE.md is context, not enforcement. Claude reads it and tries to follow it, but there's no guarantee of strict compliance, especially for vague or conflicting instructions."
-  - *Implication*: The troubleshooting guidance explicitly addresses the `/compact` concern — CLAUDE.md is re-injected from disk after compaction, so only in-conversation instructions (not written to CLAUDE.md) are lost.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+- **New commands documented for the first time**:
 
-- **CLAUDE.md from `--add-dir` directories disabled by default**: When using `--add-dir` to give Claude access to additional directories, CLAUDE.md files from those directories are not loaded unless `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` is set.
-  > "To also load CLAUDE.md files from additional directories, including `CLAUDE.md`, `.claude/CLAUDE.md`, and `.claude/rules/*.md`, set the `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD` environment variable."
-  - *Implication*: This is opt-in behavior. Developers using `--add-dir` for shared config directories will need to set this env var if they want shared CLAUDE.md files to take effect.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+  | Command | Purpose |
+  |---|---|
+  | `/add-dir <path>` | Add a working directory to the current session |
+  | `/agents` | Manage [agent](/en/sub-agents) configurations |
+  | `/chrome` | Configure Claude in Chrome settings |
+  | `/diff` | Interactive diff viewer: uncommitted changes and per-turn diffs, navigable with arrow keys |
+  | `/extra-usage` | Configure extra usage to keep working when rate limits are hit |
+  | `/fast [on\|off]` | Toggle fast mode on or off |
+  | `/feedback [report]` | Submit feedback (alias: `/bug`) |
+  | `/fork [name]` | Fork the current conversation at this point |
+  | `/hooks` | Manage hook configurations for tool events |
+  | `/ide` | Manage IDE integrations and show status |
+  | `/insights` | Generate a report on sessions: project areas, interaction patterns, friction points |
+  | `/install-github-app` | Set up Claude GitHub Actions for a repository |
+  | `/install-slack-app` | Install the Claude Slack app via browser OAuth |
+  | `/keybindings` | Open or create the keybindings configuration file |
+  | `/login` / `/logout` | Sign in or out of your Anthropic account |
+  | `/mobile` | Show QR code to download the Claude mobile app (aliases: `/ios`, `/android`) |
+  | `/output-style [style]` | Switch output styles: Default, Explanatory, Learning, or custom |
+  | `/passes` | Share a free week of Claude Code (only visible if account is eligible) |
+  | `/plugin` | Manage Claude Code plugins |
+  | `/pr-comments [PR]` | Fetch and display GitHub PR comments (requires `gh` CLI) |
+  | `/privacy-settings` | View/update privacy settings (Pro and Max only) |
+  | `/release-notes` | View the full changelog in-session |
+  | `/remote-control` | Make the session available for remote control from claude.ai (alias: `/rc`) |
+  | `/remote-env` | Configure the default remote environment for teleport sessions |
+  | `/review` | Review a pull request for quality, correctness, and security (requires `gh` CLI) |
+  | `/sandbox` | Toggle sandbox mode (supported platforms only) |
+  | `/security-review` | Analyze pending branch changes for security vulnerabilities |
+  | `/skills` | List available skills |
+  | `/stickers` | Order Claude Code stickers |
+  | `/terminal-setup` | Configure terminal keybindings (only shown in terminals that need it) |
+  | `/upgrade` | Open the upgrade page to switch to a higher plan tier |
+  | `/vim` | Toggle between Vim and Normal editing modes |
 
-### Hooks
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-- **HTTP hook type now documented**: The hooks guide adds a new `## HTTP hooks` section documenting `"type": "http"` as a hook handler type. This allows hook events to be POSTed to a URL instead of running a local shell command.
-  > "`\"type\": \"http\"`: POST event data to a URL. See HTTP hooks."
-  - *Implication*: This enables integrating Claude Code's hook lifecycle with remote services (e.g., logging endpoints, approval systems, webhook receivers) without needing a local script. The hook type sits alongside `command`, `prompt`, and `agent` types.
-  - *Source*: [Hooks Guide](https://code.claude.com/docs/en/hooks-guide.md)
+- **Existing commands updated with aliases and improved descriptions**:
 
-### Skills
+  | Command | Update |
+  |---|---|
+  | `/clear` | Added aliases `/reset`, `/new`; description adds "free up context" |
+  | `/config` | Added alias `/settings` |
+  | `/copy` | Description clarified to "Copy the last assistant response" |
+  | `/desktop` | Added alias `/app`; description updated to "Continue the current session in the Claude Code Desktop app" |
+  | `/exit` | Added alias `/quit` |
+  | `/memory` | Expanded: now covers auto-memory enable/disable and viewing auto-memory entries |
+  | `/permissions` | Added alias `/allowed-tools` |
+  | `/resume` | Added alias `/continue` |
+  | `/rewind` | Now links to `/en/checkpointing`; added alias `/checkpoint` |
+  | `/statusline` | Expanded: "Describe what you want, or run without arguments to auto-configure from your shell prompt" |
+  | `/theme` | Expanded: documents light/dark variants, colorblind-accessible (daltonized) themes, and ANSI themes |
+  | `/usage` | Removed "For subscription plans only" qualifier |
 
-- **Two bundled skills now documented**: Claude Code ships with two built-in skills that are available in every session without configuration.
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-  - **`/simplify`**: Reviews recently changed files for code reuse, quality, and efficiency issues, then fixes them. Spawns three parallel review agents (code reuse, code quality, efficiency), aggregates findings, and applies fixes. Accepts optional text to focus on specific concerns.
-  - **`/batch <instruction>`**: Orchestrates large-scale codebase changes in parallel. Researches the codebase, decomposes work into 5–30 independent units, presents a plan for approval, then spawns one background agent per unit in an isolated git worktree. Each agent implements its unit, runs tests, and opens a pull request. Requires a git repository.
+- **`/teleport` removed from the reference table**: The prior entry — "`/teleport` — Resume a remote session from claude.ai (subscribers only)" — no longer appears. Its functionality maps to `/remote-control` (alias `/rc`) and `/remote-env`. `/todos` was also silently removed from the table.
+  - *Implication*: Developers relying on `/teleport` should use `/remote-control` instead.
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-  > "Claude Code ships with two built-in skills available in every session: `/simplify` ... `/batch <instruction>`..."
-  - *Implication*: `/batch` in particular represents a significant capability — automated parallel codebase-wide changes with per-unit PR creation. It requires git and uses worktree isolation per unit.
+---
+
+### Bundled Skills
+
+- **`/debug` added as a third bundled skill**: Previously only `/simplify` and `/batch` were listed as bundled skills. `/debug` is now formally included.
+
+  > "`/debug [description]`: troubleshoots your current Claude Code session by reading the session debug log. Optionally describe the issue to focus the analysis."
+
+  - *Implication*: `/debug` was previously documented only in the interactive-mode commands table. Its promotion to bundled skill indicates it runs as a prompt-based agent — capable of spawning agents and reading files — rather than fixed CLI logic.
   - *Source*: [Skills](https://code.claude.com/docs/en/skills.md)
 
-### Subagents & Permissions
+- **Bundled skills architecturally distinguished from built-in commands**: A new paragraph explains how bundled skills differ from built-in commands like `/clear` or `/compact`.
 
-- **`Task` tool renamed to `Agent` (v2.1.63)**: The internal tool used to spawn subagents was renamed from `Task` to `Agent`. Permission rules, subagent `tools` field values, and CLI flag syntax now use `Agent(agent_type)` instead of `Task(agent_type)`.
-  > "In version 2.1.63, the Task tool was renamed to Agent. Existing `Task(...)` references in settings and agent definitions still work as aliases."
-  - *Implication*: Existing configurations using `Task(Explore)` or `Task(my-agent)` continue to work without changes. New configurations should use `Agent(Explore)` etc. The permissions page now documents `Agent (subagents)` as a tool-specific rule category.
-  - *Source*: [Sub-agents](https://code.claude.com/docs/en/sub-agents.md), [Permissions](https://code.claude.com/docs/en/permissions.md)
+  > "Unlike [built-in commands](/en/interactive-mode#built-in-commands), which execute fixed logic directly, bundled skills are prompt-based: they give Claude a detailed playbook and let it orchestrate the work using its tools. This means bundled skills can spawn parallel agents, read files, and adapt to your codebase."
 
-### Features Overview
+  - *Implication*: Bundled skills are flexible but model-dependent; built-in commands are deterministic. This matters when reasoning about reliability and predictability.
+  - *Source*: [Skills](https://code.claude.com/docs/en/skills.md)
 
-- **New CLAUDE.md vs Rules vs Skills comparison tab**: The features overview page added a three-way comparison tab clarifying when to use each instruction storage mechanism.
-  > "Use CLAUDE.md for instructions every session needs: build commands, test conventions, project architecture. Use rules to keep CLAUDE.md focused. Rules with `paths` frontmatter only load when Claude works with matching files, saving context. Use skills for content Claude only needs sometimes, like API documentation or a deployment checklist you trigger with `/<name>`."
-  - *Implication*: This is a practical decision guide for teams building out their CLAUDE.md/rules/skills architecture.
+- **Anthropic SDK developer platform skill documented**: A new note describes a skill that activates automatically — no invocation required.
+
+  > "Claude Code also includes a bundled developer platform skill that activates automatically when your code imports the Anthropic SDK. You don't need to invoke it manually."
+
+  - *Implication*: Developers building on the Anthropic SDK get context-aware assistance loaded automatically at session start without any configuration.
+  - *Source*: [Skills](https://code.claude.com/docs/en/skills.md)
+
+- **`features-overview.md` calls out all three bundled skills**: The Skills tab description now explicitly names `/simplify`, `/batch`, and `/debug`.
+
+  > "Claude Code ships with [bundled skills](/en/skills#bundled-skills) like `/simplify`, `/batch`, and `/debug` that work out of the box."
+
   - *Source*: [Features Overview](https://code.claude.com/docs/en/features-overview.md)
+
+---
+
+### Terminology: "Slash Commands" → "Commands"
+
+A consistent rename runs across all six modified pages, replacing "slash commands" and "custom slash commands" with "commands" in descriptive prose. The CLI flag `--disable-slash-commands` keeps its name (it is an identifier, not prose), but its description was updated to match.
+
+| File | Old text | New text |
+|---|---|---|
+| `cli-reference.md` | "Disable all skills and **slash commands** for this session" | "Disable all skills and **commands** for this session" |
+| `features-overview.md` | "invoke skills with a **slash command** like `/deploy`" | "invoke skills with a **command** like `/deploy`" |
+| `hooks-guide.md` | "cannot trigger **slash commands** or tool calls" | "cannot trigger **commands** or tool calls" |
+| `overview.md` | "Create **custom slash commands** to package repeatable workflows" | "Create **custom commands**" |
+| `skills.md` (subtitle) | "Includes custom **slash commands**" | "Includes custom **commands** and bundled skills" |
+| `skills.md` (note) | "Custom **slash commands** have been merged into skills" | "Custom **commands** have been merged into skills" |
+
+- *Implication*: This is a documentation framing change only. The `/` invocation prefix and all existing commands are behaviorally unchanged.
+
+---
 
 ## Notable Details
 
-- **Effective instructions guidance added**: The memory page now gives specific CLAUDE.md authoring advice — target under 200 lines, use markdown structure, prefer concrete rules ("Use 2-space indentation") over vague ones ("Format code properly"), and audit for conflicting instructions across nested files. This 200-line target differs from the skills page's 500-line tip for `SKILL.md`, reflecting different loading semantics.
+- The `interactive-mode.md` intro now explicitly notes that bundled skills (`/simplify`, `/batch`, `/debug`) appear alongside built-in commands in the `/` picker: "Claude Code also ships with [bundled skills](/en/skills#bundled-skills) like `/simplify`, `/batch`, and `/debug` that appear alongside built-in commands when you type `/`."
+- `/diff` is described as showing "per-turn diffs" — diffs scoped to individual Claude turns — alongside the standard `git diff`. Left/right arrows switch between modes; up/down browse files.
+- `/output-style` documents three built-in output modes: **Default** (standard), **Explanatory** (adds educational commentary on implementation choices), and **Learning** (pauses for hands-on practice). Custom output styles are also supported via `/en/output-styles#create-a-custom-output-style`.
+- `/insights` generates a report covering "project areas, interaction patterns, and friction points" — a session analytics command with no previous documentation.
+- `/passes` for sharing a free week of Claude Code is "only visible if your account is eligible," indicating the CLI applies per-account visibility logic.
+- The `metadata.json` timestamp advanced from `00:25` to `06:18` UTC on 2026-03-01; page counts are unchanged (59 total, 58 successful, 1 failed).
 
-- **`claudeMdExcludes` setting documented more prominently**: The setting now has its own subsection with a concrete JSON example for monorepo users wanting to skip unrelated teams' CLAUDE.md files. It supports glob patterns matched against absolute paths and can be set at any settings layer (user, project, local, or managed policy). Managed policy CLAUDE.md files cannot be excluded.
-
-- **Subagent auto memory scopes**: The memory page now cross-references subagent-specific memory (`/en/sub-agents#enable-persistent-memory`) as a related resource, confirming subagents can maintain their own auto memory directories separate from the main session.
-
-- **`/batch` requires git**: The bundled `/batch` skill requires a git repository because it creates one isolated git worktree per unit of work. This is a runtime requirement, not just a recommendation.
-
-- **VS Code minimum version**: The VS Code extension page reflects VS Code 1.98.0 as the minimum required version (minor version bump reflected in the diff).
+---
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| memory.md | Modified | +198/-172 | Major reorganization: new title, CLAUDE.md vs auto memory comparison, scope table, auto memory controls, troubleshoot section |
-| hooks-guide.md | Modified | +45/-2 | New `## HTTP hooks` section; documents `"type": "http"` hook handler alongside command/prompt/agent types |
-| features-overview.md | Modified | +19/-3 | New CLAUDE.md vs Rules vs Skills comparison tab; updated context cost table |
-| skills.md | Modified | +9/-1 | New `## Bundled skills` section documenting `/simplify` and `/batch` built-in skills |
-| sub-agents.md | Modified | +10/-8 | Documents Task→Agent rename in v2.1.63; backward-compatible alias noted |
-| permissions.md | Modified | +6/-6 | `Task (subagents)` section renamed to `Agent (subagents)`; syntax updated to `Agent(AgentName)` |
-| mcp.md | Modified | +8/-1 | Minor additions to MCP server documentation |
-| interactive-mode.md | Modified | +31/-31 | Table reformatting; equivalent additions and deletions indicate structural reorganization |
-| cli-reference.md | Modified | +10/-10 | Updated `--agents` flag table: `Task(agent_type)` reference changed to `Agent(agent_type)` |
-| hooks.md | Modified | +5/-5 | Minor reference/wording updates |
-| how-claude-code-works.md | Modified | +3/-0 | Small content additions |
-| overview.md | Modified | +3/-2 | Minor content updates |
-| settings.md | Modified | +3/-2 | Minor content updates |
-| vs-code.md | Modified | +1/-1 | VS Code minimum version update |
+| `interactive-mode.md` | Modified | +67 / -35 | Full rewrite of built-in commands table; 50+ commands with aliases, argument notation, and doc links |
+| `skills.md` | Modified | +9 / -3 | `/debug` added as third bundled skill; prompt-based architecture explained; SDK auto-skill noted |
+| `features-overview.md` | Modified | +2 / -2 | Bundled skills named explicitly; "slash command" → "command" |
+| `cli-reference.md` | Modified | +1 / -1 | `--disable-slash-commands` description: "slash commands" → "commands" |
+| `hooks-guide.md` | Modified | +1 / -1 | Hook limitation wording: "slash commands" → "commands" |
+| `overview.md` | Modified | +1 / -1 | "custom slash commands" → "custom commands" |
 
 ---
+
 *Generated from Claude Code CLI documentation changes detected on 2026-03-01*
