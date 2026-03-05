@@ -2,13 +2,13 @@
 
 ## Summary
 
-One documentation page registered a change in this diff cycle. The sole modification was a GitHub repository star count incrementing from 73.9k to 74.1k in scraped page metadata — no documentation content, CLI features, configuration options, or release notes changed.
+One documentation page was modified, but the changes are limited to GitHub repository UI metadata automatically captured during page scraping (star count and open pull request count). No substantive documentation content, CLI features, configuration options, or release notes changed in this diff.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +1/-1 | GitHub star count updated from 73.9k to 74.1k (scraped UI metadata, not content) |
+| [en/changelog.md](https://code.claude.com/docs/en/changelog.md) | Modified | +2/-2 | GitHub repo star count updated (74.1k → 74.2k); open PR count updated (253 → 254) — scraped UI metadata only, not documentation content |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-05*
