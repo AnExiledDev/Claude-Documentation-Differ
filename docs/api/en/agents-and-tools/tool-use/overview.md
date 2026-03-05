@@ -125,7 +125,94 @@ async function main() {
 main().catch(console.error);
 ```
 
-```java Java
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Anthropic;
+using Anthropic.Models.Messages;
+
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        AnthropicClient client = new();
+
+        var parameters = new MessageCreateParams
+        {
+            Model = Model.ClaudeOpus4_6,
+            MaxTokens = 1024,
+            Tools = [
+                new ToolUnion(new Tool()
+                {
+                    Name = "get_weather",
+                    Description = "Get the current weather in a given location",
+                    InputSchema = new InputSchema()
+                    {
+                        Properties = new Dictionary<string, JsonElement>
+                        {
+                            ["location"] = JsonSerializer.SerializeToElement(new { type = "string", description = "The city and state, e.g. San Francisco, CA" }),
+                        },
+                        Required = ["location"],
+                    },
+                }),
+            ],
+            Messages = [new() { Role = Role.User, Content = "What's the weather like in San Francisco?" }]
+        };
+
+        var message = await client.Messages.Create(parameters);
+        Console.WriteLine(message);
+    }
+}
+```
+
+```go Go hidelines={1..13,-1}
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/anthropics/anthropic-sdk-go"
+)
+
+func main() {
+	client := anthropic.NewClient()
+
+	message, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
+		Model:     anthropic.ModelClaudeOpus4_6,
+		MaxTokens: 1024,
+		Tools: []anthropic.ToolUnionParam{
+			{OfTool: &anthropic.ToolParam{
+				Name:        "get_weather",
+				Description: anthropic.String("Get the current weather in a given location"),
+				InputSchema: anthropic.ToolInputSchemaParam{
+					Properties: map[string]interface{}{
+						"location": map[string]interface{}{
+							"type":        "string",
+							"description": "The city and state, e.g. San Francisco, CA",
+						},
+					},
+					Required: []string{"location"},
+				},
+			}},
+		},
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock("What's the weather like in San Francisco?")),
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	jsonBytes, _ := json.MarshalIndent(message, "", "  ")
+	fmt.Println(string(jsonBytes))
+}
+```
+
+```java Java hidelines={1..14,-1}
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.core.JsonValue;
@@ -160,7 +247,7 @@ public class GetWeatherExample {
       .build();
 
     MessageCreateParams params = MessageCreateParams.builder()
-      .model(Model.CLAUDE_OPUS_4_0)
+      .model(Model.CLAUDE_OPUS_4_6)
       .maxTokens(1024)
       .addTool(
         Tool.builder()
@@ -176,6 +263,69 @@ public class GetWeatherExample {
     System.out.println(message);
   }
 }
+```
+
+```php PHP
+<?php
+
+use Anthropic\Client;
+
+$client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+
+$message = $client->messages->create(
+    maxTokens: 1024,
+    messages: [
+        ['role' => 'user', 'content' => "What's the weather like in San Francisco?"]
+    ],
+    model: 'claude-opus-4-6',
+    tools: [
+        [
+            'name' => 'get_weather',
+            'description' => 'Get the current weather in a given location',
+            'input_schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'location' => [
+                        'type' => 'string',
+                        'description' => 'The city and state, e.g. San Francisco, CA'
+                    ]
+                ],
+                'required' => ['location']
+            ]
+        ]
+    ],
+);
+
+echo $message;
+```
+
+```ruby Ruby
+require "anthropic"
+
+client = Anthropic::Client.new
+
+response = client.messages.create(
+  model: "claude-opus-4-6",
+  max_tokens: 1024,
+  tools: [
+    {
+      name: "get_weather",
+      description: "Get the current weather in a given location",
+      input_schema: {
+        type: "object",
+        properties: {
+          location: {
+            type: "string",
+            description: "The city and state, e.g. San Francisco, CA"
+          }
+        },
+        required: ["location"]
+      }
+    }
+  ],
+  messages: [{ role: "user", content: "What's the weather like in San Francisco?" }]
+)
+puts response
 ```
 
 </CodeGroup>
@@ -263,7 +413,8 @@ If you're building an application that uses the [Model Context Protocol (MCP)](h
 When you build an MCP client and call `list_tools()` on an MCP server, you'll receive tool definitions with an `inputSchema` field. To use these tools with Claude, convert them to Claude's format:
 
 <CodeGroup>
-```python Python
+
+```python Python nocheck
 from mcp import ClientSession
 
 
@@ -284,7 +435,7 @@ async def get_claude_tools(mcp_session: ClientSession):
     return claude_tools
 ```
 
-```typescript TypeScript
+```typescript TypeScript nocheck
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 async function getClaudeTools(mcpClient: Client) {
@@ -303,7 +454,8 @@ async function getClaudeTools(mcpClient: Client) {
 Then pass these converted tools to Claude:
 
 <CodeGroup>
-```python Python
+
+```python Python nocheck hidelines={1..4}
 import anthropic
 
 client = anthropic.Anthropic()
@@ -317,7 +469,7 @@ response = client.messages.create(
 )
 ```
 
-```typescript TypeScript
+```typescript TypeScript nocheck hidelines={1..3}
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic();
@@ -329,6 +481,124 @@ const response = await anthropic.messages.create({
   tools: claudeTools,
   messages: [{ role: "user", content: "What tools do you have available?" }]
 });
+```
+
+```csharp C# nocheck
+using System;
+using System.Threading.Tasks;
+using Anthropic;
+using Anthropic.Models.Messages;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        AnthropicClient client = new();
+        var claudeTools = await GetClaudeTools(mcpSession);
+
+        var parameters = new MessageCreateParams
+        {
+            Model = Model.ClaudeOpus4_6,
+            MaxTokens = 1024,
+            Tools = claudeTools,
+            Messages = [new() { Role = Role.User, Content = "What tools do you have available?" }]
+        };
+        var message = await client.Messages.Create(parameters);
+        Console.WriteLine(message);
+    }
+}
+```
+
+```go Go nocheck hidelines={1..11,-5..-1}
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/anthropics/anthropic-sdk-go"
+)
+
+func main() {
+	client := anthropic.NewClient()
+	claudeTools := getClaudeTools(mcpSession)
+
+	response, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
+		Model:     anthropic.ModelClaudeOpus4_6,
+		MaxTokens: 1024,
+		Tools:     claudeTools,
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock("What tools do you have available?")),
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%+v\n", response)
+}
+```
+
+```java Java nocheck hidelines={1..10,-1}
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.models.messages.Message;
+import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.Model;
+import com.anthropic.models.messages.ToolUnion;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        AnthropicClient client = AnthropicOkHttpClient.fromEnv();
+        List<ToolUnion> claudeTools = getClaudeTools(mcpSession);
+
+        MessageCreateParams params = MessageCreateParams.builder()
+            .model(Model.CLAUDE_OPUS_4_6)
+            .maxTokens(1024L)
+            .tools(claudeTools)
+            .addUserMessage("What tools do you have available?")
+            .build();
+
+        Message response = client.messages().create(params);
+        System.out.println(response);
+    }
+}
+```
+
+```php PHP hidelines={1..5} nocheck
+<?php
+
+use Anthropic\Client;
+
+$client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+$claudeTools = getClaudeTools($mcpSession);
+
+$message = $client->messages->create(
+    maxTokens: 1024,
+    messages: [
+        ['role' => 'user', 'content' => 'What tools do you have available?']
+    ],
+    model: 'claude-opus-4-6',
+    tools: $claudeTools,
+);
+echo $message->content[0]->text;
+```
+
+```ruby Ruby nocheck
+require "anthropic"
+
+client = Anthropic::Client.new
+claude_tools = get_claude_tools(mcp_session)
+
+message = client.messages.create(
+  model: "claude-opus-4-6",
+  max_tokens: 1024,
+  tools: claude_tools,
+  messages: [
+    { role: "user", content: "What tools do you have available?" }
+  ]
+)
+puts message
 ```
 </CodeGroup>
 
@@ -377,7 +647,7 @@ Here are a few code examples demonstrating various tool use patterns and techniq
     }'
     ```
 
-    ```python Python
+    ```python Python hidelines={1..4,-1}
     import anthropic
 
     client = anthropic.Anthropic()
@@ -414,7 +684,131 @@ Here are a few code examples demonstrating various tool use patterns and techniq
     print(response)
     ```
 
-    ```java Java
+    ```typescript TypeScript hidelines={1..4}
+    import Anthropic from "@anthropic-ai/sdk";
+
+    const client = new Anthropic();
+
+    const response = await client.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: {
+                type: "string",
+                description: "The city and state, e.g. San Francisco, CA"
+              },
+              unit: {
+                type: "string",
+                enum: ["celsius", "fahrenheit"],
+                description: 'The unit of temperature, either "celsius" or "fahrenheit"'
+              }
+            },
+            required: ["location"]
+          }
+        }
+      ],
+      messages: [{ role: "user", content: "What is the weather like in San Francisco?" }]
+    });
+    console.log(response);
+    ```
+
+    ```csharp C#
+    using System;
+    using System.Collections.Generic;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Anthropic;
+    using Anthropic.Models.Messages;
+
+    public class Program
+    {
+        public static async Task Main(string[] args)
+        {
+            AnthropicClient client = new();
+
+            var parameters = new MessageCreateParams
+            {
+                Model = Model.ClaudeOpus4_6,
+                MaxTokens = 1024,
+                Tools = [
+                    new ToolUnion(new Tool()
+                    {
+                        Name = "get_weather",
+                        Description = "Get the current weather in a given location",
+                        InputSchema = new InputSchema()
+                        {
+                            Properties = new Dictionary<string, JsonElement>
+                            {
+                                ["location"] = JsonSerializer.SerializeToElement(new { type = "string", description = "The city and state, e.g. San Francisco, CA" }),
+                                ["unit"] = JsonSerializer.SerializeToElement(new { type = "string", @enum = new[] { "celsius", "fahrenheit" }, description = "The unit of temperature, either \"celsius\" or \"fahrenheit\"" }),
+                            },
+                            Required = ["location"],
+                        },
+                    }),
+                ],
+                Messages = [new() { Role = Role.User, Content = "What is the weather like in San Francisco?" }]
+            };
+
+            var message = await client.Messages.Create(parameters);
+            Console.WriteLine(message);
+        }
+    }
+    ```
+
+    ```go Go hidelines={1..12,-1}
+    package main
+
+    import (
+    	"context"
+    	"fmt"
+
+    	"github.com/anthropics/anthropic-sdk-go"
+    )
+
+    func main() {
+    	client := anthropic.NewClient()
+
+    	message, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
+    		Model:     anthropic.ModelClaudeOpus4_6,
+    		MaxTokens: 1024,
+    		Tools: []anthropic.ToolUnionParam{
+    			{OfTool: &anthropic.ToolParam{
+    				Name:        "get_weather",
+    				Description: anthropic.String("Get the current weather in a given location"),
+    				InputSchema: anthropic.ToolInputSchemaParam{
+    					Properties: map[string]interface{}{
+    						"location": map[string]interface{}{
+    							"type":        "string",
+    							"description": "The city and state, e.g. San Francisco, CA",
+    						},
+    						"unit": map[string]interface{}{
+    							"type":        "string",
+    							"enum":        []string{"celsius", "fahrenheit"},
+    							"description": "The unit of temperature, either \"celsius\" or \"fahrenheit\"",
+    						},
+    					},
+    					Required: []string{"location"},
+    				},
+    			}},
+    		},
+    		Messages: []anthropic.MessageParam{
+    			anthropic.NewUserMessage(anthropic.NewTextBlock("What is the weather like in San Francisco?")),
+    		},
+    	})
+    	if err != nil {
+    		panic(err)
+    	}
+    	fmt.Printf("%+v\n", message)
+    }
+    ```
+
+    ```java Java hidelines={1..14,-1}
     import com.anthropic.client.AnthropicClient;
     import com.anthropic.client.okhttp.AnthropicOkHttpClient;
     import com.anthropic.core.JsonValue;
@@ -458,7 +852,7 @@ Here are a few code examples demonstrating various tool use patterns and techniq
           .build();
 
         MessageCreateParams params = MessageCreateParams.builder()
-          .model(Model.CLAUDE_OPUS_4_0)
+          .model(Model.CLAUDE_OPUS_4_6)
           .maxTokens(1024)
           .addTool(
             Tool.builder()
@@ -474,6 +868,79 @@ Here are a few code examples demonstrating various tool use patterns and techniq
         System.out.println(message);
       }
     }
+    ```
+
+    ```php PHP hidelines={1..6}
+    <?php
+
+    use Anthropic\Client;
+
+    $client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+
+    $message = $client->messages->create(
+        maxTokens: 1024,
+        messages: [
+            ['role' => 'user', 'content' => 'What is the weather like in San Francisco?']
+        ],
+        model: 'claude-opus-4-6',
+        tools: [
+            [
+                'name' => 'get_weather',
+                'description' => 'Get the current weather in a given location',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'location' => [
+                            'type' => 'string',
+                            'description' => 'The city and state, e.g. San Francisco, CA'
+                        ],
+                        'unit' => [
+                            'type' => 'string',
+                            'enum' => ['celsius', 'fahrenheit'],
+                            'description' => 'The unit of temperature, either "celsius" or "fahrenheit"'
+                        ]
+                    ],
+                    'required' => ['location']
+                ]
+            ]
+        ],
+    );
+
+    echo $message;
+    ```
+
+    ```ruby Ruby
+    require "anthropic"
+
+    client = Anthropic::Client.new
+
+    response = client.messages.create(
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: {
+                type: "string",
+                description: "The city and state, e.g. San Francisco, CA"
+              },
+              unit: {
+                type: "string",
+                enum: ["celsius", "fahrenheit"],
+                description: "The unit of temperature, either \"celsius\" or \"fahrenheit\""
+              }
+            },
+            required: ["location"]
+          }
+        }
+      ],
+      messages: [{ role: "user", content: "What is the weather like in San Francisco?" }]
+    )
+    puts response
     ```
 
 </CodeGroup>
@@ -619,7 +1086,7 @@ You would then need to execute the `get_weather` function with the provided inpu
                     {
                         "type": "tool_result",
                         "tool_use_id": "toolu_01A09q90qw90lq917835lq9",  # from the API response
-                        "content": "65 degrees",  # from running your tool
+                        "content": "15 degrees",  # from running your tool
                     }
                 ],
             },
@@ -629,7 +1096,184 @@ You would then need to execute the `get_weather` function with the provided inpu
     print(response)
     ```
 
-   ```java Java
+    ```typescript TypeScript hidelines={1..4}
+    import Anthropic from "@anthropic-ai/sdk";
+
+    const client = new Anthropic();
+
+    const response = await client.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: {
+                type: "string",
+                description: "The city and state, e.g. San Francisco, CA"
+              },
+              unit: {
+                type: "string",
+                enum: ["celsius", "fahrenheit"],
+                description: "Temperature unit"
+              }
+            },
+            required: ["location"]
+          }
+        }
+      ],
+      messages: [
+        { role: "user", content: "What's the weather like in San Francisco?" },
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "I'll check the current weather in San Francisco for you." },
+            {
+              type: "tool_use",
+              id: "toolu_01A09q90qw90lq917835lq9",
+              name: "get_weather",
+              input: { location: "San Francisco, CA", unit: "celsius" }
+            }
+          ]
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "toolu_01A09q90qw90lq917835lq9",
+              content: "15 degrees"
+            }
+          ]
+        }
+      ]
+    });
+    console.log(response);
+    ```
+
+    ```csharp C#
+    using System;
+    using System.Collections.Generic;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Anthropic;
+    using Anthropic.Models.Messages;
+
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            AnthropicClient client = new();
+
+            var parameters = new MessageCreateParams
+            {
+                Model = Model.ClaudeOpus4_6,
+                MaxTokens = 1024,
+                Tools = [
+                    new ToolUnion(new Tool()
+                    {
+                        Name = "get_weather",
+                        Description = "Get the current weather in a given location",
+                        InputSchema = new InputSchema()
+                        {
+                            Properties = new Dictionary<string, JsonElement>
+                            {
+                                ["location"] = JsonSerializer.SerializeToElement(new { type = "string", description = "The city and state, e.g. San Francisco, CA" }),
+                                ["unit"] = JsonSerializer.SerializeToElement(new { type = "string", @enum = new[] { "celsius", "fahrenheit" }, description = "The unit of temperature, either \"celsius\" or \"fahrenheit\"" }),
+                            },
+                            Required = ["location"],
+                        },
+                    }),
+                ],
+                Messages = [
+                    new() { Role = Role.User, Content = "What is the weather like in San Francisco?" },
+                    new()
+                    {
+                        Role = Role.Assistant,
+                        Content = new MessageParamContent(new List<ContentBlockParam>
+                        {
+                            new ContentBlockParam(new TextBlockParam("I'll check the current weather in San Francisco for you.")),
+                            new ContentBlockParam(new ToolUseBlockParam()
+                            {
+                                ID = "toolu_01A09q90qw90lq917835lq9",
+                                Name = "get_weather",
+                                Input = JsonSerializer.SerializeToElement(new { location = "San Francisco, CA", unit = "celsius" }),
+                            }),
+                        }),
+                    },
+                    new()
+                    {
+                        Role = Role.User,
+                        Content = new MessageParamContent(new List<ContentBlockParam>
+                        {
+                            new ContentBlockParam(new ToolResultBlockParam()
+                            {
+                                ToolUseID = "toolu_01A09q90qw90lq917835lq9",
+                                Content = "15 degrees",
+                            }),
+                        }),
+                    }
+                ]
+            };
+
+            var message = await client.Messages.Create(parameters);
+            Console.WriteLine(message);
+        }
+    }
+    ```
+
+    ```go Go hidelines={1..12,-1}
+    package main
+
+    import (
+    	"context"
+    	"fmt"
+
+    	"github.com/anthropics/anthropic-sdk-go"
+    )
+
+    func main() {
+    	client := anthropic.NewClient()
+
+    	message, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
+    		Model:     anthropic.ModelClaudeOpus4_6,
+    		MaxTokens: 1024,
+    		Tools: []anthropic.ToolUnionParam{
+    			{OfTool: &anthropic.ToolParam{
+    				Name:        "get_weather",
+    				Description: anthropic.String("Get the current weather in a given location"),
+    				InputSchema: anthropic.ToolInputSchemaParam{
+    					Properties: map[string]interface{}{
+    						"location": map[string]interface{}{"type": "string", "description": "The city and state, e.g. San Francisco, CA"},
+    						"unit":     map[string]interface{}{"type": "string", "enum": []string{"celsius", "fahrenheit"}, "description": "The unit of temperature, either \"celsius\" or \"fahrenheit\""},
+    					},
+    					Required: []string{"location"},
+    				},
+    			}},
+    		},
+    		Messages: []anthropic.MessageParam{
+    			anthropic.NewUserMessage(anthropic.NewTextBlock("What's the weather like in San Francisco?")),
+    			{
+    				Role: anthropic.MessageParamRoleAssistant,
+    				Content: []anthropic.ContentBlockParamUnion{
+    					anthropic.NewTextBlock("I'll check the current weather in San Francisco for you."),
+    					anthropic.NewToolUseBlock("toolu_01A09q90qw90lq917835lq9", map[string]interface{}{"location": "San Francisco, CA", "unit": "celsius"}, "get_weather"),
+    				},
+    			},
+    			anthropic.NewUserMessage(anthropic.NewToolResultBlock("toolu_01A09q90qw90lq917835lq9", "15 degrees", false)),
+    		},
+    	})
+    	if err != nil {
+    		panic(err)
+    	}
+    	fmt.Printf("%+v\n", message)
+    }
+    ```
+
+   ```java Java hidelines={1..11,-1}
    import com.anthropic.client.AnthropicClient;
    import com.anthropic.client.okhttp.AnthropicOkHttpClient;
    import com.anthropic.core.JsonValue;
@@ -670,7 +1314,7 @@ You would then need to execute the `get_weather` function with the provided inpu
          .build();
 
        MessageCreateParams params = MessageCreateParams.builder()
-         .model(Model.CLAUDE_OPUS_4_0)
+         .model(Model.CLAUDE_OPUS_4_6)
          .maxTokens(1024)
          .addTool(
            Tool.builder()
@@ -715,6 +1359,114 @@ You would then need to execute the `get_weather` function with the provided inpu
      }
    }
    ```
+
+    ```php PHP hidelines={1..6}
+    <?php
+
+    use Anthropic\Client;
+
+    $client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+
+    $message = $client->messages->create(
+        maxTokens: 1024,
+        messages: [
+            [
+                'role' => 'user',
+                'content' => 'What is the weather like in San Francisco?'
+            ],
+            [
+                'role' => 'assistant',
+                'content' => [
+                    [
+                        'type' => 'text',
+                        'text' => "I'll check the current weather in San Francisco for you."
+                    ],
+                    [
+                        'type' => 'tool_use',
+                        'id' => 'toolu_01A09q90qw90lq917835lq9',
+                        'name' => 'get_weather',
+                        'input' => [
+                            'location' => 'San Francisco, CA',
+                            'unit' => 'celsius'
+                        ]
+                    ]
+                ]
+            ],
+            [
+                'role' => 'user',
+                'content' => [
+                    [
+                        'type' => 'tool_result',
+                        'tool_use_id' => 'toolu_01A09q90qw90lq917835lq9',
+                        'content' => '15 degrees'
+                    ]
+                ]
+            ]
+        ],
+        model: 'claude-opus-4-6',
+        tools: [
+            [
+                'name' => 'get_weather',
+                'description' => 'Get the current weather in a given location',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'location' => [
+                            'type' => 'string',
+                            'description' => 'The city and state, e.g. San Francisco, CA'
+                        ],
+                        'unit' => [
+                            'type' => 'string',
+                            'enum' => ['celsius', 'fahrenheit'],
+                            'description' => 'The unit of temperature, either "celsius" or "fahrenheit"'
+                        ]
+                    ],
+                    'required' => ['location']
+                ]
+            ]
+        ],
+    );
+
+    echo $message;
+    ```
+
+    ```ruby Ruby
+    require "anthropic"
+
+    client = Anthropic::Client.new
+
+    response = client.messages.create(
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [{
+        name: "get_weather",
+        description: "Get the current weather in a given location",
+        input_schema: {
+          type: "object",
+          properties: {
+            location: { type: "string", description: "The city and state, e.g. San Francisco, CA" },
+            unit: { type: "string", enum: ["celsius", "fahrenheit"] }
+          },
+          required: ["location"]
+        }
+      }],
+      messages: [
+        { role: "user", content: "What's the weather like in San Francisco?" },
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "I'll check the current weather in San Francisco for you." },
+            { type: "tool_use", id: "toolu_01A09q90qw90lq917835lq9", name: "get_weather", input: { location: "San Francisco, CA", unit: "celsius" } }
+          ]
+        },
+        {
+          role: "user",
+          content: [{ type: "tool_result", tool_use_id: "toolu_01A09q90qw90lq917835lq9", content: "15 degrees" }]
+        }
+      ]
+    )
+    puts response
+    ```
 
 </CodeGroup>
 This will print Claude's final response, incorporating the weather data:
@@ -800,7 +1552,7 @@ You can provide Claude with multiple tools to choose from in a single request. H
     }'
     ```
 
-    ```python Python
+    ```python Python hidelines={1..4,-1}
     import anthropic
 
     client = anthropic.Anthropic()
@@ -853,7 +1605,162 @@ You can provide Claude with multiple tools to choose from in a single request. H
     print(response)
     ```
 
-    ```java Java
+    ```typescript TypeScript hidelines={1..4}
+    import Anthropic from "@anthropic-ai/sdk";
+
+    const client = new Anthropic();
+
+    const response = await client.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: {
+                type: "string",
+                description: "The city and state, e.g. San Francisco, CA"
+              },
+              unit: { type: "string", enum: ["celsius", "fahrenheit"] }
+            },
+            required: ["location"]
+          }
+        },
+        {
+          name: "get_time",
+          description: "Get the current time in a given time zone",
+          input_schema: {
+            type: "object",
+            properties: {
+              timezone: {
+                type: "string",
+                description: "The IANA time zone name, e.g. America/Los_Angeles"
+              }
+            },
+            required: ["timezone"]
+          }
+        }
+      ],
+      messages: [
+        {
+          role: "user",
+          content: "What is the weather like right now in New York? Also what time is it there?"
+        }
+      ]
+    });
+    console.log(response);
+    ```
+
+    ```csharp C#
+    using System;
+    using System.Collections.Generic;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Anthropic;
+    using Anthropic.Models.Messages;
+
+    public class Program
+    {
+        public static async Task Main(string[] args)
+        {
+            AnthropicClient client = new();
+
+            var parameters = new MessageCreateParams
+            {
+                Model = Model.ClaudeOpus4_6,
+                MaxTokens = 1024,
+                Tools = [
+                    new ToolUnion(new Tool()
+                    {
+                        Name = "get_weather",
+                        Description = "Get the current weather in a given location",
+                        InputSchema = new InputSchema()
+                        {
+                            Properties = new Dictionary<string, JsonElement>
+                            {
+                                ["location"] = JsonSerializer.SerializeToElement(new { type = "string", description = "The city and state, e.g. San Francisco, CA" }),
+                                ["unit"] = JsonSerializer.SerializeToElement(new { type = "string", @enum = new[] { "celsius", "fahrenheit" }, description = "The unit of temperature, either 'celsius' or 'fahrenheit'" }),
+                            },
+                            Required = ["location"],
+                        },
+                    }),
+                    new ToolUnion(new Tool()
+                    {
+                        Name = "get_time",
+                        Description = "Get the current time in a given time zone",
+                        InputSchema = new InputSchema()
+                        {
+                            Properties = new Dictionary<string, JsonElement>
+                            {
+                                ["timezone"] = JsonSerializer.SerializeToElement(new { type = "string", description = "The IANA time zone name, e.g. America/Los_Angeles" }),
+                            },
+                            Required = ["timezone"],
+                        },
+                    }),
+                ],
+                Messages = [new() { Role = Role.User, Content = "What is the weather like right now in New York? Also what time is it there?" }]
+            };
+
+            var message = await client.Messages.Create(parameters);
+            Console.WriteLine(message);
+        }
+    }
+    ```
+
+    ```go Go hidelines={1..12,-1}
+    package main
+
+    import (
+    	"context"
+    	"fmt"
+
+    	"github.com/anthropics/anthropic-sdk-go"
+    )
+
+    func main() {
+    	client := anthropic.NewClient()
+
+    	message, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
+    		Model:     anthropic.ModelClaudeOpus4_6,
+    		MaxTokens: 1024,
+    		Tools: []anthropic.ToolUnionParam{
+    			{OfTool: &anthropic.ToolParam{
+    				Name:        "get_weather",
+    				Description: anthropic.String("Get the current weather in a given location"),
+    				InputSchema: anthropic.ToolInputSchemaParam{
+    					Properties: map[string]interface{}{
+    						"location": map[string]interface{}{"type": "string", "description": "The city and state, e.g. San Francisco, CA"},
+    						"unit":     map[string]interface{}{"type": "string", "enum": []string{"celsius", "fahrenheit"}, "description": "The unit of temperature, either \"celsius\" or \"fahrenheit\""},
+    					},
+    					Required: []string{"location"},
+    				},
+    			}},
+    			{OfTool: &anthropic.ToolParam{
+    				Name:        "get_time",
+    				Description: anthropic.String("Get the current time in a given time zone"),
+    				InputSchema: anthropic.ToolInputSchemaParam{
+    					Properties: map[string]interface{}{
+    						"timezone": map[string]interface{}{"type": "string", "description": "The IANA time zone name, e.g. America/Los_Angeles"},
+    					},
+    					Required: []string{"timezone"},
+    				},
+    			}},
+    		},
+    		Messages: []anthropic.MessageParam{
+    			anthropic.NewUserMessage(anthropic.NewTextBlock("What is the weather like right now in New York? Also what time is it there?")),
+    		},
+    	})
+    	if err != nil {
+    		panic(err)
+    	}
+    	fmt.Printf("%+v\n", message)
+    }
+    ```
+
+    ```java Java hidelines={1..14,-1}
     import com.anthropic.client.AnthropicClient;
     import com.anthropic.client.okhttp.AnthropicOkHttpClient;
     import com.anthropic.core.JsonValue;
@@ -916,7 +1823,7 @@ You can provide Claude with multiple tools to choose from in a single request. H
           .build();
 
         MessageCreateParams params = MessageCreateParams.builder()
-          .model(Model.CLAUDE_OPUS_4_0)
+          .model(Model.CLAUDE_OPUS_4_6)
           .maxTokens(1024)
           .addTool(
             Tool.builder()
@@ -941,6 +1848,100 @@ You can provide Claude with multiple tools to choose from in a single request. H
         System.out.println(message);
       }
     }
+    ```
+
+    ```php PHP hidelines={1..6}
+    <?php
+
+    use Anthropic\Client;
+
+    $client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+
+    $message = $client->messages->create(
+        maxTokens: 1024,
+        messages: [
+            [
+                'role' => 'user',
+                'content' => 'What is the weather like right now in New York? Also what time is it there?'
+            ]
+        ],
+        model: 'claude-opus-4-6',
+        tools: [
+            [
+                'name' => 'get_weather',
+                'description' => 'Get the current weather in a given location',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'location' => [
+                            'type' => 'string',
+                            'description' => 'The city and state, e.g. San Francisco, CA'
+                        ],
+                        'unit' => [
+                            'type' => 'string',
+                            'enum' => ['celsius', 'fahrenheit'],
+                            'description' => "The unit of temperature, either 'celsius' or 'fahrenheit'"
+                        ]
+                    ],
+                    'required' => ['location']
+                ]
+            ],
+            [
+                'name' => 'get_time',
+                'description' => 'Get the current time in a given time zone',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'timezone' => [
+                            'type' => 'string',
+                            'description' => 'The IANA time zone name, e.g. America/Los_Angeles'
+                        ]
+                    ],
+                    'required' => ['timezone']
+                ]
+            ]
+        ],
+    );
+
+    echo $message;
+    ```
+
+    ```ruby Ruby
+    require "anthropic"
+
+    client = Anthropic::Client.new
+
+    response = client.messages.create(
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: { type: "string", description: "The city and state, e.g. San Francisco, CA" },
+              unit: { type: "string", enum: ["celsius", "fahrenheit"] }
+            },
+            required: ["location"]
+          }
+        },
+        {
+          name: "get_time",
+          description: "Get the current time in a given time zone",
+          input_schema: {
+            type: "object",
+            properties: {
+              timezone: { type: "string", description: "The IANA time zone name, e.g. America/Los_Angeles" }
+            },
+            required: ["timezone"]
+          }
+        }
+      ],
+      messages: [{ role: "user", content: "What is the weather like right now in New York? Also what time is it there?" }]
+    )
+    puts response
     ```
 
 </CodeGroup>
@@ -1056,7 +2057,135 @@ Here's an example of using a `get_location` tool to get the user's location, the
     )
     ```
 
-    ```java Java
+    ```typescript TypeScript hidelines={1..4}
+    import Anthropic from "@anthropic-ai/sdk";
+
+    const client = new Anthropic();
+
+    const response = await client.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [
+        {
+          name: "get_location",
+          description: "Get the current user location based on their IP address.",
+          input_schema: { type: "object", properties: {} }
+        },
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: { type: "string", description: "The city and state" },
+              unit: { type: "string", enum: ["celsius", "fahrenheit"] }
+            },
+            required: ["location"]
+          }
+        }
+      ],
+      messages: [{ role: "user", content: "What's the weather like where I am?" }]
+    });
+    console.log(response);
+    ```
+
+    ```csharp C#
+    using System;
+    using System.Collections.Generic;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Anthropic;
+    using Anthropic.Models.Messages;
+
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            AnthropicClient client = new();
+
+            var parameters = new MessageCreateParams
+            {
+                Model = Model.ClaudeOpus4_6,
+                MaxTokens = 1024,
+                Tools = [
+                    new ToolUnion(new Tool()
+                    {
+                        Name = "get_location",
+                        Description = "Get the current user location based on their IP address. This tool has no parameters or arguments.",
+                        InputSchema = new InputSchema(),
+                    }),
+                    new ToolUnion(new Tool()
+                    {
+                        Name = "get_weather",
+                        Description = "Get the current weather in a given location",
+                        InputSchema = new InputSchema()
+                        {
+                            Properties = new Dictionary<string, JsonElement>
+                            {
+                                ["location"] = JsonSerializer.SerializeToElement(new { type = "string", description = "The city and state, e.g. San Francisco, CA" }),
+                                ["unit"] = JsonSerializer.SerializeToElement(new { type = "string", @enum = new[] { "celsius", "fahrenheit" }, description = "The unit of temperature, either 'celsius' or 'fahrenheit'" }),
+                            },
+                            Required = ["location"],
+                        },
+                    }),
+                ],
+                Messages = [new() { Role = Role.User, Content = "What is the weather like where I am?" }]
+            };
+
+            var message = await client.Messages.Create(parameters);
+            Console.WriteLine(message);
+        }
+    }
+    ```
+
+    ```go Go hidelines={1..12,-1}
+    package main
+
+    import (
+    	"context"
+    	"fmt"
+
+    	"github.com/anthropics/anthropic-sdk-go"
+    )
+
+    func main() {
+    	client := anthropic.NewClient()
+
+    	message, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
+    		Model:     anthropic.ModelClaudeOpus4_6,
+    		MaxTokens: 1024,
+    		Tools: []anthropic.ToolUnionParam{
+    			{OfTool: &anthropic.ToolParam{
+    				Name:        "get_location",
+    				Description: anthropic.String("Get the current user location based on their IP address."),
+    				InputSchema: anthropic.ToolInputSchemaParam{
+    					Properties: map[string]interface{}{},
+    				},
+    			}},
+    			{OfTool: &anthropic.ToolParam{
+    				Name:        "get_weather",
+    				Description: anthropic.String("Get the current weather in a given location"),
+    				InputSchema: anthropic.ToolInputSchemaParam{
+    					Properties: map[string]interface{}{
+    						"location": map[string]interface{}{"type": "string", "description": "The city and state, e.g. San Francisco, CA"},
+    						"unit":     map[string]interface{}{"type": "string", "enum": []string{"celsius", "fahrenheit"}, "description": "The unit of temperature, either \"celsius\" or \"fahrenheit\""},
+    					},
+    					Required: []string{"location"},
+    				},
+    			}},
+    		},
+    		Messages: []anthropic.MessageParam{
+    			anthropic.NewUserMessage(anthropic.NewTextBlock("What's the weather like where I am?")),
+    		},
+    	})
+    	if err != nil {
+    		panic(err)
+    	}
+    	fmt.Printf("%+v\n", message)
+    }
+    ```
+
+    ```java Java hidelines={1..14,-1}
     import com.anthropic.client.AnthropicClient;
     import com.anthropic.client.okhttp.AnthropicOkHttpClient;
     import com.anthropic.core.JsonValue;
@@ -1106,7 +2235,7 @@ Here's an example of using a `get_location` tool to get the user's location, the
           .build();
 
         MessageCreateParams params = MessageCreateParams.builder()
-          .model(Model.CLAUDE_OPUS_4_0)
+          .model(Model.CLAUDE_OPUS_4_6)
           .maxTokens(1024)
           .addTool(
             Tool.builder()
@@ -1131,6 +2260,85 @@ Here's an example of using a `get_location` tool to get the user's location, the
         System.out.println(message);
       }
     }
+    ```
+
+    ```php PHP hidelines={1..6}
+    <?php
+
+    use Anthropic\Client;
+
+    $client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+
+    $message = $client->messages->create(
+        maxTokens: 1024,
+        messages: [
+            ['role' => 'user', 'content' => 'What is the weather like where I am?']
+        ],
+        model: 'claude-opus-4-6',
+        tools: [
+            [
+                'name' => 'get_location',
+                'description' => 'Get the current user location based on their IP address. This tool has no parameters or arguments.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => (object)[]
+                ]
+            ],
+            [
+                'name' => 'get_weather',
+                'description' => 'Get the current weather in a given location',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'location' => [
+                            'type' => 'string',
+                            'description' => 'The city and state, e.g. San Francisco, CA'
+                        ],
+                        'unit' => [
+                            'type' => 'string',
+                            'enum' => ['celsius', 'fahrenheit'],
+                            'description' => "The unit of temperature, either 'celsius' or 'fahrenheit'"
+                        ]
+                    ],
+                    'required' => ['location']
+                ]
+            ]
+        ],
+    );
+
+    echo $message;
+    ```
+
+    ```ruby Ruby
+    require "anthropic"
+
+    client = Anthropic::Client.new
+
+    response = client.messages.create(
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      tools: [
+        {
+          name: "get_location",
+          description: "Get the current user location based on their IP address.",
+          input_schema: { type: "object", properties: {} }
+        },
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: { type: "string", description: "The city and state, e.g. San Francisco, CA" },
+              unit: { type: "string", enum: ["celsius", "fahrenheit"] }
+            },
+            required: ["location"]
+          }
+        }
+      ],
+      messages: [{ role: "user", content: "What's the weather like where I am?" }]
+    )
+    puts response
     ```
 
 </CodeGroup>

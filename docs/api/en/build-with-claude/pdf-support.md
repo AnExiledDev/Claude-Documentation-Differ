@@ -137,7 +137,7 @@ The simplest approach is to reference a PDF directly from a URL:
 
     print(message.content)
     ```
-    ```typescript TypeScript
+    ```typescript TypeScript hidelines={1..4}
     import Anthropic from "@anthropic-ai/sdk";
 
     const anthropic = new Anthropic();
@@ -171,22 +171,25 @@ The simplest approach is to reference a PDF directly from a URL:
 
     main();
     ```
-    ```java Java
+    ```java Java hidelines={1..9,-1}
     import com.anthropic.client.AnthropicClient;
     import com.anthropic.client.okhttp.AnthropicOkHttpClient;
     import com.anthropic.models.messages.*;
-    import com.anthropic.models.messages.MessageCreateParams;
     import java.util.List;
 
-    public class PdfExample {
+    public class PdfUrlExample {
 
       public static void main(String[] args) {
         AnthropicClient client = AnthropicOkHttpClient.fromEnv();
 
         // Create document block with URL
         DocumentBlockParam documentParam = DocumentBlockParam.builder()
-          .urlPdfSource(
-            "https://assets.anthropic.com/m/1cd9d098ac3e6467/original/Claude-3-Model-Card-October-Addendum.pdf"
+          .source(
+            UrlPdfSource.builder()
+              .url(
+                "https://assets.anthropic.com/m/1cd9d098ac3e6467/original/Claude-3-Model-Card-October-Addendum.pdf"
+              )
+              .build()
           )
           .build();
 
@@ -291,10 +294,8 @@ If you need to send PDFs from your local system or when a URL isn't available:
 
     print(message.content)
     ```
-    ```typescript TypeScript
+    ```typescript TypeScript hidelines={1..2}
     import Anthropic from "@anthropic-ai/sdk";
-    import fetch from "node-fetch";
-    import fs from "fs";
 
     async function main() {
       // Method 1: Fetch and encode a remote PDF
@@ -305,6 +306,7 @@ If you need to send PDFs from your local system or when a URL isn't available:
       const pdfBase64 = Buffer.from(arrayBuffer).toString("base64");
 
       // Method 2: Load from a local file
+      // import fs from "fs";
       // const pdfBase64 = (await fs.readFile('document.pdf')).toString('base64');
 
       // Send the API request with base64-encoded PDF
@@ -339,9 +341,10 @@ If you need to send PDFs from your local system or when a URL isn't available:
     main();
     ```
 
-    ```java Java
+    ```java Java hidelines={1..21,-1}
     import com.anthropic.client.AnthropicClient;
     import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+    import com.anthropic.models.messages.Base64PdfSource;
     import com.anthropic.models.messages.ContentBlockParam;
     import com.anthropic.models.messages.DocumentBlockParam;
     import com.anthropic.models.messages.Message;
@@ -356,7 +359,7 @@ If you need to send PDFs from your local system or when a URL isn't available:
     import java.util.Base64;
     import java.util.List;
 
-    public class PdfExample {
+    public class PdfBase64Example {
 
       public static void main(String[] args) throws IOException, InterruptedException {
         AnthropicClient client = AnthropicOkHttpClient.fromEnv();
@@ -379,7 +382,7 @@ If you need to send PDFs from your local system or when a URL isn't available:
 
         // Create document block with base64 data
         DocumentBlockParam documentParam = DocumentBlockParam.builder()
-          .base64PdfSource(pdfBase64)
+          .source(Base64PdfSource.builder().data(pdfBase64).build())
           .build();
 
         // Create a message with document and text content blocks
@@ -399,11 +402,7 @@ If you need to send PDFs from your local system or when a URL isn't available:
           .build();
 
         Message message = client.messages().create(params);
-        message
-          .content()
-          .stream()
-          .flatMap(contentBlock -> contentBlock.text().stream())
-          .forEach(textBlock -> System.out.println(textBlock.text()));
+        System.out.println(message.content());
       }
     }
     ```
@@ -449,7 +448,7 @@ curl https://api.anthropic.com/v1/messages \
   }'
 ```
 
-```python Python
+```python Python nocheck hidelines={1..4,-1}
 import anthropic
 
 client = anthropic.Anthropic()
@@ -480,20 +479,20 @@ message = client.beta.messages.create(
 print(message.content)
 ```
 
-```typescript TypeScript
-import { Anthropic, toFile } from "@anthropic-ai/sdk";
+```typescript TypeScript nocheck
+import Anthropic, { toFile } from "@anthropic-ai/sdk";
 import fs from "fs";
 
 const anthropic = new Anthropic();
 
 async function main() {
   // Upload the PDF file
-  const fileUpload = await anthropic.beta.files.upload(
-    {
-      file: toFile(fs.createReadStream("document.pdf"), undefined, { type: "application/pdf" })
-    },
-    { betas: ["files-api-2025-04-14"] }
-  );
+  const fileUpload = await anthropic.beta.files.upload({
+    file: await toFile(fs.createReadStream("document.pdf"), undefined, {
+      type: "application/pdf"
+    }),
+    betas: ["files-api-2025-04-14"]
+  });
 
   // Use the uploaded file in a message
   const response = await anthropic.beta.messages.create({
@@ -526,43 +525,50 @@ async function main() {
 main();
 ```
 
-```java Java
+```java Java nocheck hidelines={1..18,-1}
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.anthropic.models.File;
-import com.anthropic.models.files.FileUploadParams;
-import com.anthropic.models.messages.*;
-import java.io.IOException;
-import java.nio.file.Files;
+import com.anthropic.models.messages.Model;
+import com.anthropic.models.beta.files.FileMetadata;
+import com.anthropic.models.beta.files.FileUploadParams;
+import com.anthropic.models.beta.messages.BetaContentBlockParam;
+import com.anthropic.models.beta.messages.BetaFileDocumentSource;
+import com.anthropic.models.beta.messages.BetaMessage;
+import com.anthropic.models.beta.messages.BetaRequestDocumentBlock;
+import com.anthropic.models.beta.messages.BetaTextBlockParam;
+import com.anthropic.models.beta.messages.MessageCreateParams;
 import java.nio.file.Path;
 import java.util.List;
 
 public class PdfFilesExample {
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     AnthropicClient client = AnthropicOkHttpClient.fromEnv();
 
     // Upload the PDF file
-    File file = client
+    FileMetadata file = client
       .beta()
       .files()
-      .upload(
-        FileUploadParams.builder().file(Files.newInputStream(Path.of("document.pdf"))).build()
-      );
+      .upload(FileUploadParams.builder().file(Path.of("document.pdf")).build());
 
     // Use the uploaded file in a message
-    DocumentBlockParam documentParam = DocumentBlockParam.builder()
-      .fileSource(file.id())
-      .build();
-
     MessageCreateParams params = MessageCreateParams.builder()
       .model(Model.CLAUDE_OPUS_4_6)
+      .addBeta("files-api-2025-04-14")
       .maxTokens(1024)
-      .addUserMessageOfBlockParams(
+      .addUserMessageOfBetaContentBlockParams(
         List.of(
-          ContentBlockParam.ofDocument(documentParam),
-          ContentBlockParam.ofText(
-            TextBlockParam.builder()
+          BetaContentBlockParam.ofDocument(
+            BetaRequestDocumentBlock.builder()
+              .source(
+                BetaFileDocumentSource.builder()
+                  .fileId(file.id())
+                  .build()
+              )
+              .build()
+          ),
+          BetaContentBlockParam.ofText(
+            BetaTextBlockParam.builder()
               .text("What are the key findings in this document?")
               .build()
           )
@@ -570,7 +576,7 @@ public class PdfFilesExample {
       )
       .build();
 
-    Message message = client.messages().create(params);
+    BetaMessage message = client.beta().messages().create(params);
     System.out.println(message.content());
   }
 }
@@ -655,7 +661,21 @@ curl https://api.anthropic.com/v1/messages \
   -H "anthropic-version: 2023-06-01" \
   -d @request.json
 ```
-```python Python
+
+```python Python nocheck hidelines={1..12}
+import anthropic
+import base64
+from pypdf import PdfWriter
+import io
+
+client = anthropic.Anthropic()
+
+buf = io.BytesIO()
+writer = PdfWriter()
+writer.add_blank_page(width=72, height=72)
+writer.write(buf)
+pdf_data = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
+
 message = client.messages.create(
     model="claude-opus-4-6",
     max_tokens=1024,
@@ -679,7 +699,7 @@ message = client.messages.create(
 )
 ```
 
-```typescript TypeScript
+```typescript TypeScript nocheck
 const response = await anthropic.messages.create({
   model: "claude-opus-4-6",
   max_tokens: 1024,
@@ -707,7 +727,7 @@ const response = await anthropic.messages.create({
 console.log(response);
 ```
 
-```java Java
+```java Java nocheck hidelines={1..19,-1}
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.Base64PdfSource;
@@ -832,7 +852,21 @@ curl https://api.anthropic.com/v1/messages/batches \
   -H "anthropic-version: 2023-06-01" \
   -d @request.json
 ```
-```python Python
+
+```python Python nocheck hidelines={1..12}
+import anthropic
+import base64
+from pypdf import PdfWriter
+import io
+
+client = anthropic.Anthropic()
+
+buf = io.BytesIO()
+writer = PdfWriter()
+writer.add_blank_page(width=72, height=72)
+writer.write(buf)
+pdf_data = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
+
 message_batch = client.messages.batches.create(
     requests=[
         {
@@ -862,7 +896,7 @@ message_batch = client.messages.batches.create(
 )
 ```
 
-```typescript TypeScript
+```typescript TypeScript nocheck
 const response = await anthropic.messages.batches.create({
   requests: [
     {
@@ -922,7 +956,7 @@ const response = await anthropic.messages.batches.create({
 console.log(response);
 ```
 
-```java Java
+```java Java nocheck hidelines={1..14,-1}
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.*;

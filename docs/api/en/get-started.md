@@ -145,27 +145,27 @@ Make your first API call to Claude and build a simple web search assistant.
       <Step title="Create your code">
         Save this as `quickstart.ts`:
 
-        ```typescript
-        import Anthropic from "@anthropic-ai/sdk";
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
 
-        async function main() {
-          const anthropic = new Anthropic();
+async function main() {
+  const anthropic = new Anthropic();
 
-          const msg = await anthropic.messages.create({
-            model: "claude-opus-4-6",
-            max_tokens: 1000,
-            messages: [
-              {
-                role: "user",
-                content:
-                  "What should I search for to find the latest developments in renewable energy?"
-              }
-            ]
-          });
-          console.log(msg);
-        }
+  const msg = await anthropic.messages.create({
+    model: "claude-opus-4-6",
+    max_tokens: 1000,
+    messages: [
+      {
+        role: "user",
+        content:
+          "What should I search for to find the latest developments in renewable energy?"
+      }
+    ]
+  });
+  console.log(msg);
+}
 
-        main().catch(console.error);
+main().catch(console.error);
         ```
       </Step>
 
@@ -231,7 +231,7 @@ Make your first API call to Claude and build a simple web search assistant.
 
         **Gradle:**
         ```groovy
-        implementation("com.anthropic:anthropic-java:1.0.0")
+        implementation("com.anthropic:anthropic-java:2.15.0")
         ```
 
         **Maven:**
@@ -239,7 +239,7 @@ Make your first API call to Claude and build a simple web search assistant.
         <dependency>
           <groupId>com.anthropic</groupId>
           <artifactId>anthropic-java</artifactId>
-          <version>1.0.0</version>
+          <version>2.15.0</version>
         </dependency>
         ```
       </Step>
@@ -280,7 +280,8 @@ Make your first API call to Claude and build a simple web search assistant.
         ```
 
         **Example output:**
-        ```java
+        
+        ```java nocheck
         [ContentBlock{text=TextBlock{text=Here are some effective search strategies to find the latest renewable energy developments:
 
         ## Search Terms to Use:

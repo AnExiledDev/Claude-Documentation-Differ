@@ -48,7 +48,7 @@ curl https://api.anthropic.com/v1/messages \
     }'
 ```
 
-```python Python
+```python Python nocheck
 import anthropic
 
 client = anthropic.Anthropic()
@@ -66,7 +66,7 @@ response = client.beta.messages.create(
 print(response.content[0].text)
 ```
 
-```typescript TypeScript
+```typescript TypeScript hidelines={1..4}
 import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic();
@@ -84,7 +84,40 @@ const response = await client.beta.messages.create({
   ]
 });
 
-console.log(response.content[0].text);
+const textBlock = response.content.find(
+  (block): block is Anthropic.Beta.Messages.BetaTextBlock => block.type === "text"
+);
+console.log(textBlock?.text);
+```
+
+```go Go hidelines={1..13,-1}
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	anthropic "github.com/anthropics/anthropic-sdk-go"
+)
+
+func main() {
+	client := anthropic.NewClient()
+
+	response, err := client.Beta.Messages.New(context.TODO(), anthropic.BetaMessageNewParams{
+		Model:     anthropic.ModelClaudeOpus4_6,
+		MaxTokens: 4096,
+		Speed:     anthropic.BetaMessageNewParamsSpeedFast,
+		Betas:     []anthropic.AnthropicBeta{anthropic.AnthropicBetaFastMode2026_02_01},
+		Messages: []anthropic.BetaMessageParam{
+			anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock("Refactor this module to use dependency injection")),
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(response.Content[0].AsText().Text)
+}
 ```
 
 </CodeGroup>
@@ -152,7 +185,7 @@ curl https://api.anthropic.com/v1/messages \
 }
 ```
 
-```python Python
+```python Python nocheck
 response = client.beta.messages.create(
     model="claude-opus-4-6",
     max_tokens=1024,
@@ -176,7 +209,37 @@ const response = await client.beta.messages.create({
 console.log(response.usage.speed); // "fast" or "standard"
 ```
 
-```ruby Ruby
+```go Go hidelines={1..13,-1}
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	anthropic "github.com/anthropics/anthropic-sdk-go"
+)
+
+func main() {
+	client := anthropic.NewClient()
+
+	response, err := client.Beta.Messages.New(context.TODO(), anthropic.BetaMessageNewParams{
+		Model:     anthropic.ModelClaudeOpus4_6,
+		MaxTokens: 1024,
+		Speed:     anthropic.BetaMessageNewParamsSpeedFast,
+		Betas:     []anthropic.AnthropicBeta{anthropic.AnthropicBetaFastMode2026_02_01},
+		Messages: []anthropic.BetaMessageParam{
+			anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock("Hello")),
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(response.Usage.Speed) // "fast" or "standard"
+}
+```
+
+```ruby Ruby nocheck
 response = anthropic.beta.messages.create(
   model: "claude-opus-4-6",
   max_tokens: 1024,
@@ -208,7 +271,8 @@ Falling back from fast to standard speed will result in a [prompt cache](/docs/e
 Since setting `max_retries` to `0` also disables retries for other transient errors (overloaded, internal server errors), the examples below re-issue the original request with default retries for those cases.
 
 <CodeGroup>
-```python Python
+
+```python Python nocheck hidelines={1..4}
 import anthropic
 
 client = anthropic.Anthropic()
@@ -244,53 +308,57 @@ message = create_message_with_fast_fallback(
 )
 ```
 
-```typescript TypeScript
+```typescript TypeScript hidelines={1..3,-1}
 import Anthropic from "@anthropic-ai/sdk";
-
 const client = new Anthropic();
-
-async function createMessageWithFastFallback(
-  params: Anthropic.Beta.MessageCreateParams,
-  requestOptions?: Anthropic.RequestOptions,
-  maxAttempts: number = 3
-): Promise<Anthropic.Beta.Message> {
-  try {
-    return await client.beta.messages.create(params, requestOptions);
-  } catch (e) {
-    if (e instanceof Anthropic.RateLimitError && params.speed === "fast") {
-      const { speed, ...rest } = params;
-      return createMessageWithFastFallback(rest);
-    }
-    if (
-      e instanceof Anthropic.InternalServerError ||
-      e instanceof Anthropic.APIConnectionError
-    ) {
-      if (maxAttempts > 1) {
-        return createMessageWithFastFallback(params, requestOptions, maxAttempts - 1);
+(async () => {
+  async function createMessageWithFastFallback(
+    params: Anthropic.Beta.MessageCreateParams,
+    requestOptions?: Anthropic.RequestOptions,
+    maxAttempts: number = 3
+  ): Promise<Anthropic.Beta.Messages.BetaMessage> {
+    try {
+      return (await client.beta.messages.create(
+        params,
+        requestOptions
+      )) as Anthropic.Beta.Messages.BetaMessage;
+    } catch (e) {
+      if (e instanceof Anthropic.RateLimitError && params.speed === "fast") {
+        const { speed, ...rest } = params;
+        return createMessageWithFastFallback(rest);
       }
+      if (
+        e instanceof Anthropic.InternalServerError ||
+        e instanceof Anthropic.APIConnectionError
+      ) {
+        if (maxAttempts > 1) {
+          return createMessageWithFastFallback(params, undefined, maxAttempts - 1);
+        }
+      }
+      throw e;
     }
-    throw e;
   }
-}
 
-const message = await createMessageWithFastFallback(
-  {
-    model: "claude-opus-4-6",
-    max_tokens: 1024,
-    messages: [{ role: "user", content: "Hello" }],
-    betas: ["fast-mode-2026-02-01"],
-    speed: "fast"
-  },
-  { maxRetries: 0 }
-);
+  const message = await createMessageWithFastFallback(
+    {
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: "Hello" }],
+      betas: ["fast-mode-2026-02-01"],
+      speed: "fast"
+    },
+    { maxRetries: 0 }
+  );
+})();
 ```
 
-```go Go
+```go Go hidelines={1..11}
 package main
 
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
@@ -319,9 +387,32 @@ func createMessageWithFastFallback(
 	}
 	return message, nil
 }
+
+func main() {
+	client := anthropic.NewClient()
+	message, err := createMessageWithFastFallback(
+		context.TODO(),
+		&client,
+		anthropic.BetaMessageNewParams{
+			Model:     anthropic.ModelClaudeOpus4_6,
+			MaxTokens: 1024,
+			Messages: []anthropic.BetaMessageParam{
+				anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock("Hello")),
+			},
+			Speed: "fast",
+			Betas: []anthropic.AnthropicBeta{anthropic.AnthropicBetaFastMode2026_02_01},
+		},
+		3,
+		option.WithMaxRetries(0),
+	)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(message)
+}
 ```
 
-```ruby Ruby
+```ruby Ruby nocheck
 require "anthropic"
 
 anthropic = Anthropic::Client.new
@@ -334,7 +425,7 @@ rescue Anthropic::Errors::RateLimitError
   create_message_with_fast_fallback(client, **params)
 rescue Anthropic::Errors::InternalServerError, Anthropic::Errors::APIConnectionError
   raise unless max_attempts > 1
-  create_message_with_fast_fallback(client, request_options: request_options, max_attempts: max_attempts - 1, **params)
+  create_message_with_fast_fallback(client, max_attempts: max_attempts - 1, **params)
 end
 
 message = create_message_with_fast_fallback(

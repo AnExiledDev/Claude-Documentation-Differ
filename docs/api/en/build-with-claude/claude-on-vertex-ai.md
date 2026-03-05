@@ -9,7 +9,7 @@ The Vertex API for accessing Claude is nearly-identical to the [Messages API](/d
 * In Vertex, `model` is not passed in the request body. Instead, it is specified in the Google Cloud endpoint URL.
 * In Vertex, `anthropic_version` is passed in the request body (rather than as a header), and must be set to the value `vertex-2023-10-16`.
 
-Vertex is also supported by Anthropic's official [client SDKs](/docs/en/api/client-sdks). This guide walks you through the process of making a request to Claude on Vertex AI in either Python or TypeScript.
+Vertex is also supported by Anthropic's official [client SDKs](/docs/en/api/client-sdks). This guide walks you through making a request to Claude on Vertex AI using one of Anthropic's client SDKs.
 
 Note that this guide assumes you already have a GCP project that is able to use Vertex AI. See [using the Claude 3 models from Anthropic](https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/use-claude) for more information on the setup required, as well as a full walkthrough.
 
@@ -30,25 +30,65 @@ npm install @anthropic-ai/vertex-sdk
 ```
 </Tab>
 
+<Tab title="C#">
+```bash
+dotnet add package Anthropic.Vertex
+```
+</Tab>
+
+<Tab title="Go">
+```bash
+go get github.com/anthropics/anthropic-sdk-go
+```
+</Tab>
+
 <Tab title="Java">
 <CodeGroup>
 ```groovy Gradle
-implementation("com.anthropic:anthropic-java-vertex:2.+")
+implementation("com.anthropic:anthropic-java-vertex:2.15.0")
 ```
 
 ```xml Maven
 <dependency>
     <groupId>com.anthropic</groupId>
     <artifactId>anthropic-java-vertex</artifactId>
-    <version>2.13.0</version>
+    <version>2.15.0</version>
 </dependency>
+```
+
+```java Java nocheck hidelines={1..9,-1}
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.vertex.backends.VertexBackend;
+import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.Message;
+import com.anthropic.models.messages.Model;
+
+public class BasicMessage {
+    public static void main(String[] args) {
+        AnthropicClient client = AnthropicOkHttpClient.builder()
+            .backend(VertexBackend.fromEnv())
+            .build();
+
+        MessageCreateParams params = MessageCreateParams.builder()
+            .model(Model.CLAUDE_OPUS_4_6)
+            .maxTokens(1024L)
+            .addUserMessage("What is the capital of France?")
+            .build();
+
+        Message response = client.messages().create(params);
+        response.content().stream()
+            .flatMap(block -> block.text().stream())
+            .forEach(textBlock -> System.out.println(textBlock.text()));
+    }
+}
 ```
 </CodeGroup>
 </Tab>
 
-<Tab title="Go">
+<Tab title="PHP">
 ```bash
-go get github.com/anthropics/anthropic-sdk-go
+composer require anthropic-ai/sdk google/auth
 ```
 </Tab>
 
@@ -60,10 +100,6 @@ gem "googleauth"
 ```
 </Tab>
 </Tabs>
-
-<Note>
-The PHP SDK does not currently support Google Vertex AI. For available SDK platform integrations, see [Client SDKs](/docs/en/api/client-sdks).
-</Note>
 
 ## Accessing Vertex AI
 
@@ -94,7 +130,28 @@ Before running requests you may need to run `gcloud auth application-default log
 The following examples show how to generate text from Claude on Vertex AI:
 <CodeGroup>
 
-  ```python Python
+  ```bash Shell
+  MODEL_ID=claude-opus-4-6
+  LOCATION=global
+  PROJECT_ID=MY_PROJECT_ID
+
+  curl \
+  -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  https://$LOCATION-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/anthropic/models/${MODEL_ID}:streamRawPredict -d \
+  '{
+    "anthropic_version": "vertex-2023-10-16",
+    "messages": [{
+      "role": "user",
+      "content": "Hey Claude!"
+    }],
+    "max_tokens": 100,
+  }'
+  ```
+
+  
+  ```python Python nocheck
   from anthropic import AnthropicVertex
 
   project_id = "MY_PROJECT_ID"
@@ -115,7 +172,8 @@ The following examples show how to generate text from Claude on Vertex AI:
   print(message)
   ```
 
-  ```typescript TypeScript
+  
+  ```typescript TypeScript nocheck hidelines={1..2}
   import { AnthropicVertex } from "@anthropic-ai/vertex-sdk";
 
   const projectId = "MY_PROJECT_ID";
@@ -144,37 +202,33 @@ The following examples show how to generate text from Claude on Vertex AI:
   main();
   ```
 
-  ```java Java
-  import com.anthropic.client.AnthropicClient;
-  import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-  import com.anthropic.models.messages.Message;
-  import com.anthropic.models.messages.MessageCreateParams;
-  import com.anthropic.vertex.backends.VertexBackend;
+  
+  ```csharp C# nocheck
+  using Anthropic;
+  using Anthropic.Models.Messages;
+  using Anthropic.Vertex;
 
-  public class VertexExample {
+  var projectId = "MY_PROJECT_ID";
+  var region = "global";
 
-    public static void main(String[] args) {
-      // Uses default Google Cloud credentials
-      AnthropicClient client = AnthropicOkHttpClient.builder()
-        .backend(VertexBackend.fromEnv())
-        .build();
+  var client = new AnthropicClient
+  {
+      Backend = new VertexBackend(projectId, region)
+  };
 
-      Message message = client
-        .messages()
-        .create(
-          MessageCreateParams.builder()
-            .model("claude-opus-4-6")
-            .maxTokens(100)
-            .addUserMessage("Hey Claude!")
-            .build()
-        );
+  var parameters = new MessageCreateParams
+  {
+      Model = Model.ClaudeOpus4_6,
+      MaxTokens = 100,
+      Messages = [new() { Role = Role.User, Content = "Hey Claude!" }]
+  };
 
-      System.out.println(message);
-    }
-  }
+  var message = await client.Messages.Create(parameters);
+  Console.WriteLine(message);
   ```
 
-  ```go Go
+  
+  ```go Go nocheck hidelines={1..11,-1}
   package main
 
   import (
@@ -205,7 +259,60 @@ The following examples show how to generate text from Claude on Vertex AI:
   }
   ```
 
-  ```ruby Ruby
+  
+  ```java Java nocheck hidelines={1..9,-1}
+  import com.anthropic.client.AnthropicClient;
+  import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+  import com.anthropic.models.messages.Message;
+  import com.anthropic.models.messages.MessageCreateParams;
+  import com.anthropic.vertex.backends.VertexBackend;
+
+  public class VertexExample {
+
+    public static void main(String[] args) {
+      // Uses default Google Cloud credentials
+      AnthropicClient client = AnthropicOkHttpClient.builder()
+        .backend(VertexBackend.fromEnv())
+        .build();
+
+      Message message = client
+        .messages()
+        .create(
+          MessageCreateParams.builder()
+            .model("claude-opus-4-6")
+            .maxTokens(100)
+            .addUserMessage("Hey Claude!")
+            .build()
+        );
+
+      System.out.println(message);
+    }
+  }
+  ```
+
+  
+  ```php PHP nocheck
+  <?php
+
+  use Anthropic\Vertex;
+
+  $client = Vertex\Client::fromEnvironment(
+      location: 'global',
+      projectId: 'MY_PROJECT_ID',
+  );
+
+  $message = $client->messages->create(
+      maxTokens: 100,
+      messages: [
+          ['role' => 'user', 'content' => 'Hey Claude!']
+      ],
+      model: 'claude-opus-4-6',
+  );
+  echo $message->content[0]->text;
+  ```
+
+  
+  ```ruby Ruby nocheck
   require "anthropic"
 
   client = Anthropic::VertexClient.new(
@@ -220,26 +327,6 @@ The following examples show how to generate text from Claude on Vertex AI:
   )
 
   puts message.content.first.text
-  ```
-
-  ```bash Shell
-  MODEL_ID=claude-opus-4-6
-  LOCATION=global
-  PROJECT_ID=MY_PROJECT_ID
-
-  curl \
-  -X POST \
-  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-  -H "Content-Type: application/json" \
-  https://$LOCATION-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/anthropic/models/${MODEL_ID}:streamRawPredict -d \
-  '{
-    "anthropic_version": "vertex-2023-10-16",
-    "messages": [{
-      "role": "user",
-      "content": "Hey Claude!"
-    }],
-    "max_tokens": 100,
-  }'
   ```
 </CodeGroup>
 
@@ -295,7 +382,8 @@ This applies to Claude Sonnet 4.5 and future models only. Older models (Claude S
 Set the `region` parameter to `"global"` when initializing the client:
 
 <CodeGroup>
-```python Python
+
+```python Python nocheck
 from anthropic import AnthropicVertex
 
 project_id = "MY_PROJECT_ID"
@@ -316,7 +404,7 @@ message = client.messages.create(
 print(message)
 ```
 
-```typescript TypeScript
+```typescript TypeScript nocheck hidelines={1..2}
 import { AnthropicVertex } from "@anthropic-ai/vertex-sdk";
 
 const projectId = "MY_PROJECT_ID";
@@ -339,29 +427,31 @@ const result = await client.messages.create({
 });
 ```
 
-```java Java
-import com.anthropic.client.AnthropicClient;
-import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.vertex.backends.VertexBackend;
+```csharp C# nocheck
+using Anthropic;
+using Anthropic.Models.Messages;
+using Anthropic.Vertex;
 
-// Uses default Google Cloud credentials
-AnthropicClient client = AnthropicOkHttpClient.builder()
-  .backend(VertexBackend.fromEnv())
-  .build();
+var projectId = "MY_PROJECT_ID";
+var region = "global";
 
-var message = client
-  .messages()
-  .create(
-    MessageCreateParams.builder()
-      .model("claude-opus-4-6")
-      .maxTokens(100)
-      .addUserMessage("Hey Claude!")
-      .build()
-  );
+var client = new AnthropicClient
+{
+    Backend = new VertexBackend(projectId, region)
+};
+
+var parameters = new MessageCreateParams
+{
+    Model = Model.ClaudeOpus4_6,
+    MaxTokens = 100,
+    Messages = [new() { Role = Role.User, Content = "Hey Claude!" }]
+};
+
+var message = await client.Messages.Create(parameters);
+Console.WriteLine(message);
 ```
 
-```go Go
+```go Go nocheck hidelines={1..10,-1}
 package main
 
 import (
@@ -388,7 +478,50 @@ func main() {
 }
 ```
 
-```ruby Ruby
+```java Java nocheck hidelines={1..5}
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.vertex.backends.VertexBackend;
+
+// Uses default Google Cloud credentials
+AnthropicClient client = AnthropicOkHttpClient.builder()
+  .backend(VertexBackend.fromEnv())
+  .build();
+
+var message = client
+  .messages()
+  .create(
+    MessageCreateParams.builder()
+      .model("claude-opus-4-6")
+      .maxTokens(100)
+      .addUserMessage("Hey Claude!")
+      .build()
+  );
+```
+
+```php PHP nocheck
+<?php
+
+use Anthropic\Vertex;
+
+$client = Vertex\Client::fromEnvironment(
+    location: 'global',
+    projectId: 'MY_PROJECT_ID',
+);
+
+$message = $client->messages->create(
+    maxTokens: 100,
+    messages: [
+        ['role' => 'user', 'content' => 'Hey Claude!']
+    ],
+    model: 'claude-opus-4-6',
+);
+
+echo $message->content[0]->text;
+```
+
+```ruby Ruby nocheck
 require "anthropic"
 
 client = Anthropic::VertexClient.new(
@@ -411,7 +544,8 @@ puts message.content.first.text
 Specify a specific region like `"us-east1"` or `"europe-west1"`:
 
 <CodeGroup>
-```python Python
+
+```python Python nocheck
 from anthropic import AnthropicVertex
 
 project_id = "MY_PROJECT_ID"
@@ -432,7 +566,7 @@ message = client.messages.create(
 print(message)
 ```
 
-```typescript TypeScript
+```typescript TypeScript nocheck hidelines={1..2}
 import { AnthropicVertex } from "@anthropic-ai/vertex-sdk";
 
 const projectId = "MY_PROJECT_ID";
@@ -455,34 +589,31 @@ const result = await client.messages.create({
 });
 ```
 
-```java Java
-import com.anthropic.client.AnthropicClient;
-import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.vertex.backends.VertexBackend;
+```csharp C# nocheck
+using Anthropic;
+using Anthropic.Models.Messages;
+using Anthropic.Vertex;
 
-// Uses default Google Cloud credentials with specific region
-AnthropicClient client = AnthropicOkHttpClient.builder()
-  .backend(
-    VertexBackend.builder()
-      .region("us-east1") // Specify a specific region
-      .project("MY_PROJECT_ID")
-      .build()
-  )
-  .build();
+var projectId = "MY_PROJECT_ID";
+var region = "us-east1";
 
-var message = client
-  .messages()
-  .create(
-    MessageCreateParams.builder()
-      .model("claude-opus-4-6")
-      .maxTokens(100)
-      .addUserMessage("Hey Claude!")
-      .build()
-  );
+AnthropicClient client = new()
+{
+    Backend = new VertexBackend(projectId, region)
+};
+
+var parameters = new MessageCreateParams
+{
+    Model = Model.ClaudeOpus4_6,
+    MaxTokens = 100,
+    Messages = [new() { Role = Role.User, Content = "Hey Claude!" }]
+};
+
+var message = await client.Messages.Create(parameters);
+Console.WriteLine(message);
 ```
 
-```go Go
+```go Go nocheck hidelines={1..10,-1}
 package main
 
 import (
@@ -509,7 +640,54 @@ func main() {
 }
 ```
 
-```ruby Ruby
+```java Java nocheck hidelines={1..5}
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.vertex.backends.VertexBackend;
+
+// Uses default Google Cloud credentials with specific region
+AnthropicClient client = AnthropicOkHttpClient.builder()
+  .backend(
+    VertexBackend.builder()
+      .region("us-east1") // Specify a specific region
+      .project("MY_PROJECT_ID")
+      .build()
+  )
+  .build();
+
+var message = client
+  .messages()
+  .create(
+    MessageCreateParams.builder()
+      .model("claude-opus-4-6")
+      .maxTokens(100)
+      .addUserMessage("Hey Claude!")
+      .build()
+  );
+```
+
+```php PHP nocheck
+<?php
+
+use Anthropic\Vertex;
+
+$client = Vertex\Client::fromEnvironment(
+    location: 'us-east1',
+    projectId: 'MY_PROJECT_ID',
+);
+
+$message = $client->messages->create(
+    maxTokens: 100,
+    messages: [
+        ['role' => 'user', 'content' => 'Hey Claude!']
+    ],
+    model: 'claude-opus-4-6',
+);
+echo $message->content[0]->text;
+```
+
+```ruby Ruby nocheck
 require "anthropic"
 
 client = Anthropic::VertexClient.new(

@@ -88,31 +88,6 @@ Get started quickly with the computer use reference implementation that includes
 Here's how to get started with computer use:
 
 <CodeGroup>
-```python Python
-import anthropic
-
-client = anthropic.Anthropic()
-
-response = client.beta.messages.create(
-    model="claude-opus-4-6",  # or another compatible model
-    max_tokens=1024,
-    tools=[
-        {
-            "type": "computer_20251124",
-            "name": "computer",
-            "display_width_px": 1024,
-            "display_height_px": 768,
-            "display_number": 1,
-        },
-        {"type": "text_editor_20250728", "name": "str_replace_based_edit_tool"},
-        {"type": "bash_20250124", "name": "bash"},
-    ],
-    messages=[{"role": "user", "content": "Save a picture of a cat to my desktop."}],
-    betas=["computer-use-2025-11-24"],
-)
-print(response)
-```
-
 ```bash Shell
 curl https://api.anthropic.com/v1/messages \
   -H "content-type: application/json" \
@@ -146,6 +121,250 @@ curl https://api.anthropic.com/v1/messages \
       }
     ]
   }'
+```
+
+```python Python
+import anthropic
+
+client = anthropic.Anthropic()
+
+response = client.beta.messages.create(
+    model="claude-opus-4-6",  # or another compatible model
+    max_tokens=1024,
+    tools=[
+        {
+            "type": "computer_20251124",
+            "name": "computer",
+            "display_width_px": 1024,
+            "display_height_px": 768,
+            "display_number": 1,
+        },
+        {"type": "text_editor_20250728", "name": "str_replace_based_edit_tool"},
+        {"type": "bash_20250124", "name": "bash"},
+    ],
+    messages=[{"role": "user", "content": "Save a picture of a cat to my desktop."}],
+    betas=["computer-use-2025-11-24"],
+)
+print(response)
+```
+
+```typescript TypeScript hidelines={1..4}
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+const response = await client.beta.messages.create({
+  model: "claude-opus-4-6",
+  max_tokens: 1024,
+  tools: [
+    {
+      type: "computer_20251124",
+      name: "computer",
+      display_width_px: 1024,
+      display_height_px: 768,
+      display_number: 1
+    },
+    {
+      type: "text_editor_20250728",
+      name: "str_replace_based_edit_tool"
+    },
+    {
+      type: "bash_20250124",
+      name: "bash"
+    }
+  ],
+  messages: [{ role: "user", content: "Save a picture of a cat to my desktop." }],
+  betas: ["computer-use-2025-11-24"]
+});
+
+console.log(response);
+```
+
+```csharp C# nocheck
+using System;
+using System.Threading.Tasks;
+using Anthropic;
+using Anthropic.Models.Beta.Messages;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        var client = new AnthropicClient();
+
+        var parameters = new MessageCreateParams
+        {
+            Model = Model.ClaudeOpus4_6,
+            MaxTokens = 1024,
+            Tools = new BetaToolUnion[]
+            {
+                new BetaToolComputerUse20251124
+                {
+                    DisplayWidthPx = 1024,
+                    DisplayHeightPx = 768,
+                    DisplayNumber = 1
+                },
+                new BetaToolTextEditor20250728(),
+                new BetaToolBash20250124()
+            },
+            Messages = new[]
+            {
+                new BetaMessageParam
+                {
+                    Role = Role.User,
+                    Content = "Save a picture of a cat to my desktop."
+                }
+            },
+            Betas = new[] { "computer-use-2025-11-24" }
+        };
+
+        var response = await client.Beta.Messages.Create(parameters);
+        Console.WriteLine(response);
+    }
+}
+```
+
+```go Go nocheck hidelines={1..13,-1}
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/anthropics/anthropic-sdk-go"
+)
+
+func main() {
+	client := anthropic.NewClient()
+
+	response, err := client.Beta.Messages.New(context.TODO(), anthropic.BetaMessageNewParams{
+		Model:     anthropic.ModelClaudeOpus4_6,
+		MaxTokens: 1024,
+		Tools: []anthropic.BetaToolUnionParam{
+			{OfComputerUseTool20251124: &anthropic.BetaToolComputerUse20251124Param{
+				DisplayWidthPx:  1024,
+				DisplayHeightPx: 768,
+				DisplayNumber:   anthropic.Int(1),
+			}},
+			{OfTextEditor20250728: &anthropic.BetaToolTextEditor20250728Param{}},
+			{OfBashTool20250124: &anthropic.BetaToolBash20250124Param{}},
+		},
+		Messages: []anthropic.BetaMessageParam{
+			anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock("Save a picture of a cat to my desktop.")),
+		},
+		Betas: []anthropic.AnthropicBeta{
+			anthropic.AnthropicBetaComputerUse2025_11_24,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(response)
+}
+```
+
+```java Java hidelines={1..10,-1}
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.models.beta.messages.BetaMessage;
+import com.anthropic.models.beta.messages.BetaToolBash20250124;
+import com.anthropic.models.beta.messages.BetaToolComputerUse20251124;
+import com.anthropic.models.beta.messages.BetaToolTextEditor20250728;
+import com.anthropic.models.beta.messages.MessageCreateParams;
+
+public class ComputerUseExample {
+    public static void main(String[] args) {
+        AnthropicClient client = AnthropicOkHttpClient.fromEnv();
+
+        MessageCreateParams params = MessageCreateParams.builder()
+            .model("claude-opus-4-6")
+            .maxTokens(1024L)
+            .addTool(BetaToolComputerUse20251124.builder()
+                .displayWidthPx(1024L)
+                .displayHeightPx(768L)
+                .displayNumber(1L)
+                .build())
+            .addTool(BetaToolTextEditor20250728.builder().build())
+            .addTool(BetaToolBash20250124.builder().build())
+            .addUserMessage("Save a picture of a cat to my desktop.")
+            .addBeta("computer-use-2025-11-24")
+            .build();
+
+        BetaMessage response = client.beta().messages().create(params);
+        System.out.println(response);
+    }
+}
+```
+
+```php PHP
+<?php
+
+use Anthropic\Client;
+
+$client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+
+$response = $client->beta->messages->create(
+    maxTokens: 1024,
+    messages: [
+        ['role' => 'user', 'content' => 'Save a picture of a cat to my desktop.'],
+    ],
+    model: 'claude-opus-4-6',
+    tools: [
+        [
+            'type' => 'computer_20251124',
+            'name' => 'computer',
+            'display_width_px' => 1024,
+            'display_height_px' => 768,
+            'display_number' => 1,
+        ],
+        [
+            'type' => 'text_editor_20250728',
+            'name' => 'str_replace_based_edit_tool',
+        ],
+        [
+            'type' => 'bash_20250124',
+            'name' => 'bash',
+        ],
+    ],
+    betas: ['computer-use-2025-11-24'],
+);
+
+echo $response;
+```
+
+```ruby Ruby
+require "anthropic"
+
+client = Anthropic::Client.new
+
+response = client.beta.messages.create(
+  model: "claude-opus-4-6",
+  max_tokens: 1024,
+  tools: [
+    {
+      type: "computer_20251124",
+      name: "computer",
+      display_width_px: 1024,
+      display_height_px: 768,
+      display_number: 1
+    },
+    {
+      type: "text_editor_20250728",
+      name: "str_replace_based_edit_tool"
+    },
+    {
+      type: "bash_20250124",
+      name: "bash"
+    }
+  ],
+  messages: [
+    { role: "user", content: "Save a picture of a cat to my desktop." }
+  ],
+  betas: ["computer-use-2025-11-24"]
+)
+
+puts response
 ```
 </CodeGroup>
 
@@ -232,7 +451,7 @@ A [reference implementation](https://github.com/anthropics/anthropic-quickstarts
 
 The core of computer use is the "agent loop" - a cycle where Claude requests tool actions, your application executes them, and returns results to Claude. Here's a simplified example:
 
-```python
+```python nocheck
 async def sampling_loop(
     *,
     model: str,
@@ -605,7 +824,7 @@ client = anthropic.Anthropic()
 
 response = client.beta.messages.create(
     model="claude-opus-4-6",
-    max_tokens=1024,
+    max_tokens=2000,
     tools=[
         {
             "type": "computer_20251124",
@@ -648,72 +867,203 @@ response = client.beta.messages.create(
 print(response)
 ```
 
-```typescript TypeScript
-import Anthropic from "@anthropic-ai/sdk";
+  ```typescript TypeScript hidelines={1..4}
+  import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic();
+  const anthropic = new Anthropic();
 
-const message = await anthropic.beta.messages.create({
-  model: "claude-opus-4-6",
-  max_tokens: 1024,
-  tools: [
-    {
-      type: "computer_20251124",
-      name: "computer",
-      display_width_px: 1024,
-      display_height_px: 768,
-      display_number: 1
-    },
-    {
-      type: "text_editor_20250728",
-      name: "str_replace_based_edit_tool"
-    },
-    {
-      type: "bash_20250124",
-      name: "bash"
-    },
-    {
-      name: "get_weather",
-      description: "Get the current weather in a given location",
-      input_schema: {
-        type: "object",
-        properties: {
-          location: {
-            type: "string",
-            description: "The city and state, e.g. San Francisco, CA"
+  const message = await anthropic.beta.messages.create({
+    model: "claude-opus-4-6",
+    max_tokens: 4096,
+    tools: [
+      {
+        type: "computer_20251124",
+        name: "computer",
+        display_width_px: 1024,
+        display_height_px: 768,
+        display_number: 1
+      },
+      {
+        type: "text_editor_20250728",
+        name: "str_replace_based_edit_tool"
+      },
+      {
+        type: "bash_20250124",
+        name: "bash"
+      },
+      {
+        name: "get_weather",
+        description: "Get the current weather in a given location",
+        input_schema: {
+          type: "object",
+          properties: {
+            location: {
+              type: "string",
+              description: "The city and state, e.g. San Francisco, CA"
+            },
+            unit: {
+              type: "string",
+              enum: ["celsius", "fahrenheit"],
+              description: "The unit of temperature, either 'celsius' or 'fahrenheit'"
+            }
           },
-          unit: {
-            type: "string",
-            enum: ["celsius", "fahrenheit"],
-            description: "The unit of temperature, either 'celsius' or 'fahrenheit'"
-          }
-        },
-        required: ["location"]
+          required: ["location"]
+        }
       }
-    }
-  ],
-  messages: [
-    {
-      role: "user",
-      content: "Find flights from San Francisco to a place with warmer weather."
-    }
-  ],
-  betas: ["computer-use-2025-11-24"],
-  thinking: { type: "enabled", budget_tokens: 1024 }
-});
-console.log(message);
-```
-```java Java
+    ],
+    messages: [
+      {
+        role: "user",
+        content: "Find flights from San Francisco to a place with warmer weather."
+      }
+    ],
+    betas: ["computer-use-2025-11-24"],
+    thinking: { type: "enabled", budget_tokens: 1024 }
+  });
+  console.log(message);
+  ```
+
+  
+  ```csharp C# nocheck
+  using System;
+  using System.Collections.Generic;
+  using System.Text.Json;
+  using System.Threading.Tasks;
+  using Anthropic;
+  using Anthropic.Models.Beta.Messages;
+
+  public class Program
+  {
+      public static async Task Main(string[] args)
+      {
+          AnthropicClient client = new()
+          {
+              ApiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")
+          };
+
+          var parameters = new MessageCreateParams
+          {
+              Model = Model.ClaudeOpus4_6,
+              MaxTokens = 2000,
+              Tools = new BetaToolUnion[]
+              {
+                  new BetaToolComputerUse20251124
+                  {
+                      DisplayWidthPx = 1024,
+                      DisplayHeightPx = 768,
+                      DisplayNumber = 1
+                  },
+                  new BetaToolTextEditor20250728(),
+                  new BetaToolBash20250124(),
+                  new BetaTool
+                  {
+                      Name = "get_weather",
+                      Description = "Get the current weather in a given location",
+                      InputSchema = new InputSchema
+                      {
+                          Properties = new Dictionary<string, JsonElement>
+                          {
+                              ["location"] = JsonSerializer.SerializeToElement(new
+                              {
+                                  type = "string",
+                                  description = "The city and state, e.g. San Francisco, CA"
+                              }),
+                              ["unit"] = JsonSerializer.SerializeToElement(new
+                              {
+                                  type = "string",
+                                  @enum = new[] { "celsius", "fahrenheit" },
+                                  description = "The unit of temperature, either 'celsius' or 'fahrenheit'"
+                              })
+                          },
+                          Required = ["location"]
+                      }
+                  }
+              },
+              Messages = new BetaMessageParam[]
+              {
+                  new()
+                  {
+                      Role = Role.User,
+                      Content = "Find flights from San Francisco to a place with warmer weather."
+                  }
+              },
+              Betas = ["computer-use-2025-11-24"],
+              Thinking = new BetaThinkingConfigParam(new BetaThinkingConfigEnabled(1024))
+          };
+
+          var message = await client.Beta.Messages.Create(parameters);
+          Console.WriteLine(message);
+      }
+  }
+  ```
+
+  
+  ```go Go nocheck hidelines={1..11,-1}
+  package main
+
+  import (
+  	"context"
+  	"fmt"
+  	"log"
+
+  	"github.com/anthropics/anthropic-sdk-go"
+  )
+
+  func main() {
+  	client := anthropic.NewClient()
+
+  	response, err := client.Beta.Messages.New(context.TODO(), anthropic.BetaMessageNewParams{
+  		Model:     anthropic.ModelClaudeOpus4_6,
+  		MaxTokens: 16384,
+  		Tools: []anthropic.BetaToolUnionParam{
+  			{OfComputerUseTool20251124: &anthropic.BetaToolComputerUse20251124Param{
+  				DisplayWidthPx:  1024,
+  				DisplayHeightPx: 768,
+  				DisplayNumber:   anthropic.Int(1),
+  			}},
+  			{OfTextEditor20250728: &anthropic.BetaToolTextEditor20250728Param{}},
+  			{OfBashTool20250124: &anthropic.BetaToolBash20250124Param{}},
+  			{OfTool: &anthropic.BetaToolParam{
+  				Name:        "get_weather",
+  				Description: anthropic.String("Get the current weather in a given location"),
+  				InputSchema: anthropic.BetaToolInputSchemaParam{
+  					Properties: map[string]any{
+  						"location": map[string]any{
+  							"type":        "string",
+  							"description": "The city and state, e.g. San Francisco, CA",
+  						},
+  						"unit": map[string]any{
+  							"type":        "string",
+  							"enum":        []string{"celsius", "fahrenheit"},
+  							"description": "The unit of temperature, either 'celsius' or 'fahrenheit'",
+  						},
+  					},
+  					Required: []string{"location"},
+  				},
+  			}},
+  		},
+  		Messages: []anthropic.BetaMessageParam{
+  			anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock("Find flights from San Francisco to a place with warmer weather.")),
+  		},
+  		Thinking: anthropic.BetaThinkingConfigParamOfEnabled(1024),
+  		Betas:    []anthropic.AnthropicBeta{anthropic.AnthropicBetaComputerUse2025_11_24},
+  	})
+  	if err != nil {
+  		log.Fatal(err)
+  	}
+  	fmt.Println(response)
+  }
+  ```
+
+```java Java hidelines={1..15,-1}
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.core.JsonValue;
 import com.anthropic.models.beta.messages.BetaMessage;
-import com.anthropic.models.beta.messages.BetaThinkingConfigEnabled;
-import com.anthropic.models.beta.messages.BetaThinkingConfigParam;
 import com.anthropic.models.beta.messages.BetaTool;
 import com.anthropic.models.beta.messages.BetaToolBash20250124;
-import com.anthropic.models.beta.messages.BetaToolComputerUse20250124;
-import com.anthropic.models.beta.messages.BetaToolTextEditor20250124;
+import com.anthropic.models.beta.messages.BetaToolComputerUse20251124;
+import com.anthropic.models.beta.messages.BetaToolTextEditor20250728;
 import com.anthropic.models.beta.messages.MessageCreateParams;
 import java.util.List;
 import java.util.Map;
@@ -725,15 +1075,15 @@ public class MultipleToolsExample {
 
     MessageCreateParams params = MessageCreateParams.builder()
       .model("claude-opus-4-6")
-      .maxTokens(1024)
+      .maxTokens(16384L)
       .addTool(
-        BetaToolComputerUse20250124.builder()
-          .displayWidthPx(1024)
-          .displayHeightPx(768)
-          .displayNumber(1)
+        BetaToolComputerUse20251124.builder()
+          .displayWidthPx(1024L)
+          .displayHeightPx(768L)
+          .displayNumber(1L)
           .build()
       )
-      .addTool(BetaToolTextEditor20250124.builder().build())
+      .addTool(BetaToolTextEditor20250728.builder().build())
       .addTool(BetaToolBash20250124.builder().build())
       .addTool(
         BetaTool.builder()
@@ -742,36 +1092,33 @@ public class MultipleToolsExample {
           .inputSchema(
             BetaTool.InputSchema.builder()
               .properties(
-                JsonValue.from(
-                  Map.of(
+                BetaTool.InputSchema.Properties.builder()
+                  .putAdditionalProperty(
                     "location",
-                    Map.of(
-                      "type",
-                      "string",
-                      "description",
-                      "The city and state, e.g. San Francisco, CA"
-                    ),
-                    "unit",
-                    Map.of(
-                      "type",
-                      "string",
-                      "enum",
-                      List.of("celsius", "fahrenheit"),
-                      "description",
-                      "The unit of temperature, either 'celsius' or 'fahrenheit'"
+                    JsonValue.from(
+                      Map.of(
+                        "type", "string",
+                        "description", "The city and state, e.g. San Francisco, CA"
+                      )
                     )
                   )
-                )
+                  .putAdditionalProperty(
+                    "unit",
+                    JsonValue.from(
+                      Map.of(
+                        "type", "string",
+                        "enum", List.of("celsius", "fahrenheit"),
+                        "description", "The unit of temperature, either 'celsius' or 'fahrenheit'"
+                      )
+                    )
+                  )
+                  .build()
               )
               .build()
           )
           .build()
       )
-      .thinking(
-        BetaThinkingConfigParam.ofEnabled(
-          BetaThinkingConfigEnabled.builder().budgetTokens(1024).build()
-        )
-      )
+      .enabledThinking(1024L)
       .addUserMessage("Find flights from San Francisco to a place with warmer weather.")
       .addBeta("computer-use-2025-11-24")
       .build();
@@ -781,6 +1128,122 @@ public class MultipleToolsExample {
   }
 }
 ```
+
+  
+  ```php PHP hidelines={1..6} nocheck
+  <?php
+
+  use Anthropic\Client;
+
+  $client = new Client(apiKey: getenv("ANTHROPIC_API_KEY"));
+
+  $message = $client->beta->messages->create(
+      maxTokens: 2000,
+      messages: [
+          ['role' => 'user', 'content' => 'Find flights from San Francisco to a place with warmer weather.'],
+      ],
+      model: 'claude-opus-4-6',
+      tools: [
+          [
+              'type' => 'computer_20251124',
+              'name' => 'computer',
+              'display_width_px' => 1024,
+              'display_height_px' => 768,
+              'display_number' => 1,
+          ],
+          [
+              'type' => 'text_editor_20250728',
+              'name' => 'str_replace_based_edit_tool',
+          ],
+          [
+              'type' => 'bash_20250124',
+              'name' => 'bash',
+          ],
+          [
+              'name' => 'get_weather',
+              'description' => 'Get the current weather in a given location',
+              'input_schema' => [
+                  'type' => 'object',
+                  'properties' => [
+                      'location' => [
+                          'type' => 'string',
+                          'description' => 'The city and state, e.g. San Francisco, CA',
+                      ],
+                      'unit' => [
+                          'type' => 'string',
+                          'enum' => ['celsius', 'fahrenheit'],
+                          'description' => 'The unit of temperature, either \'celsius\' or \'fahrenheit\'',
+                      ],
+                  ],
+                  'required' => ['location'],
+              ],
+          ],
+      ],
+      betas: ['computer-use-2025-11-24'],
+      thinking: ['type' => 'enabled', 'budget_tokens' => 1024],
+  );
+
+  echo $message;
+  ```
+
+  ```ruby Ruby
+    require "anthropic"
+
+    client = Anthropic::Client.new
+
+    message = client.beta.messages.create(
+      model: "claude-opus-4-6",
+      max_tokens: 2000,
+      tools: [
+        {
+          type: "computer_20251124",
+          name: "computer",
+          display_width_px: 1024,
+          display_height_px: 768,
+          display_number: 1
+        },
+        {
+          type: "text_editor_20250728",
+          name: "str_replace_based_edit_tool"
+        },
+        {
+          type: "bash_20250124",
+          name: "bash"
+        },
+        {
+          name: "get_weather",
+          description: "Get the current weather in a given location",
+          input_schema: {
+            type: "object",
+            properties: {
+              location: {
+                type: "string",
+                description: "The city and state, e.g. San Francisco, CA"
+              },
+              unit: {
+                type: "string",
+                enum: ["celsius", "fahrenheit"],
+                description: "The unit of temperature, either 'celsius' or 'fahrenheit'"
+              }
+            },
+            required: ["location"]
+          }
+        }
+      ],
+      messages: [
+        {
+          role: "user",
+          content: "Find flights from San Francisco to a place with warmer weather."
+        }
+      ],
+      betas: ["computer-use-2025-11-24"],
+      thinking: {
+        type: "enabled",
+        budget_tokens: 1024
+      }
+    )
+    puts message
+  ```
 </CodeGroup>
 
 ### Build a custom computer use environment
@@ -802,7 +1265,8 @@ The computer use tool is implemented as a schema-less tool. When using this tool
   </Step>
   <Step title="Implement action handlers">
     Create functions to handle each action type that Claude might request:
-    ```python
+    
+    ```python nocheck
     def handle_computer_action(action_type, params):
         if action_type == "screenshot":
             return capture_screenshot()
@@ -816,7 +1280,8 @@ The computer use tool is implemented as a schema-less tool. When using this tool
   </Step>
   <Step title="Process Claude's tool calls">
     Extract and execute tool calls from Claude's responses:
-    ```python
+    
+    ```python nocheck
     for content in response.content:
         if content.type == "tool_use":
             action = content.input["action"]
@@ -832,7 +1297,8 @@ The computer use tool is implemented as a schema-less tool. When using this tool
   </Step>
   <Step title="Implement the agent loop">
     Create a loop that continues until Claude completes the task:
-    ```python
+    
+    ```python nocheck
     while True:
         response = client.beta.messages.create(...)
 
@@ -922,7 +1388,8 @@ This can cause Claude's click coordinates to miss their targets unless you handl
 To fix this, resize screenshots yourself and scale Claude's coordinates back up:
 
 <CodeGroup>
-```python Python
+
+```python Python nocheck
 import math
 
 
@@ -953,7 +1420,7 @@ def execute_click(x, y):
     perform_click(screen_x, screen_y)
 ```
 
-```typescript TypeScript
+```typescript TypeScript nocheck
 const MAX_LONG_EDGE = 1568;
 const MAX_PIXELS = 1_150_000;
 
@@ -1008,7 +1475,8 @@ When returning screenshots to Claude:
 <section title="Add action delays">
 
 Some applications need time to respond to actions:
-```python
+
+```python nocheck
 def click_and_wait(x, y, wait_time=0.5):
     click_at(x, y)
     time.sleep(wait_time)  # Allow UI to update
@@ -1019,7 +1487,8 @@ def click_and_wait(x, y, wait_time=0.5):
 <section title="Validate actions before execution">
 
 Check that requested actions are safe and valid:
-```python
+
+```python nocheck
 def validate_action(action_type, params):
     if action_type == "left_click":
         x, y = params.get("coordinate", (0, 0))
@@ -1033,7 +1502,8 @@ def validate_action(action_type, params):
 <section title="Log actions for debugging">
 
 Keep a log of all actions for troubleshooting:
-```python
+
+```python nocheck
 import logging
 
 
