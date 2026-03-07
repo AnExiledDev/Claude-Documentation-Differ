@@ -14,12 +14,12 @@ claude-code
 Public
 Notifications
 Fork 6k
- Star 74.7k
+ Star 74.8k
 Code
 Issues
 5k+
 Pull requests
-280
+281
 Actions
 Security
 21
