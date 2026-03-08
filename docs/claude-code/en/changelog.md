@@ -14,7 +14,7 @@ claude-code
 Public
 Notifications
 Fork 6k
- Star 75k
+ Star 75.1k
 Code
 Issues
 5k+
