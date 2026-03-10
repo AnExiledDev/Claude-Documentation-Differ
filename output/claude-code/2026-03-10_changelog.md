@@ -2,13 +2,13 @@
 
 ## Summary
 
-One documentation file registered a change between commits `a887f1c` and `HEAD`, but the modification is limited to GitHub repository UI metadata scraped as part of the changelog page: the star count ticked up from 76k to 76.1k and the open pull request count moved from 295 to 300. No documentation content, CLI features, configuration, or behavioral descriptions changed.
+No substantive documentation changes were detected in this diff. The single modified file (`changelog.md`) reflects only GitHub repository statistics (fork count, star count, and open pull request count) that are rendered into the scraped page — not authored documentation content. No CLI features, configuration, behavioral descriptions, or reference material changed.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| [`changelog.md`](https://code.claude.com/docs/en/changelog.md) | Modified | +2/-2 | GitHub repo star count updated (76k → 76.1k); open PR count updated (295 → 300) |
+| [`changelog.md`](https://code.claude.com/docs/en/changelog.md) | Modified | +3/-3 | GitHub repo stats updated: forks 6.1k→6.2k, stars 76.1k→76.2k, open PRs 300→318 |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-10*
