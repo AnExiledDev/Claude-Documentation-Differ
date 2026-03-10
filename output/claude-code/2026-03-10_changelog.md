@@ -2,131 +2,147 @@
 
 ## Summary
 
-A new **Code Review** managed service (research preview) has been added for Teams and Enterprise subscribers, enabling automatic multi-agent PR reviews posted as inline GitHub comments. Alongside this, the built-in `/review` slash command is deprecated in favor of a dedicated plugin, and `/review` has been replaced as the canonical example throughout skills, plugins, and marketplace documentation.
-
----
+Version 2.1.72 is documented in the official changelog with a large set of new features and bug fixes. Across four other pages, `CLAUDE.local.md` is removed as a documented convention — the local-scope memory file no longer appears in the reference table, best-practices examples, or desktop compatibility notes. The tools reference table in `settings.md` has been substantially expanded to include newly available tools including `CronCreate/Delete/List`, `EnterWorktree`, `ExitWorktree`, `ToolSearch`, and MCP resource tools.
 
 ## Significant Changes
 
-### New Feature: GitHub Code Review (Managed Service)
+### Version 2.1.72 Release
 
-- **Automatic PR reviews via multi-agent analysis**: A new hosted Code Review service runs automatically when a pull request opens or updates on GitHub. A fleet of specialized agents analyze the diff against the full codebase in parallel on Anthropic infrastructure, then deduplicate and rank findings before posting them as inline PR comments.
+- **ExitWorktree tool added**: A new `ExitWorktree` tool is available to leave an `EnterWorktree` session and return to the original directory.
+  > Added ExitWorktree tool to leave an EnterWorktree session
+  - *Implication*: Agents working in isolated git worktrees can now cleanly exit back to the original directory programmatically.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  > "A fleet of specialized agents examine the code changes in the context of your full codebase, looking for logic errors, security vulnerabilities, broken edge cases, and subtle regressions."
+- **`/plan` accepts an inline description**: The `/plan` command now accepts an optional description argument that enters plan mode and immediately starts working on it.
+  > Added optional description argument to /plan (e.g., /plan fix the auth bug) that enters plan mode and immediately starts
+  - *Implication*: Saves the extra step of entering plan mode and then typing a prompt.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  - *Implication*: No manual trigger required — reviews run without a `@claude` mention or CI workflow change. This is distinct from GitHub Actions, which requires explicit invocation.
-  - *Source*: [Code Review](https://code.claude.com/docs/en/code-review.md)
+- **`/copy` `w` key writes directly to file**: In the `/copy` UI, pressing `w` now writes the focused selection directly to a file, bypassing the clipboard.
+  > Added w key in /copy to write the focused selection directly to a file, bypassing the clipboard (useful over SSH)
+  - *Implication*: Makes `/copy` usable in SSH sessions where clipboard integration is unavailable.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **Severity tagging system**: Findings are classified into three severity levels:
+- **`CLAUDE_CODE_DISABLE_CRON` environment variable**: A new environment variable that immediately stops all scheduled cron jobs mid-session.
+  > Added CLAUDE_CODE_DISABLE_CRON environment variable to immediately stop scheduled cron jobs mid-session
+  - *Implication*: Provides a kill-switch for recurring scheduled tasks without ending the session entirely.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  | Marker | Severity     | Meaning                                                             |
-  |--------|--------------|---------------------------------------------------------------------|
-  | 🔴     | Normal       | A bug that should be fixed before merging                           |
-  | 🟡     | Nit          | A minor issue, worth fixing but not blocking                        |
-  | 🟣     | Pre-existing | A bug that exists in the codebase but was not introduced by this PR |
+- **Bash auto-approval allowlist expanded**: `lsof`, `pgrep`, `tput`, `ss`, `fd`, and `fdfind` are now auto-approved without prompting.
+  > Added lsof, pgrep, tput, ss, fd, and fdfind to the bash auto-approval allowlist, reducing permission prompts for common read-only operations
+  - *Implication*: Fewer interruptions when Claude uses standard diagnostic and file-search tools.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  - *Implication*: Reviews are non-blocking by design — findings don't approve or reject PRs, preserving existing review workflows.
-  - *Source*: [Code Review](https://code.claude.com/docs/en/code-review.md)
+- **Agent tool `model` parameter restored**: Per-invocation model overrides on the `Agent` tool are available again.
+  > Restored the model parameter on the Agent tool for per-invocation model overrides
+  - *Implication*: Developers can route sub-agents to different models (e.g., a faster model for simpler sub-tasks).
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`REVIEW.md` — new repo-level configuration file**: A new `REVIEW.md` file (placed at repository root) lets teams encode review-specific rules without polluting the general `CLAUDE.md`. It supports "always check", "style", and "skip" sections.
+- **Effort levels simplified — `max` removed**: Levels are now `low/medium/high` with new symbols `○ ◐ ●`. A brief notification replaces the persistent icon. Use `/effort auto` to reset to default.
+  > Simplified effort levels to low/medium/high (removed max) with new symbols (○ ◐ ●) and a brief notification instead of a persistent icon. Use /effort auto to reset to default
+  - *Implication*: Existing configurations or scripts referencing `max` effort will need to be updated to `high`.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  > "`REVIEW.md`: review-only guidance, read exclusively during code reviews. Use it for rules that are strictly about what to flag or skip during review and would clutter your general `CLAUDE.md`."
+- **HTML comments in CLAUDE.md now hidden from Claude**: `<!-- ... -->` comments in CLAUDE.md files are no longer visible to Claude when auto-injected, but remain readable via the `Read` tool.
+  > Changed CLAUDE.md HTML comments (<!-- ... -->) to be hidden from Claude when auto-injected. Comments remain visible when read with the Read tool
+  - *Implication*: Teams can add internal notes inside CLAUDE.md HTML comments without those notes influencing Claude's behavior.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  - *Implication*: Teams can now separate project-wide Claude instructions (`CLAUDE.md`) from code-review-specific policies (`REVIEW.md`). Claude auto-discovers `REVIEW.md` at the repo root with no configuration needed.
-  - *Source*: [Code Review](https://code.claude.com/docs/en/code-review.md)
+- **Prompt cache invalidation fixed in SDK**: `query()` calls in the SDK were incorrectly invalidating prompt caches; this is now fixed.
+  > Fixed prompt cache invalidation in SDK query() calls, reducing input token costs up to 12x
+  - *Implication*: SDK users may see significantly lower input token costs (up to 12x reduction) without any code changes.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **Availability and pricing**: Code Review is in **research preview**, available only to **Teams and Enterprise** subscribers. Not available to organizations with Zero Data Retention enabled. Reviews are billed by token usage, averaging **$15–25 per review**.
+- **`/clear` no longer kills background tasks**: Previously `/clear` would kill background agent and bash tasks; now only foreground tasks are cleared.
+  > Fixed /clear killing background agent/bash tasks — only foreground tasks are now cleared
+  - *Implication*: Background work continues safely when a user clears their conversation.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  > "Reviews scale in cost with PR size and complexity, completing in 20 minutes on average."
+- **VSCode: URI handler for programmatic tab opening**: A new `vscode://anthropic.claude-code/open` URI handler opens a new Claude Code tab, with optional `prompt` and `session` query parameters.
+  > VSCode: Added vscode://anthropic.claude-code/open URI handler to open a new Claude Code tab programmatically, with optional prompt and session query parameters
+  - *Implication*: Enables IDE workflows and external tools to launch Claude Code sessions with pre-filled context.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  - *Implication*: The "after every push" trigger mode multiplies costs by the number of pushes per PR. Admins can set monthly spend caps at `claude.ai/admin-settings/usage`. A per-repo cost column is visible in admin settings.
-  - *Source*: [Code Review](https://code.claude.com/docs/en/code-review.md)
+- **Notable bug fixes in 2.1.72**:
+  - Skill hooks firing twice per event when a hooks-enabled skill is invoked by the model
+  - `--continue` not resuming from the most recent point after `--compact`
+  - `--effort` CLI flag being reset by unrelated settings writes on startup
+  - Plugin installation failing on Windows (EEXIST in OneDrive folders), plus marketplace blocking user-scope installs when a project-scope install exists
+  - Worktree isolation issues: Task tool resume not restoring cwd; background task notifications missing `worktreePath`/`worktreeBranch`
+  - Sandbox permission issues: certain file writes incorrectly allowed without prompting; output redirections to allowlisted dirs (like `/tmp/claude/`) prompting unnecessarily
+  - Permission rule matching: wildcards not matching commands with heredocs/embedded newlines/no arguments; deny rules not applying to all command forms
+  - Session crashes in Desktop/SDK when `Read` returned files containing U+2028/U+2029 characters
+  - Parallel tool calls where a failed `Read`/`WebFetch`/`Glob` would cancel its siblings — only Bash errors now cascade
+  - "Always Allow" saving permission rules that never match again
+  - `transcript_path` pointing to the wrong directory for resumed/forked sessions
 
----
+### CLAUDE.local.md Removed as a Convention
 
-### Deprecation: Built-in `/review` Slash Command
+Across four pages, all references to `CLAUDE.local.md` as a local-scope memory file have been removed. This is a coordinated documentation change reflecting the feature's removal.
 
-- **`/review` command deprecated**: The built-in `/review` interactive-mode command is now marked deprecated. Users are directed to install the `code-review` plugin from the marketplace instead.
+- **`memory.md` — Local instructions scope row dropped**: The "Local instructions" row (`./CLAUDE.local.md`) has been removed from the CLAUDE.md scopes table entirely. The recommended alternative for private per-project preferences is now importing a file from your home directory via the shared `CLAUDE.md`.
+  > For personal preferences you don't want to check in, import a file from your home directory. The import goes in the shared CLAUDE.md, but the file it points to stays on your machine
+  - *Implication*: Users relying on `CLAUDE.local.md` for per-project private instructions should migrate to the home-directory import pattern.
+  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
 
-  > "`/review` — Deprecated. Install the [`code-review` plugin](https://github.com/anthropics/claude-code-marketplace/blob/main/code-review/README.md) instead: `claude plugin install code-review@claude-code-marketplace`"
+- **`best-practices.md` — CLAUDE.local.md alternative removed**: The project-root CLAUDE.md bullet previously described naming it `CLAUDE.local.md` and `.gitignore`-ing it as an option; that option is gone.
+  > **Project root (`./CLAUDE.md`)**: check into git to share with your team
+  - *Source*: [Best Practices](https://code.claude.com/docs/en/best-practices.md)
 
-  - *Implication*: Existing workflows using `/review` in interactive sessions will need to migrate to the plugin. The managed Code Review service (above) handles automated PR-level reviews; the plugin handles on-demand local reviews before pushing.
-  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
+- **`desktop.md` — CLAUDE.local.md compatibility note removed**: The desktop/CLI shared configuration list previously included `CLAUDE.local.md`; now only `CLAUDE.md` is listed.
+  > **[CLAUDE.md](/en/memory)** files in your project are used by both
+  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
 
----
+- **`settings.md` — Local scope and CLAUDE.md table updated**: The Local scope file pattern is now explicitly `.claude/settings.local.json` (previously `.claude/*.local.*`), and the CLAUDE.md row in the scopes-by-feature table no longer lists a local-scope file.
+  > | **Local** | `.claude/settings.local.json` | You, in this repository only | No (gitignored) |
+  > | **CLAUDE.md** | `~/.claude/CLAUDE.md` | `CLAUDE.md` or `.claude/CLAUDE.md` | — |
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-### GitHub Actions: Cross-Reference and Prompt Updates
+### Tools Reference Table Expanded (`settings.md`)
 
-- **Link to Code Review added**: The GitHub Actions page intro now references the new managed Code Review service for teams that want reviews without a manual trigger.
+The built-in tools table has been reorganized alphabetically and expanded with newly documented tools. Several tools were renamed or had descriptions updated.
 
-  > "For automatic reviews posted on every PR without a trigger, see [GitHub Code Review](/en/code-review)."
+- **New tools added to the reference**:
+  - `CronCreate` — Schedules a recurring or one-shot prompt within the current session (session-scoped; gone when Claude exits). See [scheduled tasks](/en/scheduled-tasks).
+  - `CronDelete` — Cancels a scheduled task by ID
+  - `CronList` — Lists all scheduled tasks in the session
+  - `EnterPlanMode` — Switches to plan mode to design an approach before coding
+  - `EnterWorktree` — Creates an isolated git worktree and switches into it
+  - `ExitWorktree` — Exits a worktree session and returns to the original directory
+  - `ListMcpResourcesTool` — Lists resources exposed by connected MCP servers
+  - `ReadMcpResourceTool` — Reads a specific MCP resource by URI
+  - `TaskStop` — Kills a running background task by ID (replaces `KillShell`)
+  - `TodoWrite` — Manages the session task checklist; available in non-interactive mode and Agent SDK. Interactive sessions use `TaskCreate/Get/List/Update` instead.
+  - `ToolSearch` — Searches for and loads deferred tools when tool search is enabled (replaces `MCPSearch`)
 
-  - *Source*: [GitHub Actions](https://code.claude.com/docs/en/github-actions.md)
+- **Tools renamed**:
+  - `MCPSearch` → `ToolSearch` (reflects broader applicability beyond MCP tools)
+  - `KillShell` → `TaskStop` (generalized from bash shells to any background task type)
 
-- **PR review example prompt updated**: The Actions workflow example for automated PR reviews no longer uses the `/review` skill shorthand. It now uses an explicit plain-text prompt:
+- **Description updates**:
+  - `Agent`: now "Spawns a subagent with its own context window to handle a task" (previously "Runs a sub-agent to handle complex, multi-step tasks")
+  - `ExitPlanMode`: now "Presents a plan for approval and exits plan mode" (previously "Prompts the user to exit plan mode and start coding")
 
-  > `prompt: "Review this pull request for code quality, correctness, and security. Analyze the diff, then post your findings as review comments."`
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-  - *Implication*: This reflects the deprecation of `/review` as a built-in command and encourages explicit prompt instructions in CI workflows.
-  - *Source*: [GitHub Actions](https://code.claude.com/docs/en/github-actions.md)
+## Notable Details
 
-- **"Commands" renamed to "Skills" in Action v1 key features**: The feature list entry previously called "Commands" (with examples `/review` or `/fix`) is now called "Skills", pointing to the skills documentation.
-
-  > "**Skills** — Invoke installed [skills](/en/skills) directly from the prompt"
-
-  - *Source*: [GitHub Actions](https://code.claude.com/docs/en/github-actions.md)
-
-- **`prompt` parameter description clarified**: The Action v1 parameter table now describes `prompt` as accepting "plain text or a [skill](/en/skills) name" rather than "text or skill like `/review`".
-  - *Source*: [GitHub Actions](https://code.claude.com/docs/en/github-actions.md)
-
----
-
-### Documentation-Wide: `/review` Example Replacement
-
-Following the deprecation of `/review`, all documentation examples that used `/review` as a canonical skill name have been updated to avoid confusion:
-
-| Page | Old example | New example |
-|------|------------|-------------|
-| `features-overview.md` | `/review` runs your code review checklist | `/deploy` runs your deployment checklist |
-| `features-overview.md` | `/review` skill (Skill + Subagent pattern) | `/audit` skill |
-| `plugin-marketplaces.md` | `review-plugin` / `/review` skill walkthrough | `quality-review-plugin` / `/quality-review` skill |
-| `plugins.md` | short skill name like `/review` | short skill name like `/deploy` |
-| `skills.md` | `commands/review.md` / `/review` example | `commands/deploy.md` / `/deploy` example |
-
-- *Implication*: These are example-only changes with no behavioral impact, but they signal that `/review` is no longer the idiomatic built-in example going forward.
-
----
-
-### Overview Page: New Navigation Entry
-
-- **Code Review added to "Where to use Claude Code" table**: The overview page now includes a row directing users to the managed Code Review service.
-
-  > "Get automatic code review on every PR → [GitHub Code Review](/en/code-review)"
-
-  - *Source*: [Overview](https://code.claude.com/docs/en/overview.md)
-
----
-
-## New Pages
-
-- **[code-review.md](https://code.claude.com/docs/en/code-review.md)** — Full documentation for the new managed GitHub Code Review service: how it works, admin setup (GitHub App installation, per-repo trigger configuration), `CLAUDE.md`/`REVIEW.md` customization, usage analytics, and pricing.
-
----
+- **`/config` UX behavioral change**: Escape now cancels changes (instead of closing with saves applied); Enter saves and closes; Space toggles boolean settings. Users with muscle memory for the old behavior should note this.
+- **Bash command parsing switched to native module**: Faster initialization and eliminates a memory leak in long sessions. No user-facing API change.
+- **Bundle size reduced ~510 KB**: Smaller install footprint.
+- **`ToolSearch` now works with `ANTHROPIC_BASE_URL`**: Previously, tool search required no custom base URL to activate. It now activates with `ANTHROPIC_BASE_URL` set as long as `ENABLE_TOOL_SEARCH` is also set.
+- **"Always Allow" permission rule fix**: Rules that would never match again are no longer saved, preventing permission configuration bloat over time.
+- **`CLAUDE.local.md` removal is consistent across all four affected pages**, indicating a deliberate deprecation rather than an editorial cleanup. Users with existing `CLAUDE.local.md` files should verify whether Claude Code still loads them and plan a migration.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| `code-review.md` | New | +168 | Full documentation for managed GitHub Code Review service |
-| `github-actions.md` | Modified | +13/-16 | Cross-reference to Code Review; prompt example and "Commands→Skills" rename |
-| `features-overview.md` | Modified | +14/-14 | Example skill names updated from `/review` to `/deploy`/`/audit` |
-| `plugin-marketplaces.md` | Modified | +12/-12 | Walkthrough example renamed from `review-plugin` to `quality-review-plugin` |
-| `overview.md` | Modified | +1/-0 | New "Get automatic code review on every PR" navigation row |
-| `interactive-mode.md` | Modified | +1/-1 | `/review` command marked deprecated, plugin install instructions added |
-| `plugins.md` | Modified | +1/-1 | Example short skill name changed from `/review` to `/deploy` |
-| `skills.md` | Modified | +1/-1 | Example changed from `review.md`/`/review` to `deploy.md`/`/deploy` |
-| `changelog.md` | Modified | +1/-1 | Pull request counter incremented (292→294) |
+| `changelog.md` | Modified | +54/-2 | Added version 2.1.72 entry with features, improvements, and bug fixes |
+| `settings.md` | Modified | +34/-25 | Tools table expanded with ~11 new tools; local scope and CLAUDE.md table updated |
+| `memory.md` | Modified | +7/-10 | Removed CLAUDE.local.md scope row; updated private preference guidance |
+| `best-practices.md` | Modified | +1/-1 | Removed CLAUDE.local.md as an alternative to project CLAUDE.md |
+| `desktop.md` | Modified | +1/-1 | Removed CLAUDE.local.md from desktop/CLI shared configuration list |
 
 ---
-
 *Generated from Claude Code CLI documentation changes detected on 2026-03-10*
