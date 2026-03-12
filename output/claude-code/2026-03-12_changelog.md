@@ -2,113 +2,108 @@
 
 ## Summary
 
-Six pages were modified to document the v2.1.73 release. The headline change is a new `modelOverrides` setting that lets enterprise administrators map individual model picker entries to provider-specific IDs (Bedrock ARNs, Vertex AI version names, Foundry deployment names). The `/output-style` command was deprecated in favor of `/config`, and output styles are now locked at session start to stabilize prompt caching.
+The Claude Code changelog page was updated with the 2.1.74 release notes. This release adds two new features — actionable suggestions in the `/context` command and a configurable `autoMemoryDirectory` setting — along with 13 bug fixes covering memory leaks, MCP OAuth, policy enforcement, RTL text rendering, Windows LSP, and VS Code improvements. One behavioral change was made to `--plugin-dir` override precedence.
 
 ## Significant Changes
 
+### Features
+
+- **Enhanced `/context` command with actionable suggestions**: The `/context` command now analyzes and surfaces specific optimization tips alongside its report, identifying context-heavy tools, memory bloat, and capacity warnings.
+  > `Added actionable suggestions to /context command — identifies context-heavy tools, memory bloat, and capacity warnings with specific optimization tips`
+  - *Implication*: Developers working near context limits get guided recommendations rather than raw counts alone, making it easier to act on context warnings.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **`autoMemoryDirectory` setting**: A new configuration key allows users to specify a custom directory for auto-memory file storage, overriding the default location.
+  > `Added autoMemoryDirectory setting to configure a custom directory for auto-memory storage`
+  - *Implication*: Teams or users who want auto-memory files in a project root, shared config location, or other non-default path can now configure this without workarounds.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+### Bug Fixes
+
+- **Memory leak in streaming API responses (Node.js/npm)**: Streaming API response buffers were not released when the generator was terminated early, causing RSS memory to grow without bound over time.
+  > `Fixed memory leak where streaming API response buffers were not released when the generator was terminated early, causing unbounded RSS growth on the Node.js/npm code path`
+  - *Implication*: Long-running Claude Code sessions on the Node.js/npm distribution should see significantly reduced memory growth.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **Managed policy ask rules bypass**: User allow rules and skill `allowed-tools` settings could silently override managed policy ask rules, undermining enterprise policy enforcement.
+  > `Fixed managed policy ask rules being bypassed by user allow rules or skill allowed-tools`
+  - *Implication*: Enterprise deployments relying on managed policies to require tool approval can now trust those rules are not overridden by user-level configuration.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **Full model IDs silently ignored in agent config**: Full model identifiers (e.g. `claude-opus-4-5`) specified in agent frontmatter `model:` fields or `--agents` JSON were silently dropped, falling back to a default.
+  > `Fixed full model IDs (e.g., claude-opus-4-5) being silently ignored in agent frontmatter model: field and --agents JSON config — agents now accept the same model values as --model`
+  - *Implication*: Agent configurations that pin to a specific model version by full ID now behave as intended, matching the behavior of the `--model` flag.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **MCP OAuth port conflict hang**: MCP OAuth authentication would hang indefinitely if the localhost callback port was already in use by another process.
+  > `Fixed MCP OAuth authentication hanging when the callback port is already in use`
+  - *Implication*: MCP OAuth flows are now more robust when running multiple services on the same machine.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **MCP OAuth refresh loop broken on HTTP 200 error servers (e.g. Slack)**: After a refresh token expired on OAuth servers that signal errors with HTTP 200 responses (such as Slack), Claude Code would never prompt for re-authentication, leaving the MCP connection permanently broken.
+  > `Fixed MCP OAuth refresh never prompting for re-auth after the refresh token expires, for OAuth servers that return errors with HTTP 200 (e.g. Slack)`
+  - *Implication*: Slack MCP integrations and other non-standard OAuth servers will correctly surface a re-authentication prompt when sessions expire.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **Voice mode silent failure on macOS native binary**: Voice mode failed without any error message on the macOS native binary when the terminal application had never been granted microphone access. The root cause was a missing `audio-input` entitlement in the binary.
+  > `Fixed voice mode silently failing on the macOS native binary for users whose terminal had never been granted microphone permission — the binary now includes the audio-input entitlement so macOS prompts correctly`
+  - *Implication*: First-time voice mode users on macOS will now see the system microphone permission dialog rather than experiencing unexplained silence.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **`SessionEnd` hooks killed too early regardless of timeout config**: `SessionEnd` hooks were unconditionally terminated after 1.5 seconds on exit, even when `hook.timeout` was set to a longer value.
+  > `Fixed SessionEnd hooks being killed after 1.5 s on exit regardless of hook.timeout — now configurable via CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`
+  - *Implication*: Hooks performing cleanup work (e.g. flushing logs, syncing state) that takes longer than 1.5 seconds can now complete by setting the `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` environment variable to an appropriate value.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **`/plugin install` failing in REPL for local-source marketplace plugins**: Running `/plugin install` from within the interactive REPL failed for marketplace plugins that referenced local sources.
+  > `Fixed /plugin install failing inside the REPL for marketplace plugins with local sources`
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **Marketplace updates not syncing git submodules**: Plugin sources stored in git submodules would break after a marketplace update because the update process did not sync submodules.
+  > `Fixed marketplace update not syncing git submodules — plugin sources in submodules no longer break after update`
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **Unknown slash commands silently dropping arguments**: Invoking an unknown slash command with arguments caused the entire input to be discarded without any user feedback.
+  > `Fixed unknown slash commands with arguments silently dropping input — now shows your input as a warning`
+  - *Implication*: Typos in slash command names (e.g. `/comit` instead of `/commit`) will now surface a warning showing the discarded input rather than silently failing.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **RTL text rendering in Windows terminals**: Hebrew, Arabic, and other right-to-left scripts were not rendered correctly in Windows Terminal, conhost, and the VS Code integrated terminal.
+  > `Fixed Hebrew, Arabic, and other RTL text not rendering correctly in Windows Terminal, conhost, and VS Code integrated terminal`
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **LSP servers broken on Windows due to malformed file URIs**: Language Server Protocol servers failed to start on Windows because Claude Code was constructing malformed `file://` URIs.
+  > `Fixed LSP servers not working on Windows due to malformed file URIs`
+  - *Implication*: LSP-dependent features (e.g. language intelligence, go-to-definition) are now functional on Windows.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
 ### Configuration
 
-- **New `modelOverrides` setting for per-version provider ID mapping**: A new settings key lets administrators route each specific model version to a distinct provider endpoint, going beyond the single-ID-per-family constraint of the existing `ANTHROPIC_DEFAULT_*_MODEL` environment variables.
-  > `modelOverrides` maps individual Anthropic model IDs to the provider-specific strings that Claude Code sends to your provider's API. When a user selects a mapped model in the `/model` picker, Claude Code uses your configured value instead of the built-in default.
-  > This lets enterprise administrators route each model version to a specific Bedrock inference profile ARN, Vertex AI version name, or Foundry deployment name for governance, cost allocation, or regional routing.
+- **`--plugin-dir` local dev copies now override marketplace installs**: When `--plugin-dir` points to a local development copy of a plugin with the same name as an installed marketplace plugin, the local copy now takes precedence — unless the marketplace plugin is force-enabled by managed settings.
+  > `Changed --plugin-dir so local dev copies now override installed marketplace plugins with the same name (unless that plugin is force-enabled by managed settings)`
+  - *Implication*: Plugin developers can now test local builds without uninstalling the marketplace version first. Enterprise force-enabled plugins retain their precedence, preserving policy enforcement.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  Example from the docs:
-  ```json
-  {
-    "modelOverrides": {
-      "claude-opus-4-6": "arn:aws:bedrock:us-east-2:123456789012:application-inference-profile/opus-prod",
-      "claude-opus-4-5-20251101": "arn:aws:bedrock:us-east-2:123456789012:application-inference-profile/opus-45-prod",
-      "claude-sonnet-4-6": "arn:aws:bedrock:us-east-2:123456789012:application-inference-profile/sonnet-prod"
-    }
-  }
-  ```
-  Key behavior notes documented:
-  - Keys must be exact Anthropic model IDs from the Models overview (including date suffixes); unknown keys are silently ignored.
-  - On Bedrock, `modelOverrides` takes precedence over inference profiles auto-discovered at startup.
-  - Values supplied via `ANTHROPIC_MODEL`, `--model`, or `ANTHROPIC_DEFAULT_*_MODEL` are passed to the provider as-is and are **not** transformed by `modelOverrides`.
-  - `availableModels` allowlist is evaluated against the Anthropic model ID (not the override value), so alias entries like `"opus"` still match even when versions are mapped to ARNs.
-  - *Implication*: Enterprises can now expose multiple versions of the same model family in the `/model` picker, each routed to a separate inference profile — enabling cost allocation and governance without end users bypassing organizational controls.
-  - *Source*: [Model configuration](https://code.claude.com/docs/en/model-config.md), [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md), [Settings](https://code.claude.com/docs/en/settings.md)
+### VS Code Integration
 
-- **`modelOverrides` added to settings reference table**: The settings page now includes `modelOverrides` in its configuration key reference.
-  > `modelOverrides` — Map Anthropic model IDs to provider-specific model IDs such as Bedrock inference profile ARNs. Each model picker entry uses its mapped value when calling the provider API.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **Delete button fixed for Untitled sessions**: The delete button in the VS Code extension was non-functional when used on Untitled (unsaved) sessions.
+  > `[VSCode] Fixed delete button not working for Untitled sessions`
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-### Deprecations
-
-- **`/output-style` command deprecated; output style now fixed at session start**: The `/output-style` slash command has been removed from the command reference table. Output style selection has moved to `/config` → **Output style**. Critically, the output style is now applied once at session start and cannot be changed mid-session.
-  > Because the output style is set in the system prompt at session start, changes take effect the next time you start a new session. This keeps the system prompt stable throughout a conversation so prompt caching can reduce latency and cost.
-
-  The `outputStyle` field can still be set directly in a settings file:
-  ```json
-  { "outputStyle": "Explanatory" }
-  ```
-  - *Implication*: Developers who relied on `/output-style` to switch styles mid-session will need to restart the session instead. The trade-off is improved prompt cache hit rates and lower latency/cost for long sessions.
-  - *Source*: [Output styles](https://code.claude.com/docs/en/output-styles.md), [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md)
-
-### Features (v2.1.73 Release)
-
-- **Default Opus model on Bedrock, Vertex AI, and Microsoft Foundry changed to Opus 4.6**: The default was previously Opus 4.1. Administrators who have pinned models via environment variables are unaffected; those relying on defaults will now use Opus 4.6 automatically.
-  - *Implication*: Unmanaged deployments on third-party providers will silently upgrade to Opus 4.6 after updating Claude Code. Review existing model pin configurations.
-
-- **SSL error guidance for OAuth and connectivity failures**: Claude Code now surfaces actionable guidance (including `NODE_EXTRA_CA_CERTS`) when login or connectivity checks fail due to SSL certificate errors, which is common behind corporate proxies.
-
-- **`/effort` works while Claude is responding**: The effort level command can now be adjusted mid-response, matching the behavior of `/model`.
-
-- **Up arrow after interrupting Claude**: Now restores the interrupted prompt and rewinds the conversation in a single step rather than requiring separate actions.
-
-### Bug Fixes (v2.1.73)
-
-Notable fixes included in this release:
-
-| Area | Fix |
-|------|-----|
-| Subagents | Model aliases (`opus`/`sonnet`/`haiku`) were silently downgraded to older versions on Bedrock, Vertex, and Foundry |
-| Subagents | Background bash processes spawned by subagents were not cleaned up on agent exit |
-| Performance | Freezes and 100% CPU loops triggered by permission prompts for complex bash commands |
-| Performance | Deadlock when many skill files changed simultaneously (e.g. `git pull` in a large `.claude/skills/` directory) |
-| Sessions | Bash tool output lost when running multiple Claude Code sessions in the same project directory |
-| Sessions | `SessionStart` hooks firing twice when resuming via `--resume` or `--continue` |
-| Hooks | JSON-output hooks injecting no-op `system-reminder` messages into the model's context on every turn |
-| Commands | `/resume` showing the current session in the picker |
-| Commands | `/ide` crashing with `onInstall is not defined` when auto-installing the extension |
-| Commands | `/loop` not available on Bedrock/Vertex/Foundry and when telemetry was disabled |
-| Linux | Sandbox failing to start with "ripgrep (rg) not found" on native builds |
-| Linux | Native modules not loading on Amazon Linux 2 and other glibc 2.26 systems |
-| Voice | Session corruption when a slow connection overlaps a new recording |
-| Remote Control | `"media_type: Field required"` API error when receiving images |
-| Windows | `/heapdump` failing with `EEXIST` error when the Desktop folder already exists |
-| VS Code | HTTP 400 errors for users behind proxies or on Bedrock/Vertex with Claude 4.5 models |
-
-### Documentation — Output Styles Comparison
-
-- **Added "Output Styles vs. Skills" comparison**: The output-styles page now explicitly documents when to use output styles versus skills.
-  > Output styles modify how Claude responds (formatting, tone, structure) and are always active once selected. Skills are task-specific prompts that you invoke with `/skill-name` or that Claude loads automatically when relevant. Use output styles for consistent formatting preferences; use skills for reusable workflows and tasks.
-  - *Source*: [Output styles](https://code.claude.com/docs/en/output-styles.md)
-
-### Amazon Bedrock — Inference Profile Mapping
-
-- **New section: "Map each model version to an inference profile"**: The Bedrock page now includes a dedicated example showing how to use `modelOverrides` to expose multiple Opus versions simultaneously, each routed to its own application inference profile ARN.
-  > If your organization needs to expose several versions of the same family in the `/model` picker, each routed to its own application inference profile ARN, use the `modelOverrides` setting in your settings file instead.
-  - *Implication*: Administrators who previously had to choose a single Opus inference profile can now offer users a choice of Opus 4.1, 4.5, and 4.6, each mapped to a distinct ARN.
-  - *Source*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md)
+- **Improved scroll wheel responsiveness in integrated terminal**: Scroll wheel input in the VS Code integrated terminal now uses terminal-aware acceleration, resulting in more responsive scrolling behavior.
+  > `[VSCode] Improved scroll wheel responsiveness in the integrated terminal with terminal-aware acceleration`
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
 ## Notable Details
 
-- The `interactive-mode.md` diff is large (+62/-63 lines) but the actual content change is small: `/output-style [style]` was removed from the command table, and `/config`'s description was expanded to mention output style management. The rest of the diff is a table column-width reformatting with no semantic change.
-- The `output-styles.md` frontmatter description for the `description` field was updated from "Used only in the UI of `/output-style`" to "shown in the `/config` picker" — confirming the deprecation extends to all UI references.
-- Star count (76.7k → 76.8k) and open PR count (332 → 336) changed in the changelog page scrape; these are metadata noise from the GitHub page render and carry no documentation significance.
+- The GitHub repository star count (76.8k → 76.9k) and open pull request count (336 → 338) changed in the changelog page scrape. These reflect live GitHub metadata rendered into the page and carry no documentation significance.
+- The `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` environment variable is newly introduced as the mechanism to extend the session-end hook timeout — this is the first time this env var appears in the changelog and is not yet documented in the settings reference based on this diff alone.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| amazon-bedrock.md | Modified | +18 / -0 | New section: map model versions to Bedrock inference profile ARNs via `modelOverrides` |
-| changelog.md | Modified | +29 / -2 | v2.1.73 release notes added |
-| interactive-mode.md | Modified | +62 / -63 | `/output-style` removed from command table; `/config` description updated; table reformatted |
-| model-config.md | Modified | +26 / -0 | New section: `modelOverrides` setting with full behavior documentation |
-| output-styles.md | Modified | +16 / -11 | `/output-style` command replaced by `/config`; session-start locking explained; Skills comparison added |
-| settings.md | Modified | +1 / -0 | `modelOverrides` added to settings reference table |
+| changelog.md | Modified | +20 / -2 | Added Claude Code 2.1.74 release notes (2 features, 13 fixes, 1 behavior change) |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-12*
