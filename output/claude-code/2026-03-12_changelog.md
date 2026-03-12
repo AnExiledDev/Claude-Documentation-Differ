@@ -98,12 +98,14 @@ The Claude Code changelog page was updated with the 2.1.74 release notes. This r
 
 - The GitHub repository star count (76.8k → 76.9k) and open pull request count (336 → 338) changed in the changelog page scrape. These reflect live GitHub metadata rendered into the page and carry no documentation significance.
 - The `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` environment variable is newly introduced as the mechanism to extend the session-end hook timeout — this is the first time this env var appears in the changelog and is not yet documented in the settings reference based on this diff alone.
+- A subsequent scrape run on 2026-03-12 detected only further GitHub stat drift (forks 6.2k→6.3k, stars 76.9k→77k, PRs 338→337) with no documentation content changes.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
 | changelog.md | Modified | +20 / -2 | Added Claude Code 2.1.74 release notes (2 features, 13 fixes, 1 behavior change) |
+| changelog.md | Modified | +3 / -3 | GitHub repo stats updated (forks, stars, PR count) — no content change |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-12*
