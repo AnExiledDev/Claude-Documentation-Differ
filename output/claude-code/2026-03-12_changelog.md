@@ -2,110 +2,138 @@
 
 ## Summary
 
-The Claude Code changelog page was updated with the 2.1.74 release notes. This release adds two new features — actionable suggestions in the `/context` command and a configurable `autoMemoryDirectory` setting — along with 13 bug fixes covering memory leaks, MCP OAuth, policy enforcement, RTL text rendering, Windows LSP, and VS Code improvements. One behavioral change was made to `--plugin-dir` override precedence.
+13 pages were modified across sub-agents, settings, hooks, MCP, memory, and plugin marketplace documentation. The most significant additions are MCP server scoping for subagents, a configurable `autoMemoryDirectory` setting, a new `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` environment variable, and a behavior change to MCP tool search (now enabled by default). The "Safe autonomous mode" section covering `--dangerously-skip-permissions` was removed from best-practices documentation.
 
 ## Significant Changes
 
-### Features
+### Sub-Agents
 
-- **Enhanced `/context` command with actionable suggestions**: The `/context` command now analyzes and surfaces specific optimization tips alongside its report, identifying context-heavy tools, memory bloat, and capacity warnings.
-  > `Added actionable suggestions to /context command — identifies context-heavy tools, memory bloat, and capacity warnings with specific optimization tips`
-  - *Implication*: Developers working near context limits get guided recommendations rather than raw counts alone, making it easier to act on context warnings.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **MCP servers can now be scoped to individual subagents**: The `mcpServers` field in subagent frontmatter now supports two entry modes — inline server definitions (connected when the subagent starts, disconnected when it finishes) and string references that reuse an already-configured server from the parent session.
+  > "Use the `mcpServers` field to give a subagent access to MCP servers that aren't available in the main conversation. Inline servers defined here are connected when the subagent starts and disconnected when it finishes."
+  > "To keep an MCP server out of the main conversation entirely and avoid its tool descriptions consuming context there, define it inline here rather than in `.mcp.json`. The subagent gets the tools; the parent conversation does not."
+  - *Implication*: Developers can attach MCP servers (e.g., Playwright) exclusively to a subagent without polluting the parent conversation's context window. Inline definitions follow the same schema as `.mcp.json` entries (`stdio`, `http`, `sse`, `ws`), keyed by server name.
+  - *Source*: [Sub-agents](https://code.claude.com/docs/en/sub-agents.md)
 
-- **`autoMemoryDirectory` setting**: A new configuration key allows users to specify a custom directory for auto-memory file storage, overriding the default location.
-  > `Added autoMemoryDirectory setting to configure a custom directory for auto-memory storage`
-  - *Implication*: Teams or users who want auto-memory files in a project root, shared config location, or other non-default path can now configure this without workarounds.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Full model IDs accepted in the `model` field**: In addition to aliases (`sonnet`, `opus`, `haiku`), the `model` field in subagent frontmatter (and the `--agents` CLI flag) now accepts full model IDs such as `claude-opus-4-6`.
+  > "Model to use: `sonnet`, `opus`, `haiku`, a full model ID (for example, `claude-opus-4-6`), or `inherit`. Defaults to `inherit`"
+  > "Full model ID: Use a full model ID such as `claude-opus-4-6` or `claude-sonnet-4-6`. Accepts the same values as the `--model` flag"
+  - *Implication*: Subagents can now be pinned to specific versioned model releases rather than floating aliases. This change is consistent with the changelog entry for 2.1.74 that fixed full model IDs being silently ignored in agent config.
+  - *Source*: [Sub-agents](https://code.claude.com/docs/en/sub-agents.md), [CLI reference](https://code.claude.com/docs/en/cli-reference.md)
 
-### Bug Fixes
+### Memory
 
-- **Memory leak in streaming API responses (Node.js/npm)**: Streaming API response buffers were not released when the generator was terminated early, causing RSS memory to grow without bound over time.
-  > `Fixed memory leak where streaming API response buffers were not released when the generator was terminated early, causing unbounded RSS growth on the Node.js/npm code path`
-  - *Implication*: Long-running Claude Code sessions on the Node.js/npm distribution should see significantly reduced memory growth.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New `autoMemoryDirectory` setting**: Auto memory can now be redirected to a custom directory via the `autoMemoryDirectory` key in user, local, or policy settings.
+  > "To store auto memory in a different location, set `autoMemoryDirectory` in your user or local settings."
+  > "This setting is accepted from policy, local, and user settings. It is not accepted from project settings (`.claude/settings.json`) to prevent a shared project from redirecting auto memory writes to sensitive locations."
+  - *Implication*: Useful for teams that want to consolidate memory files or store them on a shared volume. The security restriction — blocked in project-level settings — prevents supply-chain abuse via committed `.claude/settings.json` files.
+  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md), [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **Managed policy ask rules bypass**: User allow rules and skill `allowed-tools` settings could silently override managed policy ask rules, undermining enterprise policy enforcement.
-  > `Fixed managed policy ask rules being bypassed by user allow rules or skill allowed-tools`
-  - *Implication*: Enterprise deployments relying on managed policies to require tool approval can now trust those rules are not overridden by user-level configuration.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Hooks
 
-- **Full model IDs silently ignored in agent config**: Full model identifiers (e.g. `claude-opus-4-5`) specified in agent frontmatter `model:` fields or `--agents` JSON were silently dropped, falling back to a default.
-  > `Fixed full model IDs (e.g., claude-opus-4-5) being silently ignored in agent frontmatter model: field and --agents JSON config — agents now accept the same model values as --model`
-  - *Implication*: Agent configurations that pin to a specific model version by full ID now behave as intended, matching the behavior of the `--model` flag.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **SessionEnd hooks have a documented timeout with a configurable override**: SessionEnd hooks default to a 1.5-second budget covering both session exit and `/clear`. A new environment variable `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` allows increasing this limit. Per-hook `timeout` values are still capped by this budget.
+  > "SessionEnd hooks have a default timeout of 1.5 seconds. This applies to both session exit and `/clear`. If your hooks need more time, set the `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` environment variable to a higher value in milliseconds. Any per-hook `timeout` setting is also capped by this value."
+  ```bash
+  CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS=5000 claude
+  ```
+  - *Implication*: Hooks that perform cleanup tasks (e.g., syncing files, logging) and were silently truncated at exit now have a documented path to request more time. Both this env var and per-hook `timeout` must be set appropriately.
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md), [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **MCP OAuth port conflict hang**: MCP OAuth authentication would hang indefinitely if the localhost callback port was already in use by another process.
-  > `Fixed MCP OAuth authentication hanging when the callback port is already in use`
-  - *Implication*: MCP OAuth flows are now more robust when running multiple services on the same machine.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### MCP Tool Search
 
-- **MCP OAuth refresh loop broken on HTTP 200 error servers (e.g. Slack)**: After a refresh token expired on OAuth servers that signal errors with HTTP 200 responses (such as Slack), Claude Code would never prompt for re-authentication, leaving the MCP connection permanently broken.
-  > `Fixed MCP OAuth refresh never prompting for re-auth after the refresh token expires, for OAuth servers that return errors with HTTP 200 (e.g. Slack)`
-  - *Implication*: Slack MCP integrations and other non-standard OAuth servers will correctly surface a re-authentication prompt when sessions expire.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Tool search is now enabled by default**: Previously, tool search activated only when MCP tools exceeded 10% of context (`auto` mode). It is now enabled by default for all sessions, with automatic disablement when `ANTHROPIC_BASE_URL` points to a non-first-party host (since most proxies do not forward `tool_reference` blocks).
+  > "Tool search is enabled by default: MCP tools are deferred and discovered on demand. When `ANTHROPIC_BASE_URL` points to a non-first-party host, tool search is disabled by default because most proxies do not forward `tool_reference` blocks. Set `ENABLE_TOOL_SEARCH` explicitly if your proxy does."
 
-- **Voice mode silent failure on macOS native binary**: Voice mode failed without any error message on the macOS native binary when the terminal application had never been granted microphone access. The root cause was a missing `audio-input` entitlement in the binary.
-  > `Fixed voice mode silently failing on the macOS native binary for users whose terminal had never been granted microphone permission — the binary now includes the audio-input entitlement so macOS prompts correctly`
-  - *Implication*: First-time voice mode users on macOS will now see the system microphone permission dialog rather than experiencing unexplained silence.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+  Updated `ENABLE_TOOL_SEARCH` behavior table:
 
-- **`SessionEnd` hooks killed too early regardless of timeout config**: `SessionEnd` hooks were unconditionally terminated after 1.5 seconds on exit, even when `hook.timeout` was set to a longer value.
-  > `Fixed SessionEnd hooks being killed after 1.5 s on exit regardless of hook.timeout — now configurable via CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`
-  - *Implication*: Hooks performing cleanup work (e.g. flushing logs, syncing state) that takes longer than 1.5 seconds can now complete by setting the `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` environment variable to an appropriate value.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+  | Value | Behavior |
+  |-------|----------|
+  | (unset) | Enabled by default; disabled when `ANTHROPIC_BASE_URL` is a non-first-party host |
+  | `true` | Always enabled, including for non-first-party `ANTHROPIC_BASE_URL` |
+  | `auto` | Activates when MCP tools exceed 10% of context |
+  | `auto:<N>` | Activates at a custom threshold (e.g., `auto:5` for 5%) |
+  | `false` | Disabled; all MCP tools loaded upfront |
 
-- **`/plugin install` failing in REPL for local-source marketplace plugins**: Running `/plugin install` from within the interactive REPL failed for marketplace plugins that referenced local sources.
-  > `Fixed /plugin install failing inside the REPL for marketplace plugins with local sources`
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **Marketplace updates not syncing git submodules**: Plugin sources stored in git submodules would break after a marketplace update because the update process did not sync submodules.
-  > `Fixed marketplace update not syncing git submodules — plugin sources in submodules no longer break after update`
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **Unknown slash commands silently dropping arguments**: Invoking an unknown slash command with arguments caused the entire input to be discarded without any user feedback.
-  > `Fixed unknown slash commands with arguments silently dropping input — now shows your input as a warning`
-  - *Implication*: Typos in slash command names (e.g. `/comit` instead of `/commit`) will now surface a warning showing the discarded input rather than silently failing.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **RTL text rendering in Windows terminals**: Hebrew, Arabic, and other right-to-left scripts were not rendered correctly in Windows Terminal, conhost, and the VS Code integrated terminal.
-  > `Fixed Hebrew, Arabic, and other RTL text not rendering correctly in Windows Terminal, conhost, and VS Code integrated terminal`
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **LSP servers broken on Windows due to malformed file URIs**: Language Server Protocol servers failed to start on Windows because Claude Code was constructing malformed `file://` URIs.
-  > `Fixed LSP servers not working on Windows due to malformed file URIs`
-  - *Implication*: LSP-dependent features (e.g. language intelligence, go-to-definition) are now functional on Windows.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+  - *Implication*: Users on direct Anthropic API connections get deferred MCP tool loading automatically. Users behind proxies (e.g., AWS Bedrock, corporate API gateways) will have tool search disabled by default and must set `ENABLE_TOOL_SEARCH=true` only if their proxy properly forwards `tool_reference` blocks.
+  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md), [Settings](https://code.claude.com/docs/en/settings.md)
 
 ### Configuration
 
-- **`--plugin-dir` local dev copies now override marketplace installs**: When `--plugin-dir` points to a local development copy of a plugin with the same name as an installed marketplace plugin, the local copy now takes precedence — unless the marketplace plugin is force-enabled by managed settings.
-  > `Changed --plugin-dir so local dev copies now override installed marketplace plugins with the same name (unless that plugin is force-enabled by managed settings)`
-  - *Implication*: Plugin developers can now test local builds without uninstalling the marketplace version first. Enterprise force-enabled plugins retain their precedence, preserving policy enforcement.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **`CLAUDE_CODE_ENABLE_TASKS` semantics changed**: The environment variable no longer toggles between the task tracking system and the old TODO list. It now enables task tracking specifically in non-interactive (`-p`) mode. Tasks remain on by default in interactive mode.
+  > "Set to `true` to enable the task tracking system in non-interactive mode (the `-p` flag). Tasks are on by default in interactive mode."
+  - *Implication*: The previous "revert to previous TODO list via `CLAUDE_CODE_ENABLE_TASKS=false`" path is gone. Automation scripts using `-p` that want task tracking must now explicitly set this to `true`. The corresponding note in the interactive-mode docs was also removed.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md), [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-### VS Code Integration
+- **`strictKnownMarketplaces` + `extraKnownMarketplaces` combined usage documented**: A new "Using both together" subsection clarifies that `strictKnownMarketplaces` is a policy gate (controls what users may add) but does not itself register any marketplaces. To both restrict and pre-register a marketplace, both keys must be set in `managed-settings.json`.
+  > "`strictKnownMarketplaces` is a policy gate: it controls what users may add but does not register any marketplaces. To both restrict and pre-register a marketplace for all users, set both in `managed-settings.json`."
+  - *Implication*: Administrators who set only `strictKnownMarketplaces` expecting marketplaces to be available automatically need to also add `extraKnownMarketplaces`. The same clarification is echoed as a Note in the plugin-marketplaces page.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md), [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
 
-- **Delete button fixed for Untitled sessions**: The delete button in the VS Code extension was non-functional when used on Untitled (unsaved) sessions.
-  > `[VSCode] Fixed delete button not working for Untitled sessions`
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Plugin Marketplaces
 
-- **Improved scroll wheel responsiveness in integrated terminal**: Scroll wheel input in the VS Code integrated terminal now uses terminal-aware acceleration, resulting in more responsive scrolling behavior.
-  > `[VSCode] Improved scroll wheel responsiveness in the integrated terminal with terminal-aware acceleration`
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Relative path resolution clarified**: Relative plugin source paths resolve from the marketplace root (the directory containing `.claude-plugin/`), not from the location of `marketplace.json` inside `.claude-plugin/`. Using `../` to escape this directory is explicitly prohibited.
+  > "Paths resolve relative to the marketplace root, which is the directory containing `.claude-plugin/`. In the example above, `./plugins/my-plugin` points to `<repo>/plugins/my-plugin`, even though `marketplace.json` lives at `<repo>/.claude-plugin/marketplace.json`. Do not use `../` to climb out of `.claude-plugin/`."
+  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+
+- **Git URL source no longer requires `.git` suffix**: The `url` field in the `url` source type now accepts URLs without the `.git` suffix, enabling compatibility with Azure DevOps and AWS CodeCommit repository URLs.
+  > "Required. Full git repository URL (`https://` or `git@`). The `.git` suffix is optional, so Azure DevOps and AWS CodeCommit URLs without the suffix work"
+  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+
+- **Validation error message updated**: The `claude plugin validate` error for path traversal changed from `plugins[0].source: Path traversal not allowed` to `plugins[0].source: Path contains ".."`, with the solution text pointing to the Relative paths documentation section.
+  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+
+### Plugins
+
+- **`--plugin-dir` local plugins take precedence over same-named marketplace plugins**: During a session started with `--plugin-dir`, the local development copy of a plugin now overrides any installed marketplace plugin of the same name. The only exception is marketplace plugins force-enabled by managed settings.
+  > "When a `--plugin-dir` plugin has the same name as an installed marketplace plugin, the local copy takes precedence for that session. This lets you test changes to a plugin you already have installed without uninstalling it first. Marketplace plugins force-enabled by managed settings are the only exception and cannot be overridden."
+  - *Implication*: Plugin developers can iterate without uninstall/reinstall cycles. Enterprise force-enabled plugins are exempt, preserving policy enforcement.
+  - *Source*: [Plugins](https://code.claude.com/docs/en/plugins.md)
+
+### Interactive Mode
+
+- **`/context` command now surfaces optimization suggestions**: The command description was updated to reflect that it also displays optimization suggestions for context-heavy tools, memory bloat, and capacity warnings.
+  > "Visualize current context usage as a colored grid. Shows optimization suggestions for context-heavy tools, memory bloat, and capacity warnings"
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
+
+- **`messageSelector` gains Ctrl+P / Ctrl+N keybindings**: The message selector now supports Emacs-style navigation shortcuts in addition to arrow keys and Vi-style keys.
+  - `messageSelector:up`: `Up`, `K`, **`Ctrl+P`** (new)
+  - `messageSelector:down`: `Down`, `J`, **`Ctrl+N`** (new)
+  - *Source*: [Keybindings](https://code.claude.com/docs/en/keybindings.md)
+
+### Code Review Billing
+
+- **Code Review billed separately from plan usage**: The pricing section now explicitly states that Code Review is billed via "extra usage" and does not count against a plan's included usage.
+  > "Code Review usage is billed separately through extra usage and does not count against your plan's included usage."
+  - *Source*: [Code Review](https://code.claude.com/docs/en/code-review.md)
+
+## Removed Content
+
+- **"Safe autonomous mode" section removed from best-practices**: The 10-line section documenting `--dangerously-skip-permissions` and its risks (including a warning about prompt injection and sandboxing guidance) was removed from best-practices documentation. The CLI flag itself remains functional but is no longer surfaced in this context.
+  - *Source*: [Best Practices](https://code.claude.com/docs/en/best-practices.md)
 
 ## Notable Details
 
-- The GitHub repository star count (76.8k → 76.9k) and open pull request count (336 → 338) changed in the changelog page scrape. These reflect live GitHub metadata rendered into the page and carry no documentation significance.
-- The `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` environment variable is newly introduced as the mechanism to extend the session-end hook timeout — this is the first time this env var appears in the changelog and is not yet documented in the settings reference based on this diff alone.
-- A subsequent scrape run on 2026-03-12 detected only further GitHub stat drift (forks 6.2k→6.3k, stars 76.9k→77k, PRs 338→337) with no documentation content changes.
+- The `autoMemoryDirectory` setting is explicitly blocked in project settings (`.claude/settings.json`) but accepted in policy, local, and user settings. This asymmetry is intentional and security-motivated — it prevents a malicious repository from redirecting auto-memory writes to sensitive paths.
+- The MCP tool search default change from `auto` to always-on is a potentially breaking change for users behind API proxies. The proxy detection is based on `ANTHROPIC_BASE_URL` pointing to a non-first-party host — any custom base URL triggers the fallback-to-disabled behavior.
+- `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` acts as a global budget: per-hook `timeout` values are capped by it. Setting only per-hook timeouts without this env var still results in the 1.5s kill.
+- The GitHub repository stat changes in `changelog.md` (stars 77k → 77.1k, PRs 337 → 338) reflect live metadata rendered into the page and carry no documentation significance.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +20 / -2 | Added Claude Code 2.1.74 release notes (2 features, 13 fixes, 1 behavior change) |
-| changelog.md | Modified | +3 / -3 | GitHub repo stats updated (forks, stars, PR count) — no content change |
+| sub-agents.md | Modified | +29/-1 | New `mcpServers` scoping section; full model IDs now accepted in `model` field |
+| settings.md | Modified | +23/-2 | `autoMemoryDirectory` setting added; `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` env var documented; `CLAUDE_CODE_ENABLE_TASKS` and `ENABLE_TOOL_SEARCH` descriptions updated; `strictKnownMarketplaces` + `extraKnownMarketplaces` combined usage guidance added |
+| plugin-marketplaces.md | Modified | +18/-12 | Relative path resolution clarified; git URL `.git` suffix now optional; validation error message updated; `strictKnownMarketplaces` note added |
+| memory.md | Modified | +10/-0 | `autoMemoryDirectory` setting documented with security rationale |
+| hooks.md | Modified | +6/-0 | `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` documented; 1.5s default timeout and per-hook cap explained |
+| best-practices.md | Modified | +0/-10 | "Safe autonomous mode" (`--dangerously-skip-permissions`) section removed |
+| mcp.md | Modified | +4/-3 | Tool search now on by default; proxy detection disables it; `ENABLE_TOOL_SEARCH` value table updated |
+| interactive-mode.md | Modified | +1/-2 | `/context` shows optimization suggestions; `CLAUDE_CODE_ENABLE_TASKS=false` revert note removed |
+| plugins.md | Modified | +2/-0 | `--plugin-dir` local plugins override same-named marketplace plugins |
+| keybindings.md | Modified | +2/-2 | `Ctrl+P`/`Ctrl+N` added to `messageSelector` navigation |
+| cli-reference.md | Modified | +1/-1 | `model` field updated to document full model ID support |
+| code-review.md | Modified | +1/-1 | Code Review billing clarified as separate extra usage |
+| changelog.md | Modified | +2/-2 | Repository star count (77k → 77.1k) and open PR count (337 → 338) updated |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-12*
