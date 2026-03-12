@@ -13,13 +13,13 @@ anthropics
 claude-code
 Public
 Notifications
-Fork 6.2k
- Star 76.9k
+Fork 6.3k
+ Star 77k
 Code
 Issues
 5k+
 Pull requests
-338
+337
 Actions
 Security
 21
