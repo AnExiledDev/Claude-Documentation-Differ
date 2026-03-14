@@ -2,103 +2,135 @@
 
 ## Summary
 
-12 pages were modified in this update, covering the v2.1.75 release notes, a substantial expansion of Remote Control documentation (new interactive session mode and server mode flags), a new network configuration note for GitHub Enterprise Cloud users, and the addition of UTM tracking parameters to external pricing/sales links across all pages.
+Claude Code version 2.1.76 ships MCP elicitation support (MCP servers can now prompt users for structured input mid-task), two new hook event pairs (`Elicitation`/`ElicitationResult` and `PostCompact`), two new CLI flags (`--name`/`-n` and `--effort`), and a new `/effort` slash command. The hooks guide was substantially reworked: the first-hook walkthrough now directs users to edit settings JSON directly, repositioning `/hooks` from an interactive configuration tool to a read-only browser. Fourteen pages were modified across hooks, MCP, CLI, settings, and workflow documentation.
+
+---
 
 ## Significant Changes
 
-### Features (v2.1.75 — March 13, 2026)
+### Features
 
-- **1M context window now default for Opus 4.6 on Max/Team/Enterprise**: Previously required extra usage credits; now included by default.
-  > "Added 1M context window for Opus 4.6 by default for Max, Team, and Enterprise plans (previously required extra usage)"
-  - *Implication*: Users on qualifying plans no longer need to take action to access the larger context window.
+- **MCP Elicitation Support**: MCP servers can now request structured user input mid-task via an interactive dialog (form fields or a browser URL). A new section was added to the MCP page documenting this capability, and two new hook events (`Elicitation`, `ElicitationResult`) allow hooks to intercept and override elicitation responses before they reach the server.
+  > "Added MCP elicitation support — MCP servers can now request structured input mid-task via an interactive dialog (form fields or browser URL)"
+  > "Added new `Elicitation` and `ElicitationResult` hooks to intercept and override responses before they're sent back"
+  - *Implication*: MCP tool authors can build interactive flows that collect user input inline without out-of-band channels. Developers using hooks can audit, modify, or veto what gets sent back to the server.
+  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md), [MCP](https://code.claude.com/docs/en/mcp.md)
+
+- **`PostCompact` Hook Event**: A new hook fires after context compaction completes, complementing the existing `PreCompact` event.
+  > "`PostCompact` — After context compaction completes"
+  - *Implication*: Hooks can now inject fresh context or run cleanup logic immediately after compaction rather than only before it.
+  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md)
+
+- **`--name` / `-n` CLI Flag**: Sets a human-readable display name for a session at startup, shown in `/resume` and the terminal title. Named sessions can be resumed with `claude --resume <name>`.
+  > "`--name`, `-n` — Set a display name for the session, shown in `/resume` and the terminal title. You can resume a named session with `claude --resume <name>`. `/rename` changes the name mid-session and also shows it on the prompt bar"
+  - *Implication*: Named sessions make managing concurrent or long-running Claude Code sessions significantly easier — no more copying UUIDs to resume specific sessions.
+  - *Source*: [CLI reference](https://code.claude.com/docs/en/cli-reference.md)
+
+- **`--effort` CLI Flag**: Sets the model effort level (`low`, `medium`, `high`, `max`) at session startup. Session-scoped and does not persist to settings.
+  > "`--effort` — Set the effort level for the current session. Options: `low`, `medium`, `high`, `max` (Opus 4.6 only). Session-scoped and does not persist to settings"
+  - *Implication*: Effort level is now a first-class launch parameter alongside `--model`, enabling scripted sessions with explicit reasoning budgets without touching persistent configuration.
+  - *Source*: [CLI reference](https://code.claude.com/docs/en/cli-reference.md)
+
+- **`/effort` Slash Command**: New in-session command to change effort level without navigating the `/model` picker.
+  > "`/effort [low|medium|high|max|auto]` — Set the model effort level. `low`, `medium`, and `high` persist across sessions. `max` applies to the current session only and requires Opus 4.6. `auto` resets to the model default. Without an argument, shows the current level. Takes effect immediately without waiting for the current response to finish"
+  - *Implication*: Effort can now be changed at any point mid-session with a single command, and `auto` provides an explicit way to return to the model default.
+  - *Source*: [Built-in commands](https://code.claude.com/docs/en/commands.md)
+
+- **`worktree.sparsePaths` Setting**: New configuration option under a new `Worktree settings` section that limits git sparse-checkout to specified directories when using `claude --worktree` in large monorepos.
+  > "Added `worktree.sparsePaths` setting for `claude --worktree` in large monorepos to check out only the directories you need via git sparse-checkout"
+  - *Implication*: Reduces worktree startup time and disk usage in monorepos by skipping directories the session doesn't need.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+
+- **`feedbackSurveyRate` Setting**: Enterprise admins can now configure the sampling rate for in-session quality surveys via this new setting. Per-user opt-out remains available via `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY`.
   - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`/color` command added for all users**: Sets a custom prompt-bar color for the current session.
-  > "Added `/color` command for all users to set a prompt-bar color for your session"
-  - *Implication*: Useful for visually distinguishing multiple concurrent Claude Code sessions.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+---
 
-- **Session name on prompt bar**: The session name set via `/rename` now displays directly on the prompt bar.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Configuration & Documentation
 
-- **Memory file timestamps**: Memory files now carry last-modified timestamps, allowing Claude to reason about whether a memory is current or stale.
-  > "Added last-modified timestamps to memory files, helping Claude reason about which memories are fresh vs. stale"
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **`/hooks` repositioned as read-only**: The hooks guide's first-hook walkthrough was rewritten to guide users to edit `~/.claude/settings.json` directly rather than using the `/hooks` interactive menu. The menu is now described only as a read-only configuration browser. The best-practices page was updated to match.
+  > *(New)*: "To create a hook, add a `hooks` block to a settings file. This walkthrough creates a desktop notification hook..."
+  > *(Previous)*: "The fastest way to create a hook is through the `/hooks` interactive menu in Claude Code."
+  > *(best-practices.md, new)*: "Edit `.claude/settings.json` directly to configure hooks by hand, and run `/hooks` to browse what's configured."
+  - *Implication*: Hook authoring now has a clear recommended path: JSON config or asking Claude. The `/hooks` menu is no longer framed as a hook creation tool.
+  - *Source*: [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md), [Best practices](https://code.claude.com/docs/en/best-practices.md)
 
-- **Hook source shown in permission prompts**: When a hook requires confirmation, the UI now identifies whether it originates from settings, a plugin, or a skill.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Notification hook example shows full JSON config**: The hooks guide's Notification hook walkthrough replaced bare shell command snippets with full `settings.json` JSON blocks. A new step was added to narrow the hook matcher to specific notification types. The new `elicitation_dialog` matcher value is included as an option.
 
-### Bug Fixes (v2.1.75)
+  | Matcher | Fires when |
+  |---|---|
+  | `permission_prompt` | Claude needs approval for a tool use |
+  | `idle_prompt` | Claude is done and waiting for the next prompt |
+  | `auth_success` | Authentication completes |
+  | `elicitation_dialog` | Claude is asking the user a question |
 
-- **Bash `!` in piped commands fixed**: Bash tool was mangling `!` characters in piped commands (e.g., `jq 'select(.x != .y)'`). Now works correctly.
-- **Voice mode activation on fresh installs**: Fixed a bug requiring `/voice` to be toggled twice on a fresh install.
-- **Model name display**: Fixed the Claude Code header not updating after switching models via `/model` or Option+P.
-- **Session crash on undefined attachment computation**: Fixed a crash when attachment message computation returns `undefined`.
-- **Token estimation accuracy**: Fixed over-counting tokens for `thinking` and `tool_use` blocks, which was causing premature context compaction.
-- **Organization-disabled plugins hidden**: Plugins force-disabled by an organization admin no longer appear in the `/plugin` Installed tab.
-- **`/resume` preserving session names**: Fixed session names being lost after resuming a forked or continued session.
-- **macOS startup performance**: Improved startup on macOS non-MDM machines by skipping unnecessary subprocess spawns.
-- **Async hook messages suppressed by default**: Async hook completion messages are now hidden unless `--verbose` or transcript mode is active.
+  - *Source*: [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md)
+
+- **`CLAUDE_CODE_EFFORT_LEVEL` env var updated**: Now documents `max` (Opus 4.6 only) and `auto` (reset to model default) as valid values, and clarifies its precedence over `/effort` and the `effortLevel` setting.
+  > "Set the effort level for supported models. Values: `low`, `medium`, `high`, `max` (Opus 4.6 only), or `auto` to use the model default. Takes precedence over `/effort` and the `effortLevel` setting."
+  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
+
+- **`/effort` referenced in cost-reduction guidance**: The costs page updated its advice on managing extended thinking costs to reference `/effort` alongside `/model` as a way to reduce thinking token spend.
+  - *Source*: [Costs](https://code.claude.com/docs/en/costs.md)
+
+- **Common workflows expanded**: Plan Mode now has a structured multi-step walkthrough covering `--permission-mode plan`, headless mode (`-p`), and `Ctrl+G` to edit a plan in an external editor. The subagents section was also expanded with explicit steps for viewing, using, and creating custom subagents.
+  - *Source*: [Common workflows](https://code.claude.com/docs/en/common-workflows.md)
+
+---
+
+### Bug Fixes (v2.1.76)
+
+- **Deferred tool schema loss after compaction**: Tools loaded via `ToolSearch` were losing their input schemas after conversation compaction, causing array and number parameters to be rejected with type errors. Fixed.
+- **Auto-compaction circuit breaker**: Auto-compaction now stops retrying after 3 consecutive failures instead of retrying indefinitely.
+- **Plan mode re-approval**: Fixed plan mode asking for re-approval after the plan was already accepted.
+- **`Bash(cmd:*)` permission rules with `#` in quoted arguments**: Rules were not matching when a quoted argument contained `#`. Fixed.
+- **Clipboard in tmux over SSH**: Now attempts both direct terminal write and tmux clipboard integration.
+- **`/export` success message**: Fixed showing only the filename instead of the full file path.
+- **Voice mode on Windows (npm install)**: Fixed `/voice` not working on Windows when installed via npm.
+- **Voice mode keypresses**: Fixed voice mode swallowing keypresses while a permission dialog or plan editor was open.
+- **Remote Control reliability**: Fixed sessions silently dying when the server reaps idle environments; rapid messages now batched instead of queued one-at-a-time; stale work items no longer cause redelivery after JWT refresh.
+- **Bridge session recovery**: Fixed bridge sessions failing to recover after extended WebSocket disconnects.
+- **Slash commands not found for exact match of soft-hidden commands**: Fixed.
+- **LSP plugin server registration**: Fixed LSP plugins not registering servers when LSP Manager initialized before marketplaces were reconciled.
+- **MCP reconnect spinner**: Fixed the spinner persisting after successful reconnection.
+- **1M context "Context limit reached" error**: Fixed a spurious error when invoking a skill with `model:` frontmatter on a 1M-context session.
+- **Adaptive thinking error with non-standard model strings**: Fixed "adaptive thinking is not supported on this model" error.
+- **`[VSCode]`**: Fixed gitignore patterns containing commas silently excluding entire filetypes from the @-mention file picker.
 - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-### Breaking Change (v2.1.75)
+---
 
-- **Windows managed settings path removed**: The deprecated fallback path `C:\ProgramData\ClaudeCode\managed-settings.json` has been removed.
-  > "Breaking change: Removed deprecated Windows managed settings fallback at `C:\ProgramData\ClaudeCode\managed-settings.json` — use `C:\Program Files\ClaudeCode\managed-settings.json`"
-  - *Implication*: Windows users or admins still using the old path must migrate to `C:\Program Files\ClaudeCode\managed-settings.json`.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Improvements (v2.1.76)
 
-### Remote Control — New Interactive Session Mode
+- **`--worktree` startup performance**: Now reads git refs directly and skips redundant `git fetch` when the remote branch is already available locally.
+- **Background agent partial results preserved**: Killing a background agent now preserves its partial results in the conversation context.
+- **Model fallback notifications**: Now always visible (previously hidden behind `--verbose`), with human-friendly model names.
+- **Stale worktree cleanup**: Worktrees left behind after an interrupted parallel run are now automatically cleaned up.
+- **Remote Control session titles**: Now derived from the user's first prompt instead of showing "Interactive session".
+- **Blockquote readability on dark terminals**: Text is now italic with a left bar instead of dim.
+- **`/voice` language feedback**: Now shows the dictation language on enable and warns if the `language` setting isn't supported for voice input.
+- **`--plugin-dir` accepts one path per flag**: Updated to only accept one path to support subcommands. Use repeated `--plugin-dir` for multiple directories.
 
-- **`--remote-control` / `--rc` flag added**: A new CLI flag launches a standard interactive Claude Code session with Remote Control enabled simultaneously, rather than starting a dedicated server process.
-  > "To start a normal interactive Claude Code session with Remote Control enabled, use the `--remote-control` flag (or `--rc`)... This gives you a full interactive session in your terminal that you can also control from claude.ai or the Claude app. Unlike `claude remote-control` (server mode), you can type messages locally while the session is also available remotely."
-  - *Implication*: Previously, enabling Remote Control required either `claude remote-control` (server-only, no local input) or `/remote-control` inside an existing session. The new `--remote-control` flag lets users start a session that is simultaneously local and remotely accessible from the outset.
-  - *Source*: [Remote Control](https://code.claude.com/docs/en/remote-control.md), [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
-
-- **Server mode: `--spawn` flag for concurrent session management**: The `claude remote-control` server mode now supports a `--spawn <mode>` flag controlling how concurrent remote sessions are created.
-  > "`--spawn <mode>`: How concurrent sessions are created. Press `w` at runtime to toggle. • `same-dir` (default): all sessions share the current working directory... • `worktree`: each on-demand session gets its own git worktree. Requires a git repository."
-  - *Implication*: Teams running a shared Remote Control server can now route each remote user into an isolated git worktree, preventing conflicts when multiple users edit the same files.
-  - *Source*: [Remote Control](https://code.claude.com/docs/en/remote-control.md)
-
-- **Server mode: `--capacity` flag**: Sets the maximum number of concurrent remote sessions. Defaults to 32.
-  > "`--capacity <N>`: Maximum number of concurrent sessions. Default is 32."
-  - *Source*: [Remote Control](https://code.claude.com/docs/en/remote-control.md)
-
-- **Limitations clarified**: The "one remote session at a time" limitation is now scoped explicitly to interactive processes (not server mode).
-  > "One remote session per interactive process: outside of server mode, each Claude Code instance supports one remote session at a time. Use server mode with `--spawn` to run multiple concurrent sessions from a single process."
-  - *Source*: [Remote Control](https://code.claude.com/docs/en/remote-control.md)
-
-### Network Configuration — GitHub Enterprise Cloud IP Allowlisting
-
-- **New guidance for GitHub Enterprise Cloud IP restrictions**: A new paragraph documents how Claude Code on the web and Code Review connect from Anthropic-managed infrastructure, and how to configure IP allowlisting.
-  > "Claude Code on the web and Code Review connect to your repositories from Anthropic-managed infrastructure. If your GitHub Enterprise Cloud organization restricts access by IP address, enable IP allow list inheritance for installed GitHub Apps... The Claude GitHub App registers its IP ranges, so enabling this setting allows access without manual configuration."
-  - *Implication*: Organizations with IP allowlists on GitHub Enterprise Cloud previously had to discover and add Anthropic IP ranges manually. This documents the preferred approach (enabling GitHub App IP list inheritance) and provides a fallback link to the Anthropic API IP addresses page.
-  - *Source*: [Network Config](https://code.claude.com/docs/en/network-config.md)
-
-## Notable Details
-
-- **UTM parameter rollout across all pricing/sales links**: Every external link to `claude.com/pricing` and `anthropic.com/contact-sales` (and `anthropic.com/contact-sales`) across authentication, quickstart, overview, desktop quickstart, fast mode, legal, server-managed settings, and third-party integrations pages now includes UTM parameters (e.g., `?utm_source=claude_code&utm_medium=docs&utm_content=<page_context>`). This is purely an analytics instrumentation change and does not affect user-facing behavior.
-
-- **`claude remote-control` description updated in CLI reference**: The command description now explicitly states it "Runs in server mode (no local interactive session)", clarifying the distinction from the new `--remote-control` interactive flag.
-
-- **Code block attribute duplication in overview.md and quickstart.md**: Install command code blocks had a formatting artifact introduced — `theme={null}` appears repeated 7 times (e.g., `` ```bash theme={null} theme={null} ... ``). This is a documentation source artifact and does not affect rendered output for users reading the docs site.
+---
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| remote-control.md | Modified | +30/-10 | Added interactive session mode (`--remote-control`/`--rc`), `--spawn` and `--capacity` server flags, restructured tabs |
-| changelog.md | Modified | +22/-0 | Added v2.1.75 release notes (March 13, 2026) |
-| cli-reference.md | Modified | +17/-16 | Added `--remote-control`/`--rc` flag; updated `claude remote-control` description to clarify server mode |
-| overview.md | Modified | +7/-7 | UTM parameters on pricing links; code block formatting artifact |
-| quickstart.md | Modified | +7/-7 | UTM parameters on pricing links; code block formatting artifact |
-| authentication.md | Modified | +3/-3 | UTM parameters on pricing and contact-sales links |
-| network-config.md | Modified | +2/-0 | New paragraph on GitHub Enterprise Cloud IP allowlisting |
-| desktop-quickstart.md | Modified | +2/-2 | UTM parameters on pricing links |
-| fast-mode.md | Modified | +1/-1 | UTM parameters on Teams/Enterprise pricing links |
-| legal-and-compliance.md | Modified | +1/-1 | UTM parameters on contact-sales link |
-| server-managed-settings.md | Modified | +1/-1 | UTM parameters on Teams/Enterprise pricing links |
-| third-party-integrations.md | Modified | +1/-1 | UTM parameters on Enterprise contact-sales link |
+| hooks.md | Modified | +177/-21 | Added `PostCompact`, `Elicitation`, and `ElicitationResult` hook events with full input/output schemas; updated hook lifecycle diagram and event table |
+| common-workflows.md | Modified | +85/-45 | Expanded Plan Mode walkthrough with startup flags and editor shortcut; expanded subagents section |
+| commands.md | Modified | +64/-63 | Added `/effort` command entry; updated command descriptions throughout |
+| cli-reference.md | Modified | +54/-52 | Added `--effort` and `--name`/`-n` flags to the flags reference table |
+| hooks-guide.md | Modified | +34/-45 | Rewrote first-hook walkthrough to use JSON config instead of `/hooks` interactive menu; added matcher narrowing step |
+| changelog.md | Modified | +38/-0 | Added v2.1.76 release notes (March 14, 2026) |
+| mcp.md | Modified | +13/-0 | Added "Respond to MCP elicitation requests" section |
+| settings.md | Modified | +11/-0 | Added `Worktree settings` section with `worktree.sparsePaths` |
+| model-config.md | Modified | +8/-4 | Updated effort level docs to include `/effort` command and `max`/`auto` values |
+| overview.md | Modified | +5/-5 | Minor content updates |
+| quickstart.md | Modified | +5/-5 | Minor content updates |
+| env-vars.md | Modified | +1/-1 | Updated `CLAUDE_CODE_EFFORT_LEVEL` to document `max` and `auto` values and precedence |
+| costs.md | Modified | +1/-1 | Updated effort-level cost-reduction guidance to reference `/effort` |
+| best-practices.md | Modified | +1/-1 | Updated `/hooks` description to reflect read-only browser role |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-14*
