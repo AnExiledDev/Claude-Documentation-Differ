@@ -2,102 +2,161 @@
 
 ## Summary
 
-Ten pages were modified with no additions or removals. The most substantive changes are: session quality surveys are now **enabled by default for Bedrock, Vertex, and Foundry** (previously off); hooks now reload automatically via file watcher instead of requiring manual review; fast mode pricing is simplified to a flat rate; and two new environment variables (`CLAUDECODE`, `CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS`) are documented.
+Two pages were modified with no additions or removals. The primary change is the addition of release notes for Claude Code **v2.1.77** (March 17, 2026), a large release covering token limit increases, new commands, Agent SDK behavior changes, ~25 bug fixes, and performance improvements. A minor documentation correction was also made to the plugin marketplaces reference table.
+
+---
 
 ## Significant Changes
 
-### Data Usage & Privacy
+### Release 2.1.77 — New Version Entry
 
-- **Session quality surveys now default-on for third-party providers**: The behavior of the "How is Claude doing?" survey was changed for Bedrock, Vertex, and Foundry users. It previously appeared only for Claude API users; it now appears regardless of provider.
-  > "By default, error reporting, telemetry, and bug reporting are disabled when using Bedrock, Vertex, or Foundry. Session quality surveys are the exception and appear regardless of provider."
-  - *Implication*: Organizations using Bedrock, Vertex, or Foundry that do not want surveys appearing for their users must now explicitly set `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`.
-  - *Source*: [Data usage](https://code.claude.com/docs/en/data-usage.md)
+The changelog received 47 new lines documenting the v2.1.77 release. Changes span token limits, new commands, Agent SDK behavior, security fixes, and performance.
 
-- **Survey disable conditions clarified**: The conditions that automatically suppress surveys were updated. The previous description ("disabled when using third-party providers") is no longer accurate; the new conditions are `DISABLE_TELEMETRY` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` being set.
-  > "The survey is also disabled when `DISABLE_TELEMETRY` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set."
-  - *Implication*: Teams that assumed surveys were suppressed by virtue of using Bedrock/Vertex/Foundry should review their configuration.
-  - *Source*: [Data usage](https://code.claude.com/docs/en/data-usage.md)
+#### Token Limit Increases
 
-- **`feedbackSurveyRate` setting description updated**: The setting description now links to the session quality surveys doc and explicitly notes its utility on third-party providers. The previous note about "Enterprise admins" was replaced with a general "Set to `0` to suppress entirely."
-  > "Useful when using Bedrock, Vertex, or Foundry where the default sample rate does not apply."
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **Higher output token limits for Opus 4.6 and Sonnet 4.6**: Default max output tokens for Claude Opus 4.6 raised to 64k; the upper bound for both Opus 4.6 and Sonnet 4.6 raised to 128k.
+  > "Increased default maximum output token limits for Claude Opus 4.6 to 64k tokens, and the upper bound for Opus 4.6 and Sonnet 4.6 models to 128k tokens"
+  - *Implication*: Agents and long-form tasks on these models can now produce significantly longer single responses without hitting output limits.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-### Fast Mode Pricing
+#### New Features
 
-- **Tiered pricing removed; flat rate clarified**: Fast mode previously had two price tiers based on context window size (< 200K and > 200K tokens). That distinction has been removed. The February 16 introductory 50% discount is also no longer mentioned.
+- **`allowRead` sandbox filesystem setting**: A new `allowRead` option permits re-allowing read access within regions previously blocked by `denyRead`, enabling more granular sandbox configuration.
+  > "Added `allowRead` sandbox filesystem setting to re-allow read access within `denyRead` regions"
+  - *Implication*: Operators can now allow-list specific paths inside broader deny rules rather than choosing between full access or full denial.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  Previous pricing table:
-  | Mode | Input (MTok) | Output (MTok) |
-  |---|---|---|
-  | Fast mode on Opus 4.6 (<200K) | $30 | $150 |
-  | Fast mode on Opus 4.6 (>200K) | $60 | $225 |
+- **`/copy` with optional index**: The `/copy` command now accepts an integer argument — `/copy N` copies the Nth-latest assistant response.
+  > "`/copy` now accepts an optional index: `/copy N` copies the Nth-latest assistant response"
+  - *Implication*: Easier retrieval of earlier responses in a session without scrolling.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  Updated pricing table:
-  | Mode | Input (MTok) | Output (MTok) |
-  |---|---|---|
-  | Fast mode on Opus 4.6 | $30 | $150 |
+- **`/fork` renamed to `/branch`**: The session-branching command is now `/branch`; `/fork` continues to work as an alias.
+  > "Renamed `/fork` to `/branch` (`/fork` still works as an alias)"
+  - *Implication*: Scripts or workflows using `/fork` continue to work, but `/branch` is now the canonical name going forward.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  > "Fast mode pricing is flat across the full 1M token context window."
-  - *Implication*: Users previously subject to the $60/$225 tier at >200K tokens now pay the same flat $30/$150 rate across the entire context window.
-  - *Source*: [Fast mode](https://code.claude.com/docs/en/fast-mode.md)
+- **Sessions auto-named from plan content**: When a user accepts a plan, the session is now automatically named from the plan's heading or content.
+  > "Sessions are now auto-named from plan content when you accept a plan"
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-### Hooks File Watching
+- **Background bash task output cap (5 GB)**: Background bash tasks are now killed when their output exceeds 5 GB, preventing runaway processes from filling disk.
+  > "Background bash tasks are now killed if output exceeds 5GB, preventing runaway processes from filling disk"
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- **Hook changes now reload automatically**: Previously, editing settings files while Claude Code was running required manual review in the `/hooks` menu or a restart before changes would apply — a security measure described as preventing "malicious or accidental hook modifications." This requirement has been removed.
-  > "Direct edits to hooks in settings files are normally picked up automatically by the file watcher."
-  - *Implication*: Workflows that edit hook configs externally (via scripts, editors, etc.) will see changes apply without a restart or UI interaction. The previous security framing around requiring explicit review has been dropped.
-  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md), [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md)
+- **`apiKeyHelper` slow-response notice**: A notice is shown when `apiKeyHelper` takes longer than 10 seconds, surfacing what was previously a silent block on the main loop.
+  > "Show a notice when `apiKeyHelper` takes longer than 10s, preventing it from blocking the main loop"
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- **Troubleshooting guidance updated**: The hooks guide troubleshooting section now advises that file edits are normally automatic, with a restart as a fallback only if the watcher misses the change.
-  > "File edits are normally picked up automatically. If they haven't appeared after a few seconds, the file watcher may have missed the change: restart your session to force a reload."
-  - *Source*: [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md)
+#### Agent SDK Behavior Changes
 
-### Plugin System & `/reload-plugins`
+- **`Agent` tool drops `resume` parameter**: The `resume` parameter has been removed from the `Agent` tool. Continuing a previously spawned agent now requires `SendMessage({to: agentId})`.
+  > "The Agent tool no longer accepts a `resume` parameter — use `SendMessage({to: agentId})` to continue a previously spawned agent"
+  - *Implication*: Any agent code or prompts using `Agent({resume: ...})` must be updated. This is a breaking change for that pattern.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- **`/reload-plugins` now required to activate new plugins**: The "Use your new plugin" step in the getting-started walkthrough was updated — plugins are no longer immediately active after installation. Users must now run `/reload-plugins` first.
-  > "After installing, run `/reload-plugins` to activate the plugin."
-  - *Implication*: Automated or scripted plugin install workflows that assumed immediate availability need to add a `/reload-plugins` call.
-  - *Source*: [Discover plugins](https://code.claude.com/docs/en/discover-plugins.md)
+- **`SendMessage` auto-resumes stopped agents**: `SendMessage` now automatically resumes a stopped agent in the background rather than returning an error.
+  > "`SendMessage` now auto-resumes stopped agents in the background instead of returning an error"
+  - *Implication*: Multi-agent workflows become more resilient — callers no longer need to handle the stopped-agent error case explicitly.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- **`/reload-plugins` now handles MCP servers**: Plugin MCP server connections can now be applied mid-session without a restart, using `/reload-plugins`.
-  > "At session startup, servers for enabled plugins connect automatically. If you enable or disable a plugin during a session, run `/reload-plugins` to connect or disconnect its MCP servers."
-  - *Implication*: Previously, enabling or disabling a plugin's MCP server required a full restart. This is no longer the case.
-  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
+#### Performance Improvements
 
-- **`/reload-plugins` output is now component-specific**: The command description was updated in multiple places to indicate it now reports counts per component type rather than a generic summary.
-  > "Claude Code reloads all active plugins and shows counts for reloaded commands, skills, agents, hooks, plugin MCP servers, and plugin LSP servers."
-  - *Source*: [Discover plugins](https://code.claude.com/docs/en/discover-plugins.md), [Plugins](https://code.claude.com/docs/en/plugins.md), [Commands](https://code.claude.com/docs/en/commands.md)
+- **Faster macOS startup (~60 ms)**: Keychain credential reads now happen in parallel with module loading.
+  > "Faster startup on macOS (~60ms) by reading keychain credentials in parallel with module loading"
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-### New Environment Variables
+- **Faster `--resume` for large sessions**: Up to 45% faster loading and ~100–150 MB less peak memory on fork-heavy or very large sessions.
+  > "Faster `--resume` on fork-heavy and very large sessions — up to 45% faster loading and ~100-150MB less peak memory"
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- **`CLAUDECODE`**: Documents the environment variable Claude Code sets in shells it spawns. Useful for scripts that need to detect when they are running inside a Claude Code-managed shell.
-  > "Set to `1` in shell environments Claude Code spawns (Bash tool, tmux sessions). Not set in hooks or status line commands. Use to detect when a script is running inside a shell spawned by Claude Code."
-  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
+#### Bug Fixes — Security & Correctness
 
-- **`CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS`**: New escape hatch for corporate proxy environments where the organization status check endpoint is blocked.
-  > "Set to `1` to allow fast mode when the organization status check fails due to a network error. Useful when a corporate proxy blocks the status endpoint. The API still enforces organization-level disable separately."
-  - *Implication*: Teams behind strict network proxies that block Anthropic's status endpoints can now use fast mode without being blocked by connectivity errors.
-  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
+- **`PreToolUse` hook `"allow"` bypassing deny rules (security fix)**: Returning `"allow"` from a `PreToolUse` hook could bypass `deny` permission rules, including enterprise managed settings. This is now corrected.
+  > "Fixed PreToolUse hooks returning `\"allow\"` bypassing `deny` permission rules, including enterprise managed settings"
+  - *Implication*: Hook authors relying on this bypass behavior must update their hooks. This affects enterprise policy enforcement.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-## Notable Details
+- **`--resume` silently truncating conversation history**: A race condition between memory-extraction writes and the main transcript caused recent history to be dropped on resume.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- The `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` env var description was also updated to align with the new provider behavior — it previously said surveys were "Also disabled when using third-party providers or when telemetry is disabled." That provider-based auto-disable is gone; explicit env var flags are now the only way to suppress surveys on Bedrock/Vertex/Foundry.
-- LSP server changes are no longer called out as requiring a full restart in `plugins.md` — `/reload-plugins` now lists "plugin LSP servers" as one of the reloaded components.
+- **`CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` not stripping beta tool-schema fields**: Beta fields were leaking into requests, causing proxy gateways to reject them.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **"Always Allow" on compound bash commands**: Commands like `cd src && npm test` were saved as a single rule for the full string instead of per-subcommand, producing dead rules and repeated permission prompts.
+  > "Fixed 'Always Allow' on compound bash commands (e.g. `cd src && npm test`) saving a single rule for the full string instead of per-subcommand, leading to dead rules and repeated permission prompts"
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`git-subdir` plugin cache collision in monorepos**: Plugins at different subdirectories of the same monorepo commit were colliding in the shared plugin cache.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Claude Desktop using wrong API key (OAuth vs. CLI key)**: Desktop sessions were incorrectly using the terminal CLI's configured API key instead of OAuth credentials.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+#### Bug Fixes — UI & Terminal
+
+- **Auto-updater memory accumulation**: Repeatedly opening and closing the slash-command overlay triggered overlapping binary downloads, accumulating tens of gigabytes of memory.
+- **Write tool CRLF conversion**: Files with CRLF line endings were silently having their endings converted when overwritten or created in CRLF directories.
+- **Clipboard copy in tmux**: Copy was silently failing; the copy toast now indicates whether to paste with `⌘V` or tmux `prefix+]`.
+- **IDE integration not auto-connecting in tmux/screen**: Fixed failure to auto-connect when Claude Code is launched inside tmux or screen.
+- **Hyperlinks opening twice**: Fixed double-open on Cmd+click in VS Code, Cursor, and other xterm.js-based terminals.
+- **Vim mode**: Backspace and Delete not working in NORMAL mode; status line not updating when vim mode is toggled.
+- **CJK character rendering**: Characters bleeding into adjacent UI elements when clipped at the right edge.
+- **iTerm2**: Session crash when selecting text in tmux over SSH; auto mode not detecting iTerm2 for native split-pane teammates.
+- **Ordered list numbers** not rendering in terminal UI.
+- **Arrow keys switching tabs in dialogs**: `←`/`→` were accidentally switching tabs in settings, permissions, and sandbox dialogs while navigating lists.
+- **Stale-worktree cleanup race condition**: Cleanup could delete an agent worktree just resumed from a previous crash.
+- **Input deadlock**: Opening `/mcp` or similar dialogs while the agent is running could deadlock input.
+- **Progress message memory growth**: Progress messages were surviving compaction in long-running sessions, causing memory growth over time.
+- **Cost/token tracking in non-streaming mode**: Costs and token usage were not tracked when the API fell back to non-streaming mode.
+- **Bash tool errors on paths with spaces**: The Bash tool was reporting errors for successful commands when the system temp directory path contained spaces.
+- **Paste lost when typing immediately after pasting**.
+- **Ctrl+D in `/feedback` input**: First press was deleting forward instead of the second press exiting the session.
+- **0-byte image drag**: Dragging a 0-byte image file into the prompt caused an API error.
+- **Teammate panes not closing** when the leader exits.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+#### CLI / Plugin Tooling
+
+- **Improved `claude plugin validate`**: Now checks skill, agent, and command frontmatter plus `hooks/hooks.json`, catching YAML parse errors and schema violations in addition to basic structure.
+  > "Improved `claude plugin validate` to check skill, agent, and command frontmatter plus `hooks/hooks.json`, catching YAML parse errors and schema violations"
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Headless plugin installation + `CLAUDE_CODE_PLUGIN_SEED_DIR`**: Headless mode plugin installation now correctly composes with the seed directory environment variable.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Improved Esc to abort non-streaming API requests**: Esc now more reliably cancels in-flight non-streaming API calls.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+#### VS Code Integration
+
+- **Plan preview tab titles use plan heading**: Tab titles for plan previews now use the plan's heading instead of the generic "Claude's Plan".
+- **`macOptionClickForcesSelection` hint in footer**: When option+click doesn't trigger native selection on macOS, the footer now surfaces the relevant VS Code setting.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+---
+
+### Plugin Marketplaces — `url` Source Field Correction
+
+The plugin sources reference table was updated to remove a constraint stating that `url` source URLs must end in `.git`.
+
+- **Before**: `url (must end .git)` in the Fields column for the `url` source type
+- **After**: `url` — the `.git` suffix requirement is removed
+
+  > "| `url` | object | `url`, `ref?`, `sha?` | Git URL source |"
+
+  - *Implication*: The documentation now accurately reflects that git URL sources are not restricted to `.git`-suffixed URLs. Operators using non-`.git` URLs that were held back by this note can now proceed with confidence.
+  - *Source*: [plugin-marketplaces.md](https://code.claude.com/docs/en/plugin-marketplaces.md)
+
+---
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| data-usage.md | Modified | +8/-8 | Session quality surveys now default-on for all providers; disable conditions updated; provider table revised |
-| fast-mode.md | Modified | +5/-6 | Tiered pricing removed; flat $30/$150 MTok rate across full context window; Feb 16 discount removed |
-| discover-plugins.md | Modified | +3/-5 | `/reload-plugins` now required to activate plugins; MCP reload added; output description updated |
-| env-vars.md | Modified | +3/-1 | Two new env vars: `CLAUDECODE` and `CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS`; survey var description updated |
-| hooks-guide.md | Modified | +2/-2 | Hook file changes now auto-reload via file watcher; troubleshooting updated accordingly |
-| hooks.md | Modified | +1/-1 | Removed "snapshot at startup" security model; file watcher now handles live hook reloads |
-| mcp.md | Modified | +1/-1 | Plugin MCP servers can now be connected/disconnected via `/reload-plugins` without restart |
-| plugins.md | Modified | +1/-1 | `/reload-plugins` now explicitly includes LSP servers in its reload scope |
-| commands.md | Modified | +1/-1 | `/reload-plugins` description updated to reflect component counts and error reporting |
-| settings.md | Modified | +1/-1 | `feedbackSurveyRate` description updated with link and third-party provider context |
+| changelog.md | Modified | +47 / -0 | Added v2.1.77 release entry (March 17, 2026) with ~25 bug fixes, new features, and perf improvements |
+| plugin-marketplaces.md | Modified | +8 / -8 | Table reformatting; removed erroneous `.git` suffix requirement from `url` plugin source field |
 
 ---
+
 *Generated from Claude Code CLI documentation changes detected on 2026-03-17*
