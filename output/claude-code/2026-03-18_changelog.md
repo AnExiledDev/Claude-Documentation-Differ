@@ -2,185 +2,87 @@
 
 ## Summary
 
-This update introduces push-to-talk voice dictation as a major new feature, adding a dedicated documentation page and touching eight existing pages across commands, keybindings, settings, and interactive mode. A second significant change introduces `${CLAUDE_PLUGIN_DATA}`, a persistent data directory for plugins that survives updates, alongside a new `--keep-data` flag for plugin uninstall. Several smaller clarifications address permissions, Windows path handling, network access URLs, and an environment variable rename affecting Bedrock and Vertex AI users.
+Three pages were updated in this cycle. The most substantive change is a new "Invoke subagents explicitly" section in `sub-agents.md` that formalizes three escalation patterns for subagent invocation (natural language, @-mention, and a session-wide `--agent` flag / `agent` setting). The `settings.md` page gains a single new `agent` configuration key, and `changelog.md` was updated with v2.1.78 release notes covering 20+ fixes and additions including a new `StopFailure` hook, a security fix for silent sandbox disablement, and expanded plugin frontmatter support.
 
 ---
 
 ## Significant Changes
 
-### Features
+### Subagents — Explicit Invocation Patterns
 
-#### Voice Dictation (New)
+- **New "Invoke subagents explicitly" section**: The previous single-sentence prompt about requesting a specific subagent has been replaced with a structured section documenting three distinct invocation patterns, escalating from advisory to guaranteed to session-wide.
 
-A full push-to-talk voice dictation system is now documented and available in Claude Code v2.1.69+.
+  > When automatic delegation isn't enough, you can request a subagent yourself. Three patterns escalate from a one-off suggestion to a session-wide default:
+  > * **Natural language**: name the subagent in your prompt; Claude decides whether to delegate
+  > * **@-mention**: guarantees the subagent runs for one task
+  > * **Session-wide**: the whole session uses that subagent's system prompt, tool restrictions, and model via the `--agent` flag or the `agent` setting
 
-> Hold a key and speak to dictate your prompts. Your speech is transcribed live into the prompt input, so you can mix voice and typing in the same message. Enable dictation with `/voice`. The default push-to-talk key is `Space`.
+  - *Implication*: Developers who need deterministic subagent selection can now use `@agent-<name>` @-mention syntax in the typeahead rather than relying on Claude's automatic delegation. Plugin subagents appear in the typeahead as `<plugin-name>:<agent-name>` and can also be typed manually as `@agent-<plugin-name>:<agent-name>`.
+  - *Source*: [sub-agents.md](https://code.claude.com/docs/en/sub-agents.md)
 
-Key specifics:
+- **`--agent` CLI flag and session-wide invocation documented**: Running the whole session as a named subagent is now formally described, including its interaction with the system prompt and session resume behavior:
 
-- **Activation**: Run `/voice` to toggle. State persists across sessions; written to `voiceEnabled` in user settings.
-- **Account requirement**: Uses a streaming speech-to-text service that requires a Claude.ai account. Not available with direct API key auth, Amazon Bedrock, Google Vertex AI, or Microsoft Foundry.
-- **Local only**: Does not work in remote environments (Claude Code on the web, SSH sessions). In WSL, requires WSLg (WSL2 on Windows 11).
-- **Hold-to-record mechanics**: Space-bar hold detection relies on key-repeat events. There is a brief warmup period before recording begins; rebinding to a modifier combination (e.g., `meta+k`) skips warmup entirely.
-- **Transcription**: Streaming, tuned for coding vocabulary; adds current project name and git branch as recognition hints automatically.
-- **Language**: Dictation uses the existing `language` setting (same one that controls Claude's response language). Supports 20 languages. Falls back to English if the configured language is unsupported.
-- **Linux fallback**: If the native audio module fails to load, falls back to `arecord` (ALSA) or `rec` (SoX).
-- **Rebinding**: `voice:pushToTalk` action in the `Chat` context, bindable in `~/.claude/keybindings.json`.
+  > The subagent's system prompt replaces the default Claude Code system prompt entirely, the same way `--system-prompt` does. `CLAUDE.md` files and project memory still load through the normal message flow. The agent name appears as `@<name>` in the startup header so you can confirm it's active.
 
-> Voice dictation requires Claude Code v2.1.69 or later. Check your version with `claude --version`.
+  > This works with built-in and custom subagents, and the choice persists when you resume the session.
 
-- *Implication*: Developers can dictate prompts instead of typing; particularly useful for longer, free-form instructions. The Claude.ai account requirement excludes enterprise users authenticated via API key or cloud provider integrations.
-- *Source*: [Voice dictation](https://code.claude.com/docs/en/voice-dictation.md)
+  For plugin-provided subagents: `claude --agent <plugin-name>:<agent-name>`.
 
----
+  - *Implication*: The `--agent` flag overrides the `agent` setting when both are present. This enables project-level defaults via `.claude/settings.json` while still allowing per-session overrides from the CLI.
+  - *Source*: [sub-agents.md](https://code.claude.com/docs/en/sub-agents.md)
 
-### Configuration
+### Configuration — New `agent` Setting
 
-#### Plugin Persistent Data Directory (`${CLAUDE_PLUGIN_DATA}`)
+- **`agent` key added to settings reference**: A new top-level setting runs the main session thread as a named subagent, applying its system prompt, tool restrictions, and model to the entire conversation.
 
-Plugins now have a dedicated persistent data directory that survives plugin updates, distinct from `${CLAUDE_PLUGIN_ROOT}` which changes on each update.
+  > | `agent` | Run the main thread as a named subagent. Applies that subagent's system prompt, tool restrictions, and model. See [Invoke subagents explicitly](/en/sub-agents#invoke-subagents-explicitly) | `"code-reviewer"` |
 
-> **`${CLAUDE_PLUGIN_DATA}`**: a persistent directory for plugin state that survives updates. Use this for installed dependencies such as `node_modules` or Python virtual environments, generated code, caches, and any other files that should persist across plugin versions. The directory is created automatically the first time this variable is referenced.
+  - *Implication*: Teams can commit `.claude/settings.json` with `"agent": "<name>"` to ensure every collaborator's session defaults to a specific subagent configuration — for example, a `code-reviewer` agent with restricted tools and a focused system prompt. The CLI `--agent` flag takes precedence if both are set.
+  - *Source*: [settings.md](https://code.claude.com/docs/en/settings.md)
 
-Directory path convention: `~/.claude/plugins/data/{id}/`, where `{id}` is the plugin identifier with non-alphanumeric characters (except `_` and `-`) replaced by `-`. Example: a plugin installed as `formatter@my-marketplace` → `~/.claude/plugins/data/formatter-my-marketplace/`.
+### Release Notes — v2.1.78 (March 17, 2026)
 
-The recommended pattern for managing dependencies that need to be reinstalled on update uses a `SessionStart` hook that diffs the bundled `package.json` against a copy in the data directory:
+- **`StopFailure` hook event**: New lifecycle hook event fires when a turn ends due to an API error (rate limit, auth failure, etc.), distinct from a normal `Stop`. Allows hook scripts to respond specifically to failure conditions.
 
-```json
-{
-  "hooks": {
-    "SessionStart": [{
-      "hooks": [{
-        "type": "command",
-        "command": "diff -q \"${CLAUDE_PLUGIN_ROOT}/package.json\" \"${CLAUDE_PLUGIN_DATA}/package.json\" >/dev/null 2>&1 || (cd \"${CLAUDE_PLUGIN_DATA}\" && cp \"${CLAUDE_PLUGIN_ROOT}/package.json\" . && npm install) || rm -f \"${CLAUDE_PLUGIN_DATA}/package.json\""
-      }]
-    }]
-  }
-}
-```
+- **`${CLAUDE_PLUGIN_DATA}` variable**: Plugin persistent state directory that survives plugin updates. `/plugin uninstall` now prompts before deleting this data.
 
-> The data directory is deleted automatically when you uninstall the plugin from the last scope where it is installed. The `/plugin` interface shows the directory size and prompts before deleting. The CLI deletes by default; pass `--keep-data` to preserve it.
+- **Plugin-shipped agent frontmatter expanded**: `effort`, `maxTurns`, and `disallowedTools` are now supported in frontmatter for plugin-shipped agents.
 
-- *Implication*: Plugin authors can now install language-runtime dependencies (e.g., `node_modules`, Python venvs) once and reuse them across sessions and version updates, without re-running install on every plugin update.
-- *Source*: [Plugins reference](https://code.claude.com/docs/en/plugins-reference.md)
+- **tmux passthrough for terminal notifications**: iTerm2/Kitty/Ghostty popups and the progress bar now reach the outer terminal when running inside tmux, provided `set -g allow-passthrough on` is configured.
 
-#### `plugin uninstall --keep-data` Flag (New)
+- **Streaming response text**: Response text now streams line-by-line as it is generated rather than in larger chunks.
 
-A new `--keep-data` option for `claude plugin uninstall` preserves the plugin's `${CLAUDE_PLUGIN_DATA}` directory when removing the plugin.
+- **Security fix — silent sandbox disable**:
+  > **Security:** Fixed silent sandbox disable when `sandbox.enabled: true` is set but dependencies are missing — now shows a visible startup warning.
 
-> By default, uninstalling from the last remaining scope also deletes the plugin's `${CLAUDE_PLUGIN_DATA}` directory. Use `--keep-data` to preserve it, for example when reinstalling after testing a new version.
+  Previously, a misconfigured or dependency-missing sandbox could silently fall back to no sandboxing with no user notification.
 
-- *Implication*: Useful for iterative plugin development or when reinstalling a newer version without losing cached dependencies.
-- *Source*: [Plugins reference](https://code.claude.com/docs/en/plugins-reference.md)
+- **Security fix — protected directories in `bypassPermissions` mode**: `.git`, `.claude`, and other protected directories were writable without a prompt in `bypassPermissions` mode; now fixed.
 
-#### `voiceEnabled` Setting (New)
+- **`deny: ["mcp__servername"]` permission enforcement fix**: These permission rules were not removing MCP server tools before sending to the model, allowing the model to see and attempt blocked tools. Now fixed.
 
-A new user setting controls voice dictation state:
+- **`sandbox.filesystem.allowWrite` absolute path fix**: Previously required a `//` prefix for absolute paths; now works with standard absolute paths.
 
-> `voiceEnabled`: Enable push-to-talk voice dictation. Written automatically when you run `/voice`. Requires a Claude.ai account.
+- **`ANTHROPIC_CUSTOM_MODEL_OPTION` env var**: Adds a custom entry to the `/model` picker. Optional `_NAME` and `_DESCRIPTION` suffixed variants control the display label and description text.
 
-- *Implication*: Can be pre-configured in user settings; `/voice` simply writes this setting rather than managing its own state separately.
-- *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **`--worktree` flag now loads skills and hooks**: Previously, skills and hooks from the worktree directory were not loaded when `--worktree` was in use; now fixed.
 
-#### `language` Setting Now Controls Dictation Language
+- **`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` and `includeGitInstructions` fix**: These were not suppressing the git status section of the system prompt; now fixed.
 
-The existing `language` setting's description has been extended:
+- **Infinite loop fix**: API errors triggering stop hooks that re-fed blocking errors to the model could cause an infinite loop. Fixed.
 
-> Also sets the voice dictation language.
+- **VSCode fixes**: Brief login screen flash when opening the sidebar while already authenticated; "API Error: Rate limit reached" when selecting Opus (model dropdown no longer offers the 1M context variant to subscribers whose plan tier is unknown).
 
-- *Implication*: There is no separate voice language setting. Users who have already configured `language` for response language automatically get matching dictation language.
-- *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
-
-#### Managed CLAUDE.md vs. Managed Settings Guidance
-
-The memory/CLAUDE.md documentation now includes an explicit comparison table clarifying when to use managed settings versus a managed CLAUDE.md for organizational deployments:
-
-> A managed CLAUDE.md and managed settings serve different purposes. Use settings for technical enforcement and CLAUDE.md for behavioral guidance.
-
-| Concern | Configure in |
-|---|---|
-| Block specific tools, commands, or file paths | Managed settings: `permissions.deny` |
-| Enforce sandbox isolation | Managed settings: `sandbox.enabled` |
-| Environment variables and API provider routing | Managed settings: `env` |
-| Authentication method and organization lock | Managed settings: `forceLoginMethod`, `forceLoginOrgUUID` |
-| Code style and quality guidelines | Managed CLAUDE.md |
-| Data handling and compliance reminders | Managed CLAUDE.md |
-| Behavioral instructions for Claude | Managed CLAUDE.md |
-
-> Settings rules are enforced by the client regardless of what Claude decides to do. CLAUDE.md instructions shape Claude's behavior but are not a hard enforcement layer.
-
-- *Implication*: Organizations deploying Claude Code at scale now have clear authoritative guidance on the enforcement boundary between settings and CLAUDE.md.
-- *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
-
----
-
-### Permissions
-
-#### Read/Edit Deny Rules Do Not Apply to Bash Subprocesses
-
-A new Warning callout clarifies a common misconception about permission rule scope:
-
-> Read and Edit deny rules apply to Claude's built-in file tools, not to Bash subprocesses. A `Read(./.env)` deny rule blocks the Read tool but does not prevent `cat .env` in Bash. For OS-level enforcement that blocks all processes from accessing a path, enable the sandbox.
-
-- *Implication*: Teams relying on `Read` deny rules for security must also enable sandboxing to prevent Bash-level bypasses.
-- *Source*: [Configure permissions](https://code.claude.com/docs/en/permissions.md)
-
-#### Windows Path Normalization for Permission Rules
-
-Documentation now explicitly covers how Windows paths are handled in permission patterns:
-
-> On Windows, paths are normalized to POSIX form before matching. `C:\Users\alice` becomes `/c/Users/alice`, so use `//c/**/.env` to match `.env` files anywhere on that drive. To match across all drives, use `//**/.env`.
-
-- *Implication*: Windows users writing permission rules must account for this normalization; the `//` absolute-path prefix convention applies using the drive letter as the first path component.
-- *Source*: [Configure permissions](https://code.claude.com/docs/en/permissions.md)
-
----
-
-### Network & Infrastructure
-
-#### Native Installer URLs Added to Network Requirements
-
-The network configuration page now documents two additional URLs required by the native installer and update mechanism:
-
-> The native installer and update checks also require the following URLs. If you install Claude Code through npm or manage your own binary distribution, end users may not need access:
-> - `downloads.claude.ai`: CDN hosting the install script, version pointers, manifests, and executables
-> - `storage.googleapis.com`: legacy download bucket, deprecation in progress
-
-- *Implication*: Enterprise firewall allowlists must include `downloads.claude.ai` for auto-update to function. `storage.googleapis.com` is flagged as being deprecated on the Anthropic side — organizations that have added it for legacy access can plan to remove it eventually.
-- *Source*: [Enterprise network configuration](https://code.claude.com/docs/en/network-config.md)
-
----
-
-### Breaking / Renamed
-
-#### `ANTHROPIC_SMALL_FAST_MODEL` Renamed to `ANTHROPIC_DEFAULT_HAIKU_MODEL`
-
-The environment variable for specifying a secondary fast model has been renamed in both the Amazon Bedrock and Google Vertex AI documentation:
-
-```bash
-# Before
-export ANTHROPIC_SMALL_FAST_MODEL='us.anthropic.claude-haiku-4-5-20251001-v1:0'
-
-# After
-export ANTHROPIC_DEFAULT_HAIKU_MODEL='us.anthropic.claude-haiku-4-5-20251001-v1:0'
-```
-
-- *Implication*: Users relying on `ANTHROPIC_SMALL_FAST_MODEL` in their Bedrock or Vertex AI configurations should update to the new variable name. The old name is no longer referenced in documentation.
-- *Source*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md), [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai.md)
-
----
-
-## New Pages
-
-- **[voice-dictation.md](https://code.claude.com/docs/en/voice-dictation.md)** — Complete reference for push-to-talk voice dictation: requirements, enabling/disabling, recording mechanics, language configuration, push-to-talk key rebinding, and troubleshooting. Covers macOS, Linux, Windows, and WSL specifics.
+- *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
 ---
 
 ## Notable Details
 
-- The `${CLAUDE_PLUGIN_ROOT}` description in hooks documentation was updated from "plugin's root directory" to "plugin's **installation** directory" with the added note: "Changes on each plugin update." This wording shift is meaningful — it signals to plugin authors that any files written to this path will be lost on update.
-- The MCP plugin documentation now explicitly lists both `${CLAUDE_PLUGIN_ROOT}` (for bundled files) and `${CLAUDE_PLUGIN_DATA}` (for persistent state), replacing a single-variable mention. This affects `mcp.md` and `plugin-marketplaces.md` in addition to the main `plugins-reference.md`.
-- Voice dictation adds a new `voice:pushToTalk` action to the `Chat` keybinding context. Because hold detection uses key-repeat, the docs specifically warn against binding a bare letter key (e.g., `v`) as it will type during the warmup period. The recommendation is to use `Space` (default) or a modifier combo like `meta+k`.
+- The @-mention syntax for subagents uses the same typeahead UI as file @-mentions. This is newly documented — previously the only documented approach for explicit invocation was natural-language phrasing like "Use the test-runner subagent to...". The @-mention pattern guarantees which subagent runs rather than leaving delegation to Claude's judgment.
+- The `--agent` flag is described as architecturally equivalent to `--system-prompt` in terms of system prompt replacement, with the addition of tool restrictions and model selection. This clarifies that it is not a separate mechanism but a named, structured version of `--system-prompt`.
+- The v2.1.78 `ANTHROPIC_BETAS` env var fix (silently ignored for Haiku models, now working) enables beta feature testing with smaller/cheaper models — a relevant quality-of-life fix for developers iterating on beta capabilities.
+- The `cc log` and `--resume` truncation fix for large sessions (>5 MB) that used subagents addresses a data-loss scenario where conversation history was silently dropped on resume.
 
 ---
 
@@ -188,20 +90,9 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL='us.anthropic.claude-haiku-4-5-20251001-v1:
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| voice-dictation.md | New | +138 | Full reference for push-to-talk voice dictation feature |
-| plugins-reference.md | Modified | +57/-5 | New `${CLAUDE_PLUGIN_DATA}` persistent directory, `--keep-data` uninstall flag |
-| memory.md | Modified | +14/-0 | Managed CLAUDE.md vs. managed settings comparison table |
-| keybindings.md | Modified | +8/-0 | New "Voice actions" section with `voice:pushToTalk` action |
-| interactive-mode.md | Modified | +6/-0 | New "Voice input" shortcut table (Hold Space for push-to-talk) |
-| permissions.md | Modified | +6/-0 | Warning about Bash subprocess bypass; Windows path normalization note |
-| network-config.md | Modified | +5/-0 | `downloads.claude.ai` and `storage.googleapis.com` added to allowlist requirements |
-| settings.md | Modified | +2/-1 | New `voiceEnabled` setting; `language` setting updated to mention voice dictation |
-| hooks.md | Modified | +2/-1 | `${CLAUDE_PLUGIN_ROOT}` clarified; `${CLAUDE_PLUGIN_DATA}` documented |
-| google-vertex-ai.md | Modified | +2/-2 | `ANTHROPIC_SMALL_FAST_MODEL` → `ANTHROPIC_DEFAULT_HAIKU_MODEL` |
-| commands.md | Modified | +1/-0 | `/voice` command added to commands reference |
-| mcp.md | Modified | +1/-1 | Plugin MCP env vars updated to include `${CLAUDE_PLUGIN_DATA}` |
-| amazon-bedrock.md | Modified | +1/-1 | `ANTHROPIC_SMALL_FAST_MODEL` → `ANTHROPIC_DEFAULT_HAIKU_MODEL` |
-| plugin-marketplaces.md | Modified | +1/-1 | `${CLAUDE_PLUGIN_ROOT}` note updated to reference `${CLAUDE_PLUGIN_DATA}` |
+| `sub-agents.md` | Modified | +41 / -1 | New "Invoke subagents explicitly" section: natural language, @-mention, and `--agent`/`agent` setting session-wide patterns |
+| `changelog.md` | Modified | +29 / -0 | Added v2.1.78 release notes (March 17, 2026) |
+| `settings.md` | Modified | +1 / -0 | Added `agent` setting to the settings reference table |
 
 ---
 
