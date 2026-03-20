@@ -2,94 +2,104 @@
 
 ## Summary
 
-This update introduces **Channels**, a research preview feature in Claude Code v2.1.80 that allows MCP servers to push messages, alerts, and chat events into a running Claude Code session. Two new documentation pages cover user setup (Telegram, Discord, fakechat) and developer reference for building custom channel MCP servers. Supporting changes land across the CLI reference, MCP docs, settings, and several related pages.
+Ten documentation pages were updated with no new or removed pages (19 additions, 11 deletions total). The most substantive changes document a new `resume` trigger for `SessionEnd` hooks (fired when switching sessions via interactive `/resume`), an `effort` frontmatter field for skills and subagents enabling per-component reasoning budget overrides, and a new workspace trust requirement section for the status line feature.
 
 ---
 
 ## Significant Changes
 
-### Features: Channels (Research Preview)
+### Hooks
 
-- **`--channels` flag — push external events into a running session**: Claude Code v2.1.80 adds a `--channels` flag that opts named MCP servers into message-push mode. When enabled, those servers can deliver events (chat messages, CI alerts, webhooks) into the active session, and Claude can react to them in real time. The feature requires a claude.ai login; Console and API key auth are not supported.
+- **New `SessionEnd` reason: `resume`**: Interactive `/resume` session switching now fires `SessionEnd` hooks with `reason: "resume"`. Previously, switching sessions was not documented as a trigger, and existing reason values could not match it.
 
-  > "A channel is an MCP server that pushes events into your running Claude Code session, so Claude can react to things that happen while you're not at the terminal. Channels can be two-way: Claude reads the event and replies back through the same channel, like a chat bridge."
+  > `| resume | Session switched via interactive /resume |`
 
-  - *Implication*: Developers can now drive Claude Code from Telegram or Discord, or pipe CI/monitoring webhooks into an active session. Previously the only push-style interface was Remote Control (browser/phone to local terminal); channels add a programmatic event-push layer.
-  - *Source*: [Channels](https://code.claude.com/docs/en/channels.md)
+  The matcher value tables in both `hooks.md` and `hooks-guide.md` were updated:
 
-- **Telegram and Discord plugins (official research preview)**: Both are installable via `/plugin install telegram@claude-plugins-official` or `/plugin install discord@claude-plugins-official`, then activated per session with `--channels plugin:telegram@claude-plugins-official`. Pairing bootstraps a sender allowlist using a code exchange.
+  > `SessionEnd` — why the session ended — `clear`, **`resume`**, `logout`, `prompt_input_exit`, `bypass_permissions_disabled`, `other`
 
-  > "Every approved channel plugin maintains a sender allowlist: only IDs you've added can push messages, and everyone else is silently dropped."
+  - *Implication*: Hook authors who need to run cleanup only on true session exit (not on session switching) should add an explicit `reason != "resume"` guard. Those who want to respond specifically to session switches can now match on `resume`.
+  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md), [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md)
 
-  - *Implication*: Access control is opt-in per sender and per session — both the `--channels` flag and pairing are required before any message is forwarded to Claude.
-  - *Source*: [Channels](https://code.claude.com/docs/en/channels.md)
+- **`CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` scope expanded to include `/resume`**: The environment variable description now explicitly lists three triggers: session exit, `/clear`, and switching sessions via interactive `/resume`.
 
-- **Fakechat — localhost demo channel**: An officially supported demo that runs a browser chat UI at `http://localhost:8787` with no external credentials. Useful for testing the plugin flow before connecting a real platform.
-  - *Source*: [Channels](https://code.claude.com/docs/en/channels.md)
+  > `Maximum time in milliseconds for SessionEnd hooks to complete (default: 1500). Applies to session exit, /clear, and switching sessions via interactive /resume.`
 
-- **`--dangerously-load-development-channels` flag**: Bypasses the Anthropic-curated channel allowlist (which only permits `claude-plugins-official` entries during the research preview), allowing developers to test custom channels locally. Works with both `plugin:<name>@<marketplace>` and `server:<name>` entry types.
+  - *Implication*: Operators who rely on this timeout budget should be aware it now also applies to the `/resume` path, and may need to increase the value if `/resume` is frequent and hooks do non-trivial work.
+  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
 
-  > "The bypass is per-entry. Combining this flag with `--channels` doesn't extend the bypass to the `--channels` entries."
+---
 
-  - *Implication*: Custom channel development is possible locally but requires this flag throughout the research preview period. Publishing to an official marketplace requires Anthropic security review.
-  - *Source*: [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
+### Model Configuration
 
-### Configuration: New `channelsEnabled` Managed Setting
+- **Effort level now settable in skill and subagent frontmatter**: A new `effort` method was added to the effort-setting documentation, and the precedence chain was updated to clarify how frontmatter interacts with environment variables and session-level settings.
 
-- **`channelsEnabled` setting for Team/Enterprise admins**: A new managed-settings-only field that controls whether channel message delivery is active for an organization. Defaults to disabled for Team/Enterprise; Pro/Max (no org) users can opt in per session.
+  > `Skill and subagent frontmatter: set effort in a skill or subagent markdown file to override the effort level when that skill or subagent runs`
 
-  > "Unset or `false` blocks channel message delivery regardless of what users pass to `--channels`"
+  Updated precedence description:
 
-  - *Implication*: Admins on Team/Enterprise must explicitly enable this at `claude.ai → Admin settings → Claude Code → Channels` before users can receive channel messages. The MCP server still connects and its non-channel tools work regardless of this setting — only message push is gated.
+  > `The environment variable takes precedence over all other methods, then your configured level, then the model default. Frontmatter effort applies when that skill or subagent is active, overriding the session level but not the environment variable.`
+
+  - *Implication*: Individual subagents and skills can now pin their own effort level (e.g., `low` for speed-sensitive exploratory agents, `max` for deep reasoning tasks) without changing the session-wide setting. The environment variable remains the highest-priority override and cannot be overridden by frontmatter.
+  - *Source*: [Model configuration](https://code.claude.com/docs/en/model-config.md)
+
+---
+
+### Subagents
+
+- **New `effort` frontmatter field**: The supported frontmatter fields table gains an `effort` entry.
+
+  > `| effort | No | Effort level when this subagent is active. Overrides the session effort level. Default: inherits from session. Options: low, medium, high, max (Opus 4.6 only) |`
+
+  - *Implication*: Subagent definition files can now include `effort: low` (or `medium`, `high`, `max`) to pin the reasoning budget for that agent's entire run, independent of what the parent session uses.
+  - *Source*: [Create custom subagents](https://code.claude.com/docs/en/sub-agents.md)
+
+- **`--agents` CLI flag now documents `effort`, `background`, and `isolation`**: The flag description was extended to include three previously undocumented accepted fields.
+
+  > `The --agents flag accepts JSON with the same frontmatter fields as file-based subagents: description, prompt, tools, disallowedTools, model, permissionMode, mcpServers, hooks, maxTurns, skills, memory, effort, background, and isolation.`
+
+  - *Implication*: Ephemeral CLI-defined agents (used in automation or quick testing) can now configure effort, background execution mode, and worktree isolation without writing a subagent file to disk.
+  - *Source*: [Create custom subagents](https://code.claude.com/docs/en/sub-agents.md)
+
+- **Memory configuration UI label renamed**: The quickstart walkthrough's memory step changed the option label from "**Enable**" to "**User scope**".
+
+  > `Select User scope to give the subagent a persistent memory directory at ~/.claude/agent-memory/.`
+
+  - *Implication*: This reflects a UI label change in the `/agents` interactive wizard. Users following the walkthrough should look for "User scope" rather than "Enable".
+  - *Source*: [Create custom subagents](https://code.claude.com/docs/en/sub-agents.md)
+
+---
+
+### Status Line
+
+- **Workspace trust requirement documented**: A new "Workspace trust required" section was added to the troubleshooting part of the status line page, explaining that `statusLine` only executes after accepting the workspace trust dialog — the same requirement as hooks and other shell-executing settings.
+
+  > `The status line command only runs if you've accepted the workspace trust dialog for the current directory. Because statusLine executes a shell command, it requires the same trust acceptance as hooks and other shell-executing settings.`
+  >
+  > `If trust isn't accepted, you'll see the notification statusline skipped · restart to fix instead of your status line output. Restart Claude Code and accept the trust prompt to enable it.`
+
+  - *Implication*: Users who configure a status line in a new directory and see no output (or a blank bar) should check for the `statusline skipped · restart to fix` notification rather than debugging their script. Restarting Claude Code and accepting the trust prompt resolves it.
+  - *Source*: [Customize your status line](https://code.claude.com/docs/en/statusline.md)
+
+---
+
+### Plugins & Marketplaces
+
+- **New reserved marketplace name: `knowledge-work-plugins`**: Added to the list of names reserved for official Anthropic use in the plugin marketplaces documentation.
+
+  > Reserved names now include: `claude-code-marketplace`, `claude-code-plugins`, `claude-plugins-official`, `anthropic-marketplace`, `anthropic-plugins`, `agent-skills`, **`knowledge-work-plugins`**, `life-sciences`
+
+  - *Implication*: Third-party marketplace authors using `knowledge-work-plugins` as their marketplace name must rename it to avoid rejection.
+  - *Source*: [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+
+- **Settings doc removes hard-coded marketplace source type count**: The description changed from "The allowlist supports **seven** marketplace source types" to "The allowlist supports **multiple** marketplace source types".
+
+  - *Implication*: Cosmetic wording change, likely anticipating additional source types without requiring a doc update to the count.
   - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-### MCP: Channel Capability Protocol
+- **`/reload-plugins` description corrected in two pages**: Both `plugins.md` and `discover-plugins.md` changed "reloads **commands**, skills, agents, hooks..." to "reloads **plugins**, skills, agents, hooks...", correcting an inaccurate term.
 
-- **`claude/channel` MCP capability**: The channels feature is built on top of MCP. A server becomes a channel by declaring `capabilities.experimental['claude/channel']: {}` in its constructor and emitting `notifications/claude/channel` events. Events are delivered to Claude wrapped in a `<channel source="...">` XML tag, with optional `meta` key-value pairs as attributes.
-
-  > "An MCP server can also push messages directly into your session so Claude can react to external events like CI results, monitoring alerts, or chat messages. To enable this, your server declares the `claude/channel` capability and you opt it in with the `--channels` flag at startup."
-
-  - *Implication*: Any MCP server can be extended to push events into Claude Code without requiring a new transport mechanism. Two-way channels additionally expose a standard MCP reply tool.
-  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md), [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
-
-### Version 2.1.80 Release Notes (from changelog)
-
-The following additional changes ship in v2.1.80 (documented in the official changelog, not in separate pages):
-
-- **`rate_limits` field for statusline scripts**: Shows Claude.ai rate limit usage across 5-hour and 7-day windows with `used_percentage` and `resets_at` fields.
-- **`source: 'settings'` plugin marketplace source**: Plugin entries can now be declared inline in `settings.json`.
-- **`effort` frontmatter for skills and slash commands**: Overrides the model effort level when the skill is invoked.
-- **CLI tool usage detection for plugin tips**: Plugin tip matching now considers CLI tool usage in addition to file pattern matching.
-- **Fix: `--resume` dropping parallel tool results**: Sessions with parallel tool calls now restore all `tool_use`/`tool_result` pairs instead of showing `[Tool result missing]` placeholders.
-- **Fix: voice mode WebSocket failures**: Resolved Cloudflare bot detection failures caused by non-browser TLS fingerprints.
-- **Fix: 400 errors on fine-grained tool streaming**: Fixed errors when routing through API proxies, Bedrock, or Vertex.
-- **Fix: managed settings not applied at startup**: `enabledPlugins`, `permissions.defaultMode`, and policy-set env vars now apply correctly when `remote-settings.json` was cached from a prior session.
-- **Fix: `/remote-control` appearing in gateway deployments**: Removed the command for gateway and third-party provider deployments where it cannot function.
-- **~80 MB memory reduction on startup** in large repositories (250k-file repos).
-- **Improved `@` file autocomplete** responsiveness in large git repositories.
-- *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
----
-
-## New Pages
-
-- **[channels.md](https://code.claude.com/docs/en/channels.md)** — User-facing guide for the Channels research preview. Covers Telegram and Discord plugin installation and pairing, the fakechat localhost demo, sender security model, and enterprise controls (`channelsEnabled`). Requires Claude Code v2.1.80+ and claude.ai login.
-
-- **[channels-reference.md](https://code.claude.com/docs/en/channels-reference.md)** — Developer reference for building custom channel MCP servers. Covers the channel capability declaration, `notifications/claude/channel` event format, `meta` key encoding, two-way reply tool pattern, sender gating (prompt injection defense), and packaging as a plugin. Includes a full webhook receiver walkthrough in TypeScript/Bun.
-
----
-
-## Notable Details
-
-- **Column width reformatting in `cli-reference.md`**: The 56-addition/54-deletion diff for `cli-reference.md` is almost entirely whitespace reformatting of the flags table — column widths were widened to accommodate the new `--dangerously-load-development-channels` flag. Only two substantive rows were added: `--channels` and `--dangerously-load-development-channels`.
-
-- **`overview.md` code block attribute duplication**: The diff shows `theme={null}` repeated multiple times in fenced code block attributes (e.g., ` ```bash theme={null} theme={null} theme={null}...`). This appears to be a rendering artifact in the source markdown and does not affect the displayed documentation.
-
-- **Channels added to `scheduled-tasks.md` as a counterpart**: The scheduled tasks description now explicitly cross-references Channels as the event-driven alternative to polling: *"To react to events as they happen instead of polling, see Channels: your CI can push the failure into the session directly."* This positions the two features as complementary (polling vs. push) rather than overlapping.
-
-- **Security note on `meta` key naming**: The channels reference specifies that `meta` keys must match `[a-zA-Z0-9_]` — keys with hyphens are silently dropped. This is a non-obvious constraint for developers integrating webhook payloads with hyphenated field names.
-
-- **`channelsEnabled` is managed-settings only**: Unlike most Claude Code settings that can appear in user or project config, `channelsEnabled` is explicitly restricted to managed settings. Individual users cannot self-enable the feature on Team/Enterprise plans.
+  - *Source*: [Plugins](https://code.claude.com/docs/en/plugins.md), [Discover plugins](https://code.claude.com/docs/en/discover-plugins.md)
 
 ---
 
@@ -97,15 +107,16 @@ The following additional changes ship in v2.1.80 (documented in the official cha
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| channels.md | New | +257 | User guide for Channels: Telegram/Discord setup, fakechat quickstart, security model, enterprise controls |
-| channels-reference.md | New | +403 | Developer reference for building channel MCP servers: capability protocol, notification format, reply tools, sender gating |
-| cli-reference.md | Modified | +56/-54 | Added `--channels` and `--dangerously-load-development-channels` flags; table column width reformatting |
-| changelog.md | Modified | +20/-0 | Added v2.1.80 release notes |
-| mcp.md | Modified | +5/-0 | Added "Push messages with channels" section and channels bullet to use-case list |
-| overview.md | Modified | +15/-14 | Added Channels row to integrations table; minor code block formatting changes |
-| remote-control.md | Modified | +1/-0 | Added Channels cross-link in related resources |
-| scheduled-tasks.md | Modified | +1/-1 | Added Channels as event-driven alternative to polling |
-| settings.md | Modified | +1/-0 | Added `channelsEnabled` managed setting documentation |
+| statusline.md | Modified | +5 / -0 | New "Workspace trust required" troubleshooting section |
+| hooks.md | Modified | +3 / -2 | Added `resume` to `SessionEnd` matcher values and reason table; expanded timeout scope description |
+| sub-agents.md | Modified | +3 / -2 | Added `effort` frontmatter field; expanded `--agents` field list; renamed memory UI option |
+| model-config.md | Modified | +2 / -1 | Added frontmatter as an effort-setting method; updated precedence chain description |
+| hooks-guide.md | Modified | +1 / -1 | Added `resume` to `SessionEnd` matcher values |
+| env-vars.md | Modified | +1 / -1 | Expanded `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` scope to include `/resume` |
+| plugin-marketplaces.md | Modified | +1 / -1 | Added `knowledge-work-plugins` to reserved marketplace names |
+| plugins.md | Modified | +1 / -1 | Corrected `/reload-plugins` description: "commands" → "plugins" |
+| discover-plugins.md | Modified | +1 / -1 | Corrected `/reload-plugins` description: "commands" → "plugins" |
+| settings.md | Modified | +1 / -1 | Changed "seven" to "multiple" for marketplace source type count |
 
 ---
 
