@@ -2,7 +2,7 @@
 
 ## Summary
 
-Version 2.1.81 was released with 28 changelog entries covering a new `--bare` scripting flag, a `--channels` permission relay for remote approvals, numerous bug fixes, and behavioral changes to plan mode and Windows streaming. Alongside the release, documentation was updated to clarify admin controls for Remote Control and web sessions, add new IDE auto-connect settings, and add a comparison table to the channels page.
+Version 2.1.81 was released with 28 changelog entries covering a new `--bare` scripting flag, a `--channels` permission relay for remote approvals, numerous bug fixes, and behavioral changes to plan mode and Windows streaming. Alongside the release, documentation was updated to clarify admin controls for Remote Control and web sessions, add new IDE auto-connect settings, and add a comparison table to the channels page. A follow-up update corrected the canonical name of the `--allowedTools` flag in the GitHub Actions reference.
 
 ---
 
@@ -24,6 +24,13 @@ Version 2.1.81 was released with 28 changelog entries covering a new `--bare` sc
   > Updated MCP OAuth to support Client ID Metadata Document (CIMD / SEP-991) for servers without Dynamic Client Registration
   - *Implication*: Broader MCP server compatibility without requiring DCR support.
   - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+### GitHub Actions CLI Flag
+
+- **`--allowedTools` is now the canonical flag name (was `--allowed-tools`)**: The GitHub Actions reference documentation updated the flag name from kebab-case to camelCase, and explicitly documents the hyphenated form as a still-working alias.
+  > `--allowedTools`: Comma-separated list of allowed tools. The `--allowed-tools` alias also works.
+  - *Implication*: Existing workflows using `--allowed-tools` continue to work without modification, but new scripts should prefer `--allowedTools` to match the documented canonical form.
+  - *Source*: [GitHub Actions](https://code.claude.com/docs/en/github-actions.md)
 
 ### Behavioral Changes (v2.1.81)
 
@@ -134,6 +141,7 @@ Version 2.1.81 was released with 28 changelog entries covering a new `--bare` sc
 | sandboxing.md | Modified | +3/−1 | Clarified `.` path resolution in `allowRead` per settings file location |
 | discover-plugins.md | Modified | +1/−1 | Added link to plugin catalog at claude.com/plugins |
 | env-vars.md | Modified | +1/−1 | Cross-referenced `autoInstallIdeExtension` setting from env var docs |
+| github-actions.md | Modified | +1/−1 | Renamed `--allowed-tools` to `--allowedTools`; old name retained as alias |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-21*
