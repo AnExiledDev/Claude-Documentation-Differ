@@ -2,81 +2,112 @@
 
 ## Summary
 
-Six documentation pages were updated with no pages added or removed. The changes introduce a new `user.account_id` OTel attribute, expand plugin agent frontmatter field documentation, clarify the scope of `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS`, add tmux passthrough guidance for notifications, and refine terminal progress bar support details.
+Nine pages were modified with no pages added or removed (472 additions, 94 deletions). The largest change is the addition of a **permission relay** capability to the Channels API, enabling channel servers to forward tool-use approval prompts to remote users (e.g. via phone over Telegram or Discord). A second meaningful change documents the new `--bare` CLI flag for scripted and CI use, which skips all auto-discovery at startup and is flagged as the future default for `-p` mode.
+
+---
 
 ## Significant Changes
 
-### Monitoring & Telemetry
+### Channels: Permission Relay (New Capability)
 
-- **New `user.account_id` OTel attribute**: A new standard attribute `user.account_id` is now documented alongside the existing `user.account_uuid`. It provides the account ID in tagged format matching Anthropic admin APIs.
-  > `user.account_id` — Account ID in tagged format matching Anthropic admin APIs (when authenticated), such as `user_01BWBeN28...`
-  - *Implication*: This attribute is controlled by `OTEL_METRICS_INCLUDE_ACCOUNT_UUID` (default: `true`) and can now be used for metric segmentation. The `OTEL_METRICS_INCLUDE_ACCOUNT_UUID` description has been updated to reflect that it gates both `user.account_uuid` and `user.account_id`. The alerting segmentation note also now includes `user.account_id`.
-  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
+- **Remote tool-use approval via channels**: Two-way channel servers can now opt in to receive permission prompts in parallel with the local terminal dialog, enabling a developer away from their desk to approve or deny `Bash`, `Write`, and `Edit` calls remotely. Requires **Claude Code v2.1.81 or later**.
+  > "A two-way channel can opt in to receive the same prompt in parallel and relay it to you on another device. Both stay live: you can answer in the terminal or on your phone, and Claude Code applies whichever answer arrives first and closes the other."
+  - *Implication*: Channel builders must declare `capabilities.experimental['claude/channel/permission']: {}` in the `Server` constructor. Claude Code then sends `notifications/claude/channel/permission_request` notifications to the server when a dialog opens, and accepts verdicts via `notifications/claude/channel/permission` with `request_id` and `behavior: 'allow' | 'deny'`. Earlier versions silently ignore the capability.
+  - *Source*: [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
 
-- **Event-only attributes formally documented**: Two attributes are now explicitly listed as event-only (excluded from metrics due to unbounded cardinality):
-  > Events additionally include the following attributes. These are never attached to metrics because they would cause unbounded cardinality:
-  > * `prompt.id`: UUID correlating a user prompt with all subsequent events until the next prompt.
-  > * `workspace.host_paths`: host workspace directories selected in the desktop app, as a string array
-  - *Implication*: `workspace.host_paths` is a newly documented attribute. Monitoring pipelines that rely on event data should be aware of this additional field when running the desktop app.
-  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
+- **`notifications/claude/channel/permission_request` schema**: The outbound notification carries four fields:
 
-### Plugin Agent Configuration
+  | Field           | Description |
+  |-----------------|-------------|
+  | `request_id`    | Five lowercase letters (`a`–`z`, excluding `l`) so the ID is unambiguous when typed on a phone |
+  | `tool_name`     | Name of the tool, e.g. `Bash` or `Write` |
+  | `description`   | Human-readable summary of the specific call — same text shown in the local dialog |
+  | `input_preview` | Tool arguments as JSON, truncated to 200 characters |
 
-- **Plugin agent frontmatter fields fully enumerated**: The plugins reference now shows a complete example with `model`, `effort`, `maxTurns`, and `disallowedTools` in the agent frontmatter code block, and explicitly documents all supported fields and security restrictions.
-  > Plugin agents support `name`, `description`, `model`, `effort`, `maxTurns`, `tools`, `disallowedTools`, `skills`, `memory`, `background`, and `isolation` frontmatter fields. The only valid `isolation` value is `"worktree"`. For security reasons, `hooks`, `mcpServers`, and `permissionMode` are not supported for plugin-shipped agents.
-  - *Implication*: Plugin authors now have an authoritative reference for which frontmatter fields are available and which are explicitly blocked for security reasons.
-  - *Source*: [Plugins Reference](https://code.claude.com/docs/en/plugins-reference.md)
+  The inbound verdict uses `yes <id>` / `no <id>` format. The documentation provides a reference regex: `/^\s*(y|yes|n|no)\s+([a-km-z]{5})\s*$/i`.
+  - *Source*: [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
 
-### Git Instructions Scope Clarification
+- **Security: allowlist gates permission relay**: The sender allowlist that already controls inbound chat messages also gates permission relay. This was added to both `channels-reference.md` and the Security section of `channels.md`.
+  > "Only declare the capability if your channel authenticates the sender, because anyone who can reply through your channel can approve or deny tool use in your session."
+  - *Source*: [Channels](https://code.claude.com/docs/en/channels.md), [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
 
-- **`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` now also disables the git status snapshot**: The description was updated to include "and the git status snapshot" in what gets removed from Claude's system prompt.
-  > Set to `1` to remove built-in commit and PR workflow instructions **and the git status snapshot** from Claude's system prompt. Useful when using your own git workflow skills.
-  - *Implication*: Users who set this flag should be aware that the git status snapshot is also suppressed — this affects context Claude has about the current repo state, not just workflow guidance. The `includeGitInstructions` setting in `settings.md` was updated with identical wording.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md), [Settings](https://code.claude.com/docs/en/settings.md)
+- **Updated `Server` options table**: `capabilities.experimental['claude/channel/permission']` was added as a new optional field alongside the existing `claude/channel` entry.
+  - *Source*: [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
 
-### Channels Plugin Installation
+- **Webhook example upgraded with SSE**: The full two-way `webhook.ts` example was reworked to use Server-Sent Events on `GET /events` so developers can watch Claude's replies and permission prompts arrive live via `curl -N localhost:8788/events`. The previous version wrote replies to stderr.
+  - *Source*: [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
 
-- **Plugin marketplace troubleshooting improved**: The "plugin not found" error guidance now distinguishes between a missing and an outdated marketplace, and adds a required post-install step.
-  > If Claude Code reports that the plugin is not found in any marketplace, your marketplace is either missing or outdated. Run `/plugin marketplace update claude-plugins-official` to refresh it, or `/plugin marketplace add anthropics/claude-plugins-official` if you haven't added it before. Then retry the install.
-  >
-  > After installing, run `/reload-plugins` to activate the plugin's configure command.
-  - *Implication*: The `/reload-plugins` step after installation is new and required to make the plugin's configure command (e.g. `/telegram:configure`) available in the current session without a restart. This applies to Telegram and Discord channel plugins.
-  - *Source*: [Channels](https://code.claude.com/docs/en/channels.md)
+- **Troubleshooting steps added to webhook walkthrough**: Two diagnostic bullet points were added for when events don't arrive:
+  > "**`curl` succeeds but nothing reaches Claude**: run `/mcp` in your session to check the server's status... check the debug log at `~/.claude/debug/<session-id>.txt`"
+  > "**`curl` fails with 'connection refused'**: the port is either not bound yet or a stale process is holding it. `lsof -i :<port>` shows what's listening."
+  - *Source*: [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
 
-### Terminal Configuration
+---
 
-- **tmux passthrough requirement documented**: A new section explains that notifications and the terminal progress bar are intercepted by tmux unless passthrough is explicitly enabled.
-  > When running Claude Code inside tmux, notifications and the terminal progress bar only reach the outer terminal, such as iTerm2, Kitty, or Ghostty, if you enable passthrough in your tmux configuration:
-  > ```
-  > set -g allow-passthrough on
-  > ```
-  - *Implication*: Users who noticed missing desktop notifications or absent progress bars when running Claude Code inside tmux now have the resolution documented.
-  - *Source*: [Terminal Config](https://code.claude.com/docs/en/terminal-config.md)
+### CLI: New `--bare` Flag for Scripted Use
 
-- **Vim mode `editorMode` config key documented**: The terminal-config Vim Mode section now includes a direct reference to configuring `editorMode` in `~/.claude.json`, enabling programmatic configuration without using `/vim`.
-  > To set the mode directly in your config file, set the [`editorMode`](/en/settings#global-config-settings) global config key to `"vim"` in `~/.claude.json`.
-  - *Source*: [Terminal Config](https://code.claude.com/docs/en/terminal-config.md)
+- **`--bare` flag documented**: A new flag that skips auto-discovery of hooks, skills, plugins, MCP servers, auto memory, and CLAUDE.md. Reduces startup time and ensures consistent, environment-independent behavior.
+  > "`--bare` is the recommended mode for scripted and SDK calls, and will become the default for `-p` in a future release."
+  - *Implication*: Teams running `claude -p` in CI should add `--bare` now. Authentication in bare mode requires `ANTHROPIC_API_KEY` or `apiKeyHelper` in `--settings`; OAuth/keychain reads are skipped. The flag internally sets `CLAUDE_CODE_SIMPLE=1`.
+  - *Source*: [CLI reference](https://code.claude.com/docs/en/cli-reference.md), [Run Claude Code programmatically](https://code.claude.com/docs/en/headless.md)
+
+- **Context-loading reference table for bare mode** (from `headless.md`):
+
+  | To load                 | Use                                                     |
+  |-------------------------|---------------------------------------------------------|
+  | System prompt additions | `--append-system-prompt`, `--append-system-prompt-file` |
+  | Settings                | `--settings <file-or-json>`                             |
+  | MCP servers             | `--mcp-config <file-or-json>`                           |
+  | Custom agents           | `--agents <json>`                                       |
+  | A plugin directory      | `--plugin-dir <path>`                                   |
+
+  - *Source*: [Run Claude Code programmatically](https://code.claude.com/docs/en/headless.md)
+
+---
+
+### Settings: New `showClearContextOnPlanAccept` Option
+
+- **`showClearContextOnPlanAccept` setting added**: Controls whether the "clear context" option is shown on the plan accept screen. Defaults to `false`.
+  > "Show the 'clear context' option on the plan accept screen. Defaults to `false`. Set to `true` to restore the option."
+  - *Implication*: This indicates the option was hidden by default in a recent release. Teams that relied on clearing context at plan acceptance should add this to their settings.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+
+---
+
+### MCP: OAuth Client ID Metadata Document (CIMD) Support
+
+- **CIMD OAuth discovery added**: Claude Code now attempts to auto-discover MCP servers using a Client ID Metadata Document in addition to Dynamic Client Registration (DCR).
+  > "Claude Code also supports servers that use a Client ID Metadata Document (CIMD) instead of Dynamic Client Registration, and discovers these automatically. If automatic discovery fails, register an OAuth app through the server's developer portal first."
+  - *Implication*: Fewer OAuth-protected MCP servers should require manual credential pre-registration, as CIMD is now tried automatically.
+  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
+
+---
 
 ## Notable Details
 
-- **`terminalProgressBarEnabled` supported terminals updated**: The setting description changed from "Windows Terminal and iTerm2" to "ConEmu, Ghostty 1.2.0+, and iTerm2 3.6.6+". This is a more precise list — notably Windows Terminal is no longer listed, and Ghostty now appears with a minimum version requirement.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **`CLAUDE_CODE_SIMPLE` description expanded** (`env-vars.md`): Previously described as "Disables MCP tools, attachments, hooks, and CLAUDE.md files." Now reads: "Disables auto-discovery of hooks, skills, plugins, MCP servers, auto memory, and CLAUDE.md." The new description aligns with what `--bare` does, adding "auto memory" and "skills" to the affected list.
 
-- **`editorMode` added to global config settings table**: A new entry `editorMode` documents the `"normal"` or `"vim"` key binding modes for the input prompt. It is written automatically when `/vim` is run, and appears in `/config` as **Key binding mode**.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **`--bare` as future default — a compatibility signal**: The documentation explicitly flags `--bare` as the future default for `claude -p`. Existing scripts that depend on `claude -p` loading `.mcp.json`, CLAUDE.md, or hooks will break when that default changes.
 
-- **`settings.md` bulk reformat**: The available settings table accounts for 55 additions and 54 deletions. The content changes are the `includeGitInstructions` and `terminalProgressBarEnabled` / `editorMode` updates noted above; the remaining diff is column-width adjustment in the markdown table.
+- **`how-claude-code-works.md` context window description**: "auto memory" was added to the list of items that populate Claude's context window. Minor clarification confirming auto memory occupies context space alongside CLAUDE.md and loaded skills.
+
+- **`interactive-mode.md` Ctrl+O context expanded**: The `Ctrl+O` (Toggle verbose output) shortcut now notes it "Also expands MCP read and search calls, which collapse to a single line like 'Queried slack' by default." The remaining +18/-18 line delta in this file is table column-width reformatting with no other content change.
+
+---
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| settings.md | Modified | +55/-54 | `includeGitInstructions` scope update (git status snapshot); `editorMode` added to global config; `terminalProgressBarEnabled` supported terminal list refined; table reformatting |
-| monitoring-usage.md | Modified | +21/-15 | New `user.account_id` standard attribute; `OTEL_METRICS_INCLUDE_ACCOUNT_UUID` scope expanded; event-only attributes (`prompt.id`, `workspace.host_paths`) documented |
-| terminal-config.md | Modified | +9/-1 | tmux passthrough guidance added for notifications and progress bar; `editorMode` config key reference added to Vim mode section |
-| plugins-reference.md | Modified | +6/-0 | Plugin agent frontmatter fields fully documented with example and security restrictions |
-| channels.md | Modified | +7/-3 | Marketplace troubleshooting updated to distinguish missing vs. outdated; `/reload-plugins` step added post-install |
-| env-vars.md | Modified | +1/-1 | `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` now explicitly includes git status snapshot in what it disables |
+| channels-reference.md | Modified | +361/-15 | New "Relay permission prompts" section with protocol spec, full TypeScript examples with SSE, and troubleshooting |
+| headless.md | Modified | +29/-1 | New "Start faster with bare mode" subsection; CI guidance and context-loading table |
+| cli-reference.md | Modified | +57/-56 | Added `--bare` flag to CLI flags table; remainder is table column-width reformatting |
+| interactive-mode.md | Modified | +18/-18 | Expanded `Ctrl+O` description for MCP call collapsing; table column-width reformatting |
+| channels.md | Modified | +3/-1 | Updated permission prompt note; security warning for permission relay added |
+| settings.md | Modified | +1/-0 | New `showClearContextOnPlanAccept` setting |
+| env-vars.md | Modified | +1/-1 | `CLAUDE_CODE_SIMPLE` description updated to match `--bare` behavior |
+| how-claude-code-works.md | Modified | +1/-1 | "auto memory" added to context window description |
+| mcp.md | Modified | +1/-1 | CIMD OAuth auto-discovery added to OAuth setup documentation |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-22*
