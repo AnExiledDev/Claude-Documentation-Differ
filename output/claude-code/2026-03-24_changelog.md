@@ -2,83 +2,152 @@
 
 ## Summary
 
-This update introduces documentation for two significant new Desktop features — computer use (macOS, research preview) and Dispatch integration — along with a new platform comparison page. Supporting changes clarify scheduling options across surfaces, document what the sandbox does not cover, and add "right approach" guidance to remote-working pages.
+This update introduces auto mode — a research preview that replaces manual permission prompts with a background classifier model — along with a dedicated `permission-modes.md` reference page that consolidates all mode documentation. iMessage is added as a third supported channel alongside Telegram and Discord, and the LiteLLM docs include a security advisory about two compromised package versions (1.82.7 and 1.82.8).
 
 ## Significant Changes
 
-### Features
+### Permissions & Auto Mode
 
-#### Computer Use on Desktop (macOS)
+- **New page: `permission-modes.md`**: Permission mode documentation has been extracted into its own dedicated reference page, covering how to switch modes in CLI, JetBrains, VS Code, Desktop, and web/mobile surfaces.
+  > "Switch between supervised editing, read-only planning, and auto mode where a background classifier replaces manual permission prompts. Cycle modes with Shift+Tab in the CLI or use the mode selector in VS Code, Desktop, and claude.ai."
+  - *Implication*: Links previously pointing to `permissions.md#permission-modes` now point to `/en/permission-modes`. Internal links and bookmarks to the old anchor should be updated.
+  - *Source*: [permission-modes.md](https://code.claude.com/docs/en/permission-modes.md)
 
-- **New feature: Claude can control your screen and open apps**: The Desktop app now supports computer use on macOS (Pro and Max plans only, research preview). This lets Claude interact with native apps, the iOS simulator, desktop tools without a CLI, or anything only accessible via GUI.
-  > *Computer use lets Claude open your apps, control your screen, and work directly on your machine the way you would. Ask Claude to test a native app in the iOS simulator, interact with a desktop tool that has no CLI, or automate something that only works through a GUI.*
-  - *Implication*: Developers should note that computer use runs on the actual desktop, not inside the sandbox — the trust boundary is different from the sandboxed Bash tool. Per-app permission prompts gate each application and approvals are session-scoped (or 30-minute-scoped in Dispatch sessions).
-  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
+- **Auto mode (research preview)**: A new permission mode — `auto` — has been documented. It runs a background classifier (Claude Sonnet 4.6) to approve or block each pending action without surfacing a prompt.
+  > "Auto mode lets Claude execute actions without showing permission prompts. Before each action runs, a separate classifier model reviews the conversation and decides whether the action matches what you asked for: it blocks actions that escalate beyond the task scope, target infrastructure the classifier doesn't recognize as trusted, or appear to be driven by hostile content encountered in a file or web page."
+  - Currently limited to **Team plans** (Enterprise and API described as "rolling out shortly"). Requires **Claude Sonnet 4.6 or Opus 4.6**. Not available on Haiku, claude-3 models, or third-party providers (Bedrock, Vertex, Foundry).
+  - On Team/Enterprise plans, an admin must enable auto mode in Claude Code admin settings before users can turn it on.
+  - **Classifier defaults — blocked**: `curl | bash`, production deploys, mass cloud storage deletion, IAM or repo permission grants, force push, pushing directly to `main`, irreversible file destruction, sending sensitive data to external endpoints.
+  - **Classifier defaults — allowed**: local file operations in the working directory, installing declared dependencies, read-only HTTP requests, pushing to the branch you started on or one Claude created.
+  - **Fallback behavior**: if the classifier blocks 3 consecutive actions or 20 total in one session, auto mode pauses and Claude Code resumes per-action prompts. In non-interactive (`-p`) mode it aborts the session instead.
+  - **Cost**: each classifier call contributes to token usage. Shell commands and network operations trigger classifier calls; read-only actions and file edits in the working directory do not.
+  - *Implication*: Auto mode is the documented preferred alternative to `bypassPermissions` for automated workflows where safety checks are still desirable. It is not a drop-in replacement for manual review on sensitive operations.
+  - *Source*: [permission-modes.md](https://code.claude.com/docs/en/permission-modes.md), [permissions.md](https://code.claude.com/docs/en/permissions.md)
 
-- **App-level access tiers for computer use**: Access is tiered by app category and cannot be changed by users:
+- **Auto mode classifier configuration (`autoMode` settings block)**: Extensive new configuration guide added to `permissions.md` explaining how organizations configure the classifier's trust model.
+  > "For most organizations, `autoMode.environment` is the only field you need to set. It tells the classifier which repos, buckets, and domains are trusted, without touching the built-in block and allow rules."
+  - Three sub-fields: `environment` (prose descriptions of trusted infrastructure), `allow` (override default allow exceptions), `soft_deny` (override default block rules).
+  - `autoMode` is read from user settings, `.claude/settings.local.json`, and managed settings. **Not** from shared project `.claude/settings.json` — a checked-in repo cannot inject its own classifier allow rules.
+  - **Critical warning**: Setting `allow` or `soft_deny` replaces the entire default list for that section. Always run `claude auto-mode defaults` before customizing to start from the full default lists.
+  - *Implication*: Organizations whose developers push to non-default repos, write to cloud buckets, or use internal services will see classifier false-positive blocks until an admin populates `autoMode.environment`.
+  - *Source*: [permissions.md](https://code.claude.com/docs/en/permissions.md)
 
-  | Tier | What Claude can do | Applies to |
-  |---|---|---|
-  | View only | See the app in screenshots | Browsers, trading platforms |
-  | Click only | Click and scroll, but not type or use keyboard shortcuts | Terminals, IDEs |
-  | Full control | Click, type, drag, and use keyboard shortcuts | Everything else |
+- **New CLI subcommands for auto mode inspection**:
+  > `claude auto-mode defaults` — Print the built-in auto mode classifier rules as JSON. Use `claude auto-mode config` to see your effective config with settings applied.
+  - Three new subcommands: `claude auto-mode defaults`, `claude auto-mode config`, `claude auto-mode critique`.
+  - `critique` provides AI feedback on custom `allow` and `soft_deny` rules, flagging ambiguous or redundant entries.
+  - *Source*: [cli-reference.md](https://code.claude.com/docs/en/cli-reference.md)
 
-  > *The [per-app access tiers] reinforce this: browsers are capped at view-only, and terminals and IDEs at click-only, steering Claude toward the dedicated tool even when computer use is active.*
-  - *Implication*: Claude prefers the most precise tool first (connector → Bash → Chrome → computer use); screen control is reserved for things nothing else can reach.
-  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
+- **New CLI flag `--enable-auto-mode`**: Unlocks `auto` in the `Shift+Tab` mode cycle without activating it. Requires a Team plan and Claude Sonnet 4.6 or Opus 4.6.
+  > "Unlock auto mode in the Shift+Tab cycle. Requires a Team plan (Enterprise and API support rolling out shortly) and Claude Sonnet 4.6 or Opus 4.6"
+  - *Source*: [cli-reference.md](https://code.claude.com/docs/en/cli-reference.md)
 
-- **Enable computer use**: Requires toggling on in **Settings > Desktop app > General** and granting two macOS system permissions: **Accessibility** and **Screen Recording**.
-  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
+- **`disableAutoMode` managed setting**: Administrators can prevent auto mode use across an organization by setting `disableAutoMode` to `"disable"` in managed settings (also accepted under `permissions`). This joins `permissions.disableBypassPermissionsMode` as a managed lockout control.
+  - *Source*: [desktop.md](https://code.claude.com/docs/en/desktop.md), [permissions.md](https://code.claude.com/docs/en/permissions.md)
 
-#### Dispatch Integration
+- **`disableBypassPermissionsMode` key updated in Desktop managed settings table**: The table now uses `permissions.disableBypassPermissionsMode` (with the `permissions.` prefix) instead of the bare `disableBypassPermissionsMode`.
+  - *Implication*: Verify which key format your Desktop managed settings configuration uses; both forms appear to be accepted per the inline documentation.
+  - *Source*: [desktop.md](https://code.claude.com/docs/en/desktop.md)
 
-- **New: Send tasks from your phone to Desktop**: Dispatch (the persistent conversation in the Cowork tab) can now spawn Claude Code sessions in the Desktop app. Task routing to Code happens explicitly ("open a Claude Code session and fix the login bug") or automatically for dev work (bug fixes, dependency updates, running tests, opening PRs). Sessions appear in the Code tab sidebar with a **Dispatch** badge; push notifications fire on completion.
-  > *[Dispatch] is a persistent conversation with Claude that lives in the Cowork tab. You message Dispatch a task, and it decides how to handle it.*
-  - *Implication*: Dispatch requires a Pro or Max plan and is not available on Team or Enterprise. Dispatch-spawned sessions that use computer use have 30-minute app-approval windows (not full-session like regular sessions).
-  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
+- **`bypassPermissions` and `auto` mode disable instructions clarified**: New sentence in `permissions.md`:
+  > "To prevent `bypassPermissions` or `auto` mode from being used, set `permissions.disableBypassPermissionsMode` or `disableAutoMode` to `"disable"` in any settings file. These are most useful in managed settings where they cannot be overridden."
+  - *Source*: [permissions.md](https://code.claude.com/docs/en/permissions.md)
 
-### New Pages
+### Channels
 
-- **[platforms.md](https://code.claude.com/docs/en/platforms.md)** — A new overview/index page: "Platforms and integrations". Covers where to run Claude Code (CLI, Desktop, VS Code, JetBrains, Web), how to connect tools (Chrome, GitHub Actions, GitLab CI/CD, Code Review, Slack), and a comparison table of all remote-access options (Dispatch, Remote Control, Channels, Slack, Scheduled tasks). Acts as a navigation hub for platform selection.
+- **iMessage added as a supported channel**: iMessage joins Telegram and Discord as an officially supported channel plugin in the research preview.
+  > "The iMessage channel reads your Messages database directly and sends replies through AppleScript. It requires macOS and needs no bot token or external service."
+  - Install: `/plugin install imessage@claude-plugins-official`
+  - Launch: `claude --channels plugin:imessage@claude-plugins-official`
+  - Requires **Full Disk Access** permission for the terminal to read `~/Library/Messages/chat.db`. Without it, the server exits immediately with `authorization denied`.
+  - Self-chat (texting yourself) bypasses access control automatically. Other senders are added by handle: `/imessage:access allow +15551234567`.
+  - Unlike Telegram/Discord, iMessage detects the user's own addresses from the Messages database at startup rather than using a pairing code flow.
+  - *Source*: [channels.md](https://code.claude.com/docs/en/channels.md), [channels-reference.md](https://code.claude.com/docs/en/channels-reference.md)
 
-### Configuration & Documentation
+### Security
 
-- **Scheduling comparison table inlined across three pages**: All three scheduling pages previously included a shared `<Snippet file="scheduling-comparison.mdx" />`. This snippet has been replaced with an identical inline table on each page (desktop.md, scheduled-tasks.md, web-scheduled-tasks.md). Content is unchanged — the table compares Cloud, Desktop, and `/loop` scheduling across dimensions like machine requirements, persistence, file access, MCP servers, permission prompts, and minimum interval.
-  > *Use **cloud tasks** for work that should run reliably without your machine. Use **Desktop tasks** when you need access to local files and tools. Use **`/loop`** for quick polling during a session.*
-  - *Implication*: No behavior change. The inline approach makes each page fully self-contained.
-  - *Source*: [Scheduled tasks (CLI)](https://code.claude.com/docs/en/scheduled-tasks.md), [Web scheduled tasks](https://code.claude.com/docs/en/web-scheduled-tasks.md), [Desktop](https://code.claude.com/docs/en/desktop.md)
+- **LiteLLM security warning — compromised package versions**: A `<Note>` block in `llm-gateway.md` has been upgraded to a `<Warning>` with an active security advisory:
+  > "LiteLLM PyPI versions 1.82.7 and 1.82.8 were compromised with credential-stealing malware. Do not install these versions. If you have already installed them: Remove the package, Rotate all credentials on affected systems, Follow the remediation steps in BerriAI/litellm#24518"
+  - *Implication*: Anyone using LiteLLM as an LLM gateway with Claude Code should immediately check their installed version and rotate credentials if affected.
+  - *Source*: [llm-gateway.md](https://code.claude.com/docs/en/llm-gateway.md)
 
-- **"Choose the right approach" section added to Remote Control**: A new section at the end of the Remote Control page presents the full comparison table of remote-work options — Dispatch, Remote Control, Channels, Slack, and Scheduled tasks — with trigger, execution location, setup effort, and best-fit guidance for each.
-  - *Implication*: Gives Remote Control users an off-ramp when a different approach fits better (e.g., Dispatch for fire-and-forget delegation, Channels for event-driven automation).
-  - *Source*: [Remote Control](https://code.claude.com/docs/en/remote-control.md)
+### Configuration
 
-- **Sandboxing scope clarified**: A new "What sandboxing does not cover" section explicitly documents the sandbox's boundaries:
-  > *The sandbox isolates Bash subprocesses. Other tools operate under different boundaries:*
-  > - ***Built-in file tools**: Read, Edit, and Write use the permission system directly rather than running through the sandbox.*
-  > - ***Computer use on Desktop**: when Claude opens apps and controls your screen on macOS, it runs on your actual desktop rather than in an isolated environment.*
-  - *Implication*: Developers relying on the sandbox for full isolation should be aware that file tool access and computer use operate outside the sandbox perimeter.
-  - *Source*: [Sandboxing](https://code.claude.com/docs/en/sandboxing.md)
+- **`autoMode` configuration in server-managed settings**: The server-managed settings docs now include an example showing how to configure auto mode classifier trust via the admin console:
+  ```json
+  {
+    "autoMode": {
+      "environment": [
+        "Source control: github.example.com/acme-corp and all repos under it",
+        "Trusted cloud buckets: s3://acme-build-artifacts, gs://acme-ml-datasets",
+        "Trusted internal domains: *.corp.example.com"
+      ]
+    }
+  }
+  ```
+  - *Source*: [server-managed-settings.md](https://code.claude.com/docs/en/server-managed-settings.md)
+
+- **`settings.md` restructured around scopes**: The settings page has been reorganized around an explicit scope model (Managed → User → Project → Local), with a table explaining which features live at each scope. Also notes that the legacy Windows managed settings path `C:\ProgramData\ClaudeCode\managed-settings.json` is no longer supported as of v2.1.75; the new path is `C:\Program Files\ClaudeCode\managed-settings.json`.
+  - *Source*: [settings.md](https://code.claude.com/docs/en/settings.md)
+
+### Best Practices
+
+- **New section "Run autonomously with auto mode"**: Added under the "Automate and scale" section:
+  > "For uninterrupted execution with background safety checks, use auto mode. A classifier model reviews commands before they run, blocking scope escalation, unknown infrastructure, and hostile-content-driven actions while letting routine work proceed without prompts."
+  - Example: `claude --permission-mode auto -p "fix all lint errors"`
+  - For non-interactive runs with `-p`, auto mode aborts if the classifier repeatedly blocks actions.
+  - *Source*: [best-practices.md](https://code.claude.com/docs/en/best-practices.md)
+
+- **Permission configuration section updated**: The "Configure permissions" tip now mentions auto mode as a third option alongside allowlists and sandboxing. The warning about `--dangerously-skip-permissions` was removed from this section (it remains documented in `permission-modes.md`).
+  - *Source*: [best-practices.md](https://code.claude.com/docs/en/best-practices.md)
+
+### IDE & Surface Updates
+
+- **Desktop permission mode table updated**: Auto mode is now listed in the Desktop permission mode table with availability details. The CLI-vs-Desktop comparison table at the bottom of the page is updated to include Auto among the Desktop-available modes.
+  - *Source*: [desktop.md](https://code.claude.com/docs/en/desktop.md)
+
+- **Hooks `permission_mode` field updated**: The `permission_mode` field in the common hook JSON fields table now lists `"auto"` as a valid value alongside `"default"`, `"plan"`, `"acceptEdits"`, `"dontAsk"`, and `"bypassPermissions"`.
+  - *Implication*: Hooks that branch on `permission_mode` should be updated to handle the new `"auto"` value.
+  - *Source*: [hooks.md](https://code.claude.com/docs/en/hooks.md)
+
+- **`Shift+Tab` description updated**: In `interactive-mode.md`, the shortcut description changed from "Toggle permission modes" to "Cycle permission modes":
+  > "Cycle through `default`, `acceptEdits`, `plan`, and any modes you have enabled, such as `auto` or `bypassPermissions`. See permission modes."
+  - *Source*: [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md)
+
+## New Pages
+
+- **[permission-modes.md](https://code.claude.com/docs/en/permission-modes.md)** — Dedicated reference for all permission modes (default, acceptEdits, plan, auto, dontAsk, bypassPermissions). Covers switching modes across CLI, JetBrains, VS Code, Desktop, and web/mobile; auto mode classifier behavior including defaults, fallback thresholds, subagent handling, and cost; plan mode workflow; and a side-by-side comparison table of all modes.
 
 ## Notable Details
 
-- **CLI comparison table capitalization**: The CLI-vs-Desktop table in `desktop.md` had a minor capitalization normalization pass (e.g., `model dropdown` → `Model dropdown`, `not available` → `Not available`). No functional content changed.
-- **Plugin marketplace walkthrough fix**: The example command in the `plugin-marketplaces.md` walkthrough was corrected from `/review` to `/quality-review`, matching the actual skill defined in the tutorial. This was a documentation bug.
-- **Overview page gains Dispatch mention**: A single line was added to the "Work from anywhere" accordion: *"Message Dispatch a task from your phone and open the Desktop session it creates"*, linking to the new desktop.md anchor.
-- **Total page count**: The docs metadata went from 68 to 69 pages, confirming `platforms.md` is the only net-new page.
-- **Dispatch plan restriction**: Multiple places in the diff consistently note that Dispatch is Pro/Max only — not Team or Enterprise. This is a notable constraint for organizations.
+- Auto mode explicitly drops broad allow rules when activated: `Bash(*)`, wildcarded interpreters like `Bash(python*)`, package-manager run commands, and `Agent` allow rules. Narrow rules like `Bash(npm test)` are preserved and restored when leaving auto mode.
+- The classifier receives only user messages and tool calls — Claude's own text and tool results are stripped. This means hostile content in a file or web page **cannot reach the classifier directly**, only through Claude's action choices.
+- When a plan mode session completes, one of the approval options is "Approve and start in auto mode", enabling a plan-then-automate workflow without restarting.
+- `--allow-dangerously-skip-permissions` is documented as a flag (distinct from `--dangerously-skip-permissions`) that adds `bypassPermissions` to the `Shift+Tab` cycle **without** activating it, allowing composition like `--permission-mode plan --allow-dangerously-skip-permissions`.
+- The `autoMode` settings block is deliberately excluded from shared project settings (`.claude/settings.json`) to prevent a cloned repo from injecting its own classifier allow rules.
+- The `disableBypassPermissionsMode` entry was **removed** from the managed-only settings table in `permissions.md`. It now appears in a different context as `permissions.disableBypassPermissionsMode`, implying it is no longer strictly managed-only but is most effective there.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| desktop.md | Modified | +110 / -23 | Computer use feature (4 new sections), Dispatch integration section, scheduling comparison table inlined, CLI comparison table updated with new rows and capitalization fixes |
-| scheduled-tasks.md | Modified | +17 / -1 | Scheduling comparison snippet replaced with inline table |
-| web-scheduled-tasks.md | Modified | +17 / -1 | Scheduling comparison snippet replaced with inline table |
-| remote-control.md | Modified | +13 / -0 | "Choose the right approach" comparison table added; Dispatch added to related resources |
-| sandboxing.md | Modified | +7 / -0 | "What sandboxing does not cover" section added |
-| overview.md | Modified | +1 / -0 | Dispatch mention added to "Work from anywhere" accordion |
-| plugin-marketplaces.md | Modified | +1 / -1 | Walkthrough example command corrected from `/review` to `/quality-review` |
-| platforms.md | New | +78 | New platforms and integrations overview page |
+| permission-modes.md | New | +290 | New dedicated page covering all permission modes including full auto mode docs |
+| permissions.md | Modified | +118/-9 | Added `auto` to modes table; new auto mode classifier configuration guide; `disableAutoMode` setting |
+| channels.md | Modified | +55/-5 | Added iMessage as a supported channel with full setup instructions |
+| settings.md | Modified | +58/-56 | Restructured around explicit scope model; legacy Windows path deprecation noted |
+| best-practices.md | Modified | +15/-10 | New "Run autonomously with auto mode" section; updated permission tips |
+| desktop.md | Modified | +15/-12 | Added Auto mode to permission table and managed settings keys table |
+| vs-code.md | Modified | +15/-15 | Updated permission mode references to new page |
+| interactive-mode.md | Modified | +18/-18 | Updated Shift+Tab description to mention auto mode and new page link |
+| server-managed-settings.md | Modified | +16/-2 | Added `autoMode` configuration example |
+| llm-gateway.md | Modified | +8/-2 | Security warning for compromised LiteLLM versions 1.82.7 and 1.82.8 |
+| overview.md | Modified | +11/-11 | Updated channels feature table to mention iMessage |
+| cli-reference.md | Modified | +4/-2 | Added `claude auto-mode defaults` command; added `--enable-auto-mode` flag; updated links |
+| hooks.md | Modified | +7/-7 | Added `"auto"` to `permission_mode` field values |
+| how-claude-code-works.md | Modified | +1/-0 | Added auto mode to Shift+Tab mode list |
+| channels-reference.md | Modified | +3/-3 | Added iMessage to supported channels list and pairing flow notes |
+| sub-agents.md | Modified | +3/-3 | Updated permission mode links to new page |
+| remote-control.md | Modified | +1/-1 | Updated permission mode link to new page |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-24*
