@@ -2,93 +2,58 @@
 
 ## Summary
 
-Three pages were updated in this revision. The largest change introduces a new `headersHelper` configuration option for MCP servers, enabling dynamic header generation for non-OAuth authentication schemes. Two smaller updates clarify that `@mention` is unavailable in remote Desktop sessions and confirm that the settings hierarchy applies uniformly across CLI, VS Code, and JetBrains.
+Two pages were modified in this update. The quickstart page received a large addition (+608 lines) in the form of an interactive installation configurator React component, surfacing install commands for all supported platforms and IDEs in one place. The keybindings page received a minor but functionally meaningful update: `Ctrl+M` is now documented as a reserved shortcut that cannot be rebound.
 
 ## Significant Changes
 
-### MCP Configuration
+### Features
 
-- **New `headersHelper` field for custom MCP authentication**: A new section documents how to use `headersHelper` in MCP server config to support authentication schemes outside of OAuth — such as Kerberos, short-lived tokens, or internal SSO systems. Claude Code executes the specified command at connection time and merges its stdout into the request headers.
+- **Interactive Install Configurator added to Quickstart**: The quickstart page now embeds a full React component (`InstallConfigurator`) that renders a tabbed, OS-aware installation widget. The component covers four installation targets (Terminal, Desktop, VS Code, JetBrains) and within the Terminal tab, four install methods:
 
-  > "If your MCP server uses an authentication scheme other than OAuth (such as Kerberos, short-lived tokens, or an internal SSO), use `headersHelper` to generate request headers at connection time. Claude Code runs the command and merges its output into the connection headers."
+  | Method | Command |
+  |--------|---------|
+  | macOS / Linux | `curl -fsSL https://claude.ai/install.sh \| bash` |
+  | Windows (PowerShell) | `irm https://claude.ai/install.ps1 \| iex` |
+  | Windows (CMD) | `curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd` |
+  | Homebrew | `brew install --cask claude-code` |
+  | WinGet | `winget install Anthropic.ClaudeCode` |
 
-  Example configuration:
-  ```json
-  {
-    "mcpServers": {
-      "internal-api": {
-        "type": "http",
-        "url": "https://mcp.internal.example.com",
-        "headersHelper": "/opt/bin/get-mcp-auth-headers.sh"
-      }
-    }
-  }
-  ```
+  The component auto-detects the user's OS via `navigator.userAgent` and pre-selects the relevant install tab on page load.
 
-  Key behavioral constraints documented:
-  - The command must write a JSON object of string key-value pairs to stdout
-  - Runs in a shell with a **10-second timeout**
-  - Dynamic headers **override** any static `headers` with the same name
-  - Runs fresh on every connection — no caching is performed
-  - When defined at project or local scope, only executes after the workspace trust dialog is accepted
+  - *Implication*: Homebrew and WinGet users are explicitly warned that these package managers do not auto-update Claude Code; users must periodically run `brew upgrade claude-code` or `winget upgrade Anthropic.ClaudeCode` manually. Windows users can toggle between PowerShell and CMD installer variants within the same tab.
+  - *Source*: [Quickstart](https://code.claude.com/docs/en/quickstart.md)
 
-  - *Implication*: Teams using enterprise auth systems (Kerberos, internal SSO) can now connect MCP servers without requiring OAuth flows. The security note about workspace trust is important — this executes arbitrary shell commands.
-  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
+- **Team/Enterprise install path in the configurator**: The new widget includes a toggle — "I'm buying for a team or company (SSO, AWS/Azure/GCP, central billing)" — that reveals team-specific setup options. When enabled, a provider selector appears with four choices: Anthropic, Amazon Bedrock, Microsoft Foundry, and Google Vertex AI. Selecting a cloud provider surfaces a contextual setup notice, for example:
 
-- **Fixed plugin `.mcp.json` example — missing `mcpServers` wrapper**: The JSON code example for configuring an MCP server inside a plugin was corrected to include the required top-level `"mcpServers"` key, which was absent in the previous version.
+  > **Configure your AWS account first.** Running on Bedrock requires model access enabled in the AWS console and IAM credentials.
 
-  Before:
-  ```json
-  {
-    "database-tools": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/servers/db-server",
-      ...
-    }
-  }
-  ```
+  Similar notices appear for Vertex AI (GCP project and service account setup) and Microsoft Foundry (Azure subscription with Foundry resource and model deployments).
 
-  After:
-  ```json
-  {
-    "mcpServers": {
-      "database-tools": {
-        "command": "${CLAUDE_PLUGIN_ROOT}/servers/db-server",
-        ...
-      }
-    }
-  }
-  ```
+  - *Implication*: The quickstart now serves as a unified entry point for both individual developers and enterprise teams deploying via cloud provider infrastructure, with direct links to the Bedrock, Vertex AI, and Foundry setup guides from the first page a new user visits.
+  - *Source*: [Quickstart](https://code.claude.com/docs/en/quickstart.md)
 
-  - *Implication*: Plugin authors using the old example format may have had silently broken MCP server configurations. The corrected structure matches the standard MCP config schema.
-  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
+### Configuration
 
-### Desktop Application
+- **`Ctrl+M` added to the reserved shortcuts list**: The keybindings documentation now lists `Ctrl+M` in the "Reserved shortcuts" table — shortcuts that cannot be rebound regardless of keybindings configuration.
 
-- **`@mention` files unavailable in remote sessions**: The documentation now explicitly states that file `@mention` does not work in remote Desktop sessions. This appears in both the feature description prose and the CLI vs. Desktop comparison table.
+  > | Ctrl+M | Identical to Enter in terminals (both send CR) |
 
-  > "@mention is not available in remote sessions."
+  - *Implication*: At the terminal protocol level, `Ctrl+M` and `Enter` both emit a carriage return (CR), making them indistinguishable to applications. Developers attempting to bind a custom action to `Ctrl+M` would encounter confusing behavior; this entry clarifies why such a binding is not permitted.
+  - *Source*: [Keybindings](https://code.claude.com/docs/en/keybindings.md)
 
-  The comparison table entry for `@mention files` was updated from "With autocomplete" to "With autocomplete; local and SSH sessions only".
+## Notable Details
 
-  - *Implication*: Users connecting to Claude Code Desktop via remote sessions should use file attachments instead of `@mention` for adding file context.
-  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
-
-### Settings
-
-- **Settings precedence hierarchy now explicitly covers VS Code and JetBrains**: The description of how the settings hierarchy works was extended to confirm it applies identically across all Claude Code surfaces.
-
-  > "The same precedence applies whether you run Claude Code from the CLI, the [VS Code extension](/en/vs-code), or a [JetBrains IDE](/en/jetbrains)."
-
-  - *Implication*: Clarifies that organizational policy enforcement via enterprise/project settings files works consistently regardless of which editor or interface a developer uses.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- The quickstart configurator is written as inline JSX/React directly in the Markdown source file. Copy-to-clipboard functionality includes a fallback using `document.execCommand('copy')` for environments where the Clipboard API is unavailable, with a 1800ms visual "Copied" confirmation state.
+- VS Code extension install is documented both as a Marketplace link and as a CLI command: `code --install-extension anthropic.claude-code`.
+- The JetBrains plugin URL in the configurator (`https://plugins.jetbrains.com/plugin/27310-claude-code-beta-`) still carries a `-beta-` suffix, indicating the JetBrains plugin remains in beta status.
+- The configurator CSS includes full dark mode support toggled via a `.dark` class on a parent element, consistent with the documentation site's theming approach.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| mcp.md | Modified | +49 / -5 | New `headersHelper` auth section; fixed plugin `.mcp.json` structure |
-| desktop.md | Modified | +2 / -2 | `@mention` files restricted to local/SSH sessions only |
-| settings.md | Modified | +1 / -1 | Settings hierarchy clarified to include VS Code and JetBrains |
+| `quickstart.md` | Modified | +608 / -0 | Added interactive `InstallConfigurator` React component with OS-aware install tabs for Terminal, Desktop, VS Code, and JetBrains, plus team/enterprise cloud provider selection |
+| `keybindings.md` | Modified | +5 / -4 | Added `Ctrl+M` to the reserved shortcuts table (identical to Enter at the terminal level; cannot be rebound) |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-25*
