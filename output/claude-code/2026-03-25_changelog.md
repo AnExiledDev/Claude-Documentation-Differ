@@ -2,58 +2,158 @@
 
 ## Summary
 
-Two pages were modified in this update. The quickstart page received a large addition (+608 lines) in the form of an interactive installation configurator React component, surfacing install commands for all supported platforms and IDEs in one place. The keybindings page received a minor but functionally meaningful update: `Ctrl+M` is now documented as a reserved shortcut that cannot be rebound.
+The Claude Code changelog page received a single addition: the release notes for version **2.1.83** (March 25, 2026). This is a substantial release covering new policy management, hook events, security settings, a `TaskOutput` deprecation, keybinding changes, performance improvements, and an extensive list of bug fixes across core, sandbox, voice, remote control, and VS Code.
+
+---
 
 ## Significant Changes
 
-### Features
+### New Settings & Environment Variables
 
-- **Interactive Install Configurator added to Quickstart**: The quickstart page now embeds a full React component (`InstallConfigurator`) that renders a tabbed, OS-aware installation widget. The component covers four installation targets (Terminal, Desktop, VS Code, JetBrains) and within the Terminal tab, four install methods:
+- **`managed-settings.d/` drop-in directory**: A new directory sits alongside `managed-settings.json`, allowing separate teams to deploy independent policy fragments that are merged alphabetically.
+  > *"letting separate teams deploy independent policy fragments that merge alphabetically"*
+  - *Implication*: Enterprise deployments can now split managed policies across files without coordinating on a single monolithic JSON blob.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  | Method | Command |
-  |--------|---------|
-  | macOS / Linux | `curl -fsSL https://claude.ai/install.sh \| bash` |
-  | Windows (PowerShell) | `irm https://claude.ai/install.ps1 \| iex` |
-  | Windows (CMD) | `curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd` |
-  | Homebrew | `brew install --cask claude-code` |
-  | WinGet | `winget install Anthropic.ClaudeCode` |
+- **`sandbox.failIfUnavailable` setting**: When sandbox is enabled but cannot start, Claude Code will now exit with an error rather than silently falling back to running unsandboxed.
+  > *"exit with an error when sandbox is enabled but cannot start, instead of running unsandboxed"*
+  - *Implication*: Security-conscious environments can now enforce that sandbox is always active and catch misconfiguration at startup.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  The component auto-detects the user's OS via `navigator.userAgent` and pre-selects the relevant install tab on page load.
+- **`disableDeepLinkRegistration` setting**: Prevents the `claude-cli://` protocol handler from being registered on the system.
+  - *Implication*: Useful in locked-down enterprise environments or when multiple CLI versions coexist on the same machine.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  - *Implication*: Homebrew and WinGet users are explicitly warned that these package managers do not auto-update Claude Code; users must periodically run `brew upgrade claude-code` or `winget upgrade Anthropic.ClaudeCode` manually. Windows users can toggle between PowerShell and CMD installer variants within the same tab.
-  - *Source*: [Quickstart](https://code.claude.com/docs/en/quickstart.md)
+- **`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` env var**: Strips Anthropic and cloud provider credentials from subprocess environments — applies to the Bash tool, hooks, and MCP stdio servers.
+  > *"strip Anthropic and cloud provider credentials from subprocess environments (Bash tool, hooks, MCP stdio servers)"*
+  - *Implication*: Reduces the credential blast radius when Claude Code spawns external processes.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- **Team/Enterprise install path in the configurator**: The new widget includes a toggle — "I'm buying for a team or company (SSO, AWS/Azure/GCP, central billing)" — that reveals team-specific setup options. When enabled, a provider selector appears with four choices: Anthropic, Amazon Bedrock, Microsoft Foundry, and Google Vertex AI. Selecting a cloud provider surfaces a contextual setup notice, for example:
+- **`CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK` env var**: Disables the non-streaming fallback when streaming fails.
+  - *Implication*: Allows controlled environments to reject silent degraded fallback behavior explicitly.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  > **Configure your AWS account first.** Running on Bedrock requires model access enabled in the AWS console and IAM credentials.
+### New Hook Events
 
-  Similar notices appear for Vertex AI (GCP project and service account setup) and Microsoft Foundry (Azure subscription with Foundry resource and model deployments).
+- **`CwdChanged` and `FileChanged` hook events**: Two new reactive hook events enable integrations such as `direnv` to respond to directory and file changes mid-session.
+  > *"Added `CwdChanged` and `FileChanged` hook events for reactive environment management (e.g., direnv)"*
+  - *Implication*: Hooks can now fire in response to file system and working-directory context changes, not just tool invocations.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  - *Implication*: The quickstart now serves as a unified entry point for both individual developers and enterprise teams deploying via cloud provider infrastructure, with direct links to the Bedrock, Vertex AI, and Foundry setup guides from the first page a new user visits.
-  - *Source*: [Quickstart](https://code.claude.com/docs/en/quickstart.md)
+### Deprecations
 
-### Configuration
+- **`TaskOutput` tool deprecated**: Replaced by calling `Read` on a background task's output file path directly.
+  > *"Deprecated `TaskOutput` tool in favor of using `Read` on the background task's output file path"*
+  - *Implication*: Workflows and agents using `TaskOutput` should migrate to `Read`. The tool appears to remain functional for now but should be treated as on the removal path.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-- **`Ctrl+M` added to the reserved shortcuts list**: The keybindings documentation now lists `Ctrl+M` in the "Reserved shortcuts" table — shortcuts that cannot be rebound regardless of keybindings configuration.
+### Keybinding Changes
 
-  > | Ctrl+M | Identical to Enter in terminals (both send CR) |
+- **"Stop all background agents" rebound to `Ctrl+X Ctrl+K`**: Previously `Ctrl+F`, which shadowed readline's forward-char binding.
+  > *"Changed 'stop all background agents' keybinding from `Ctrl+F` to `Ctrl+X Ctrl+K` to stop shadowing readline forward-char"*
+  - *Implication*: Users who relied on `Ctrl+F` for readline navigation will no longer have it intercepted while a background agent runs.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
 
-  - *Implication*: At the terminal protocol level, `Ctrl+M` and `Enter` both emit a carriage return (CR), making them indistinguishable to applications. Developers attempting to bind a custom action to `Ctrl+M` would encounter confusing behavior; this entry clarifies why such a binding is not permitted.
-  - *Source*: [Keybindings](https://code.claude.com/docs/en/keybindings.md)
+- **`Ctrl+X Ctrl+E` added as external editor alias**: Matches the standard readline binding for launching an editor; `Ctrl+G` continues to work.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`Ctrl+L` clears screen and forces full redraw**: Documented as a recovery path when `Cmd+K` leaves the UI partially blank. Note: `Ctrl+U` or double-Esc now clears prompt input (previously `Ctrl+L` may have handled both).
+  > *"use this to recover when Cmd+K leaves the UI partially blank. Use `Ctrl+U` or double-Esc to clear prompt input."*
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`chat:killAgents` and `chat:fastMode` now rebindable**: Both actions can be remapped via `~/.claude/keybindings.json`.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+### Agent & Plugin Features
+
+- **`initialPrompt` in agent frontmatter**: Agents can declare an `initialPrompt` that is auto-submitted as the first turn.
+  - *Implication*: Agents can self-start without requiring a user-supplied opening message, enabling fully autonomous launch flows.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Plugin options (`manifest.userConfig`) exposed externally**: Plugins can prompt for configuration at enable time; values marked `sensitive: true` are stored in the macOS keychain or a protected credentials file on other platforms.
+  > *"plugins can prompt for configuration at enable time, with `sensitive: true` values stored in keychain (macOS) or protected credentials file (other platforms)"*
+  - *Implication*: Plugins can now manage their own secrets through a platform-native secrets store rather than requiring environment variables.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Duplicate plugin MCP server suppression**: Plugin MCP servers that duplicate an org-managed connector are now suppressed rather than running a redundant second connection.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+### UI & UX Improvements
+
+- **Transcript search**: Press `/` in transcript mode (`Ctrl+O`) to search; use `n`/`N` to step through matches.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Pasted images get positional `[Image #N]` chip**: Images pasted into the prompt insert a labeled chip at the cursor, enabling positional references in the prompt. Claude can also reference the on-disk path of clipboard-pasted images for file operations.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Interrupted prompt input auto-restored**: Interrupting a prompt before any response arrives now automatically restores the input text for editing and resubmission.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`/status` works mid-response**: `/status` no longer queues until the turn finishes — it executes while Claude is actively responding.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`AskUserQuestion` and plan-mode tools disabled under `--channels`**: These interactive tools are now suppressed when `--channels` is active, preventing them from blocking channel-driven sessions.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+### Performance & Limits
+
+- **Non-streaming fallback limits raised**: Token cap 21k → 64k; timeout 120s → 300s (local). Reduces truncated or timed-out fallback responses.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`--bare -p` ~14% faster to API request**: Performance improvement for the SDK scripting pattern.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`claude -p` startup ~600ms faster** with unauthenticated HTTP/SSE MCP servers.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Bedrock SDK cold-start latency improved**: Profile fetch now overlaps with other boot work.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`MEMORY.md` index truncates at 25KB**: Added alongside the existing 200-line cap.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **`WebFetch` identifies as `Claude-User`**: Allows site operators to recognize and allowlist Claude Code traffic via `robots.txt`. Peak memory for large pages is also reduced.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Scrollback resets reduced**: In long sessions, scrollback resets drop from once per turn to approximately once per 50 messages.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Linux: `XDG_DATA_HOME` respected** when registering the `claude-cli://` protocol handler.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+### VS Code Integration
+
+- **"Not responding" spinner**: The spinner turns red with "Not responding" when the backend hasn't responded for 60 seconds.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Esc-twice / `/rewind` rewind picker**: A keyboard-navigable rewind picker is now accessible via double-Esc or the `/rewind` slash command.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Fixed session history loading**: Session history now loads correctly when reopening a session via URL or after restart.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+- **Fixed "Fork conversation from here" and rewind actions**: Both were failing silently when the session cache went stale.
+  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+
+---
 
 ## Notable Details
 
-- The quickstart configurator is written as inline JSX/React directly in the Markdown source file. Copy-to-clipboard functionality includes a fallback using `document.execCommand('copy')` for environments where the Clipboard API is unavailable, with a 1800ms visual "Copied" confirmation state.
-- VS Code extension install is documented both as a Marketplace link and as a CLI command: `code --install-extension anthropic.claude-code`.
-- The JetBrains plugin URL in the configurator (`https://plugins.jetbrains.com/plugin/27310-claude-code-beta-`) still carries a `-beta-` suffix, indicating the JetBrains plugin remains in beta status.
-- The configurator CSS includes full dark mode support toggled via a `.dark` class on a parent element, consistent with the documentation site's theming approach.
+- **`Ctrl+B` behavior corrected**: Previously intercepted readline's backward-char at an idle prompt. It now only fires when a foreground task is actually backgroundable, restoring expected readline navigation.
+- **Background subagent visibility after context compaction**: Agents were becoming invisible post-compaction, which could cause **duplicate agents to be spawned** — a particularly dangerous failure mode now fixed.
+- **Sandbox piped command fix**: `rg ... | wc -l` and similar piped commands were hanging and returning `0` in sandbox mode on Linux. This affects any automation using shell pipelines inside sandboxed sessions.
+- **Startup regression fix**: Claude Code was waiting ~3s for a claude.ai MCP config fetch before proceeding. This was a regression that has been resolved.
+- **Voice input freeze resolved**: A 1–8 second UI freeze on startup when voice input was enabled was caused by eagerly loading the native audio module. ALSA library errors corrupting the terminal UI on Linux without audio hardware (Docker, headless, WSL1) are also fixed.
+- **`caffeinate` process fix (macOS)**: The `caffeinate` process was not properly terminating when Claude Code exited, which prevented Macs from sleeping. Now fixed.
+- **Remote Control improvements**: Sessions now correctly show active rather than Idle status, AI-generated session titles appear within seconds of the first message, and remote sessions no longer require re-login on transient auth errors.
+
+---
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| `quickstart.md` | Modified | +608 / -0 | Added interactive `InstallConfigurator` React component with OS-aware install tabs for Terminal, Desktop, VS Code, and JetBrains, plus team/enterprise cloud provider selection |
-| `keybindings.md` | Modified | +5 / -4 | Added `Ctrl+M` to the reserved shortcuts table (identical to Enter at the terminal level; cannot be rebound) |
+| `changelog.md` | Modified | +79 / -0 | Added v2.1.83 release notes (March 25, 2026) |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-25*
