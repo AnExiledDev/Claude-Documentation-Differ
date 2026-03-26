@@ -2,123 +2,190 @@
 
 ## Summary
 
-Version 2.1.84 was released on March 26, 2026, introducing a Windows PowerShell tool as an opt-in preview, new environment variables for customizing pinned model display and capability detection on third-party providers (Bedrock, Vertex AI, Foundry), and a `TaskCreated` hook event. Hooks gained HTTP support for `WorktreeCreate` and a per-hook `shell` field for PowerShell. Several UI improvements were documented including new footer keybindings and a VSCode rate-limit warning banner, alongside numerous bug fixes.
+15 pages were modified in this update with no pages added or removed (+275/-151 lines total). The most substantial changes are: a new `TaskCreated` hook event for agent team workflows, a new PR auto-fix feature for Claude Code on the web, and a new `CLAUDE_STREAM_IDLE_TIMEOUT_MS` environment variable. Additional changes include a new `chat:newline` keybinding action, a `paths` field for skill auto-activation scoping, MCP tool description size limits, and three new Remote Control troubleshooting entries.
 
 ---
 
 ## Significant Changes
 
-### Features — Windows PowerShell Tool (Preview)
+### Hooks
 
-- **New `PowerShell` tool for Windows**: Claude Code can now run PowerShell commands natively on Windows instead of routing through Git Bash. This is an opt-in preview requiring `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
-  > "On Windows, Claude Code can run PowerShell commands natively instead of routing through Git Bash. This is an opt-in preview."
-  > "Claude Code auto-detects `pwsh.exe` (PowerShell 7+) with a fallback to `powershell.exe` (PowerShell 5.1). The Bash tool remains registered alongside the PowerShell tool, so you may need to ask Claude to use PowerShell."
-  - *Implication*: Windows users can now write PowerShell-native scripts and commands without Git Bash translation. The `PowerShell` tool requires permission (same as `Bash`).
-  - *Source*: [Tools Reference](https://code.claude.com/docs/en/tools-reference.md)
+- **New `TaskCreated` hook event**: A new lifecycle hook fires when a task is being created via the `TaskCreate` tool in agent team workflows. Like `TaskCompleted`, it supports exit code 2 to block creation (with stderr fed back to the model as feedback) and `{"continue": false, "stopReason": "..."}` to stop the teammate entirely.
 
-- **Preview limitations**: Auto mode, PowerShell profiles, and sandboxing are not yet supported. Native Windows only (not WSL). Git Bash is still required to start Claude Code.
-  - *Source*: [Tools Reference](https://code.claude.com/docs/en/tools-reference.md)
+  > Runs when a task is being created via the `TaskCreate` tool. Use this to enforce naming conventions, require task descriptions, or prevent certain tasks from being created.
 
-- **`defaultShell` setting**: New `settings.json` key routes interactive `!` commands through PowerShell. Accepts `"bash"` (default) or `"powershell"`. Requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+  The hook receives `task_id`, `task_subject`, and optionally `task_description`, `teammate_name`, and `team_name`. It supports all four hook types (`command`, `http`, `prompt`, `agent`) and does not support matchers — it fires on every occurrence.
 
-- **`shell` field on command hooks**: Individual hooks can now run in PowerShell by setting `"shell": "powershell"`. This works regardless of whether `CLAUDE_CODE_USE_POWERSHELL_TOOL` is set, because hooks spawn PowerShell directly.
-  > "`shell`: Shell to use for this hook. Accepts `"bash"` (default) or `"powershell"`. Setting `"powershell"` runs the command via PowerShell on Windows. Does not require `CLAUDE_CODE_USE_POWERSHELL_TOOL` since hooks spawn PowerShell directly"
-  - *Implication*: Teams can migrate individual hooks to PowerShell incrementally without enabling the full PowerShell tool.
-  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
+  ```json
+  {
+    "hook_event_name": "TaskCreated",
+    "task_id": "task-001",
+    "task_subject": "Implement user authentication",
+    "task_description": "Add login and signup endpoints",
+    "teammate_name": "implementer",
+    "team_name": "my-project"
+  }
+  ```
 
-- **`shell` frontmatter field in skills**: Skills can declare `shell: powershell` to run `` !`command` `` blocks via PowerShell on Windows. Requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
-  - *Source*: [Skills](https://code.claude.com/docs/en/skills.md)
+  Decision control example — block tasks whose subjects don't follow a required format:
 
----
+  ```bash
+  #!/bin/bash
+  INPUT=$(cat)
+  TASK_SUBJECT=$(echo "$INPUT" | jq -r '.task_subject')
 
-### Features — Model Configuration (Third-Party Providers)
+  if [[ ! "$TASK_SUBJECT" =~ ^\[TICKET-[0-9]+\] ]]; then
+    echo "Task subject must start with a ticket number, e.g. '[TICKET-123] Add feature'" >&2
+    exit 2
+  fi
+  ```
 
-- **Pinned model display name and capability overrides**: New companion environment variables allow operators on Bedrock, Vertex AI, and Foundry to customize how pinned models appear in the `/model` picker and declare which features they support. These variables have no effect when using the Anthropic API directly.
+  - *Implication*: Teams can now gate task creation with the same hook machinery used for task completion — useful for enforcing ticket-number prefixes, required descriptions, or policy checks before work begins.
+  - *Source*: [hooks.md](https://code.claude.com/docs/en/hooks.md), [hooks-guide.md](https://code.claude.com/docs/en/hooks-guide.md), [agent-teams.md](https://code.claude.com/docs/en/agent-teams.md), [plugins-reference.md](https://code.claude.com/docs/en/plugins-reference.md)
 
-  New variables follow the pattern `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL_{NAME,DESCRIPTION,SUPPORTED_CAPABILITIES}`:
+- **`TaskCreated` added to decision control and matcher tables**: The matcher reference tables now include `TaskCreated` in the "no matcher support" row alongside `TeammateIdle` and `TaskCompleted`. It also appears in the "exit code or `continue: false`" decision pattern group and in the exit-code-2 effects table.
 
-  | Variable suffix | Purpose |
-  |---|---|
-  | `_NAME` | Display name in `/model` picker |
-  | `_DESCRIPTION` | Display description in `/model` picker |
-  | `_SUPPORTED_CAPABILITIES` | Comma-separated capability declarations |
+  > `TeammateIdle`, `TaskCreated`, `TaskCompleted` — Exit code 2 blocks the action with stderr feedback. JSON `{"continue": false, "stopReason": "..."}` also stops the teammate entirely.
 
-  Supported capability values: `effort`, `max_effort`, `thinking`, `adaptive_thinking`, `interleaved_thinking`.
+  - *Source*: [hooks.md](https://code.claude.com/docs/en/hooks.md)
 
-  > "Claude Code enables features like effort levels and extended thinking by matching the model ID against known patterns. Provider-specific IDs such as Bedrock ARNs or custom deployment names often don't match these patterns, leaving supported features disabled. Set `_SUPPORTED_CAPABILITIES` to tell Claude Code which features the model actually supports."
-
-  - *Implication*: Bedrock/Vertex/Foundry operators who pin models with non-standard IDs (ARNs, deployment names) can now unlock effort levels and thinking features that were previously silently disabled.
-  - *Source*: [Model Configuration](https://code.claude.com/docs/en/model-config.md), [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
-
----
-
-### Features — Hooks
-
-- **`WorktreeCreate` now supports HTTP hooks**: Previously only `type: "command"` hooks were supported for `WorktreeCreate`. HTTP hooks can now return the created worktree path via `hookSpecificOutput.worktreePath` in the response JSON.
-  > "Command hooks (`type: "command"`): print the path on stdout. HTTP hooks (`type: "http"`): return `{ "hookSpecificOutput": { "hookEventName": "WorktreeCreate", "worktreePath": "/absolute/path" } }` in the response body."
-  - *Implication*: `WorktreeCreate` hooks can now be implemented as remote HTTP endpoints, enabling centralized worktree management services.
-  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
-
-- **`WorktreeRemove` no longer restricted to command hooks**: The documentation previously stated `WorktreeRemove` only supports `type: "command"` hooks. This restriction has been removed.
-  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
-
-- **`TaskCreated` hook event added**: A new hook fires when a task is created via `TaskCreate`.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **Corrected hook type support table**: Several events previously listed as "only `command`" now document support for both `command` and `http` hooks. `SessionStart` is explicitly called out as supporting only `command` hooks.
-  > "Events that support `command` and `http` hooks but not `prompt` or `agent`: [ConfigChange, CwdChanged, FileChanged, InstructionsLoaded, Notification, PostCompact, PreCompact, SessionEnd, StopFailure, SubagentStart, TeammateIdle, WorktreeCreate, WorktreeRemove]"
-  > "`SessionStart` supports only `command` hooks."
-  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
+- **Hook lifecycle diagram updated**: The lifecycle SVG was replaced with a new version that includes `TaskCreated` inside the agentic loop alongside `TaskCompleted`. The diagram height increased from 1100px to 1155px to accommodate the new event.
+  - *Source*: [hooks.md](https://code.claude.com/docs/en/hooks.md)
 
 ---
 
-### Features — Keybindings
+### Web Features
 
-- **New footer navigation actions**: Two keybinding actions were added to the `Footer` context: `footer:up` (Up arrow, deselects at top) and `footer:down` (Down arrow). This corresponds to the bug fix for up/down arrow keys being unresponsive when a footer item is focused.
-  - *Source*: [Keybindings](https://code.claude.com/docs/en/keybindings.md)
+- **New Auto-fix pull requests feature**: Claude Code on the web can now watch a PR and automatically respond to CI failures and review comments. The Claude GitHub App subscribes to GitHub activity on the PR; when a check fails or a reviewer comments, Claude investigates and pushes a fix if one is clear.
 
----
+  > Claude can watch a pull request and automatically respond to CI failures and review comments. Claude subscribes to GitHub activity on the PR, and when a check fails or a reviewer leaves a comment, Claude investigates and pushes a fix if one is clear.
 
-### Version 2.1.84 — Additional Changes (from changelog)
+  Three ways to enable auto-fix:
+  - **PRs created in Claude Code on the web**: open the CI status bar and select **Auto-fix**
+  - **From the mobile app**: tell Claude to auto-fix the PR
+  - **Any existing PR**: paste the PR URL into a session
 
-The following changes appear in the v2.1.84 release entry and are not yet fully reflected in the reference documentation:
+  Claude's response behavior is tiered by confidence level:
+  - **Clear fixes**: Claude makes the change, pushes it, and explains in the session
+  - **Ambiguous requests**: Claude asks before acting
+  - **Duplicate or no-action events**: Claude notes the event and moves on
 
-- **`CLAUDE_STREAM_IDLE_TIMEOUT_MS`**: New env var to configure the streaming idle watchdog threshold (default 90s).
-- **`allowedChannelPlugins` managed setting**: Allows team/enterprise admins to define a channel plugin allowlist.
-- **`x-client-request-id` header**: Added to API requests to aid in debugging timeouts.
-- **Idle-return prompt**: After 75+ minutes away, users are nudged to `/clear` to avoid unnecessary token re-caching.
-- **Deep link terminal preference**: `claude-cli://` links now open in the user's preferred terminal instead of the first terminal detected.
-- **`paths:` frontmatter accepts YAML list**: Rules and skills `paths:` now accepts a YAML list of globs (not just a single glob).
-- **MCP tool description cap**: Tool descriptions and server instructions are capped at 2KB to prevent OpenAPI-generated servers from bloating context.
-- **MCP server deduplication**: Servers configured both locally and via claude.ai connectors are deduplicated — local config wins.
-- **Background bash interactive-prompt detection**: Tasks stuck on an interactive prompt surface a notification after ~45 seconds.
-- **Token count display**: Counts ≥1M now display as "1.5m" instead of "1512.6k".
-- **Global system-prompt caching**: Now works when `ToolSearch` is enabled, including with MCP tools configured.
-- **`#123` auto-link removed**: Issue/PR references are only clickable when written as `owner/repo#123` — bare `#123` no longer auto-links.
-- **Unavailable slash commands hidden**: Commands unavailable for the current auth setup (`/voice`, `/mobile`, `/chrome`, `/upgrade`, etc.) are now hidden rather than shown.
-- **[VSCode] Rate limit warning banner**: Shows usage percentage and reset time.
-- **Stats screenshot speed**: Ctrl+S in `/stats` now works in all builds and is 16× faster.
-- **Bug fixes**: Voice push-to-talk, `Ctrl+U` kill-to-line-start, null chord unbinding, mouse events in transcript search, workflow subagent API 400 errors, emoji background color, `Edit(.claude)` permission sticking, large file attachment hang, MCP tool/resource cache leak on reconnect, partial clone repository startup (Scalar/GVFS), IME composition/CJK input, transient macOS keychain errors, cold-start race with core tool deferral.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+  > Claude may reply to review comment threads on GitHub as part of resolving them. These replies are posted using your GitHub account, so they appear under your username, but each reply is labeled as coming from Claude Code so reviewers know it was written by the agent and not by you directly.
+
+  - *Implication*: Enables a partially automated CI/CD loop where Claude monitors and repairs PRs without manual re-engagement, while preserving human oversight for ambiguous or architectural decisions.
+  - *Source*: [claude-code-on-the-web.md](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
 ---
 
-### Plugin Marketplace URL Update
+### Environment Variables
 
-- **`code-review` plugin reference updated**: The install command for the `code-review` plugin changed from `claude-code-marketplace` to `claude-plugins-official` in both the CLI reference and the `/review` deprecation notice.
-  > `claude plugin install code-review@claude-plugins-official`
-  - *Implication*: Existing install commands referencing `claude-code-marketplace` for `code-review` are outdated. The GitHub URL also changed to `github.com/anthropics/claude-plugins-official`.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md), [Commands](https://code.claude.com/docs/en/commands.md)
+- **New `CLAUDE_STREAM_IDLE_TIMEOUT_MS`**: Controls how long the streaming idle watchdog waits before closing a stalled connection.
+
+  > Timeout in milliseconds before the streaming idle watchdog closes a stalled connection. Default: `90000` (90 seconds). Increase this value if long-running tools or slow networks cause premature timeout errors.
+
+  - *Implication*: Users hitting unexpected timeout errors on slow networks or with long-running tool invocations can now tune this threshold without patching code.
+  - *Source*: [env-vars.md](https://code.claude.com/docs/en/env-vars.md)
+
+---
+
+### Keybindings
+
+- **New `chat:newline` action**: A new keybinding action (unbound by default) inserts a newline into the chat input without submitting the message.
+
+  > `chat:newline` — (unbound) — Insert a newline without submitting
+
+  - *Implication*: Users can bind this to a preferred key (e.g., `Shift+Enter`) to compose multiline messages more naturally.
+  - *Source*: [keybindings.md](https://code.claude.com/docs/en/keybindings.md)
+
+- **Chord unbinding documentation added**: New documentation explains how to unbind chord prefixes to free them for single-key use. All chords sharing a prefix must be unbound before the prefix key becomes available as a standalone binding. A note clarifies partial unbinding still enters chord-wait mode.
+
+  ```json
+  {
+    "bindings": [
+      {
+        "context": "Chat",
+        "bindings": {
+          "ctrl+x ctrl+k": null,
+          "ctrl+x ctrl+e": null,
+          "ctrl+x": "chat:newline"
+        }
+      }
+    ]
+  }
+  ```
+
+  > If you unbind some but not all chords on a prefix, pressing the prefix still enters chord-wait mode for the remaining bindings.
+
+  - *Source*: [keybindings.md](https://code.claude.com/docs/en/keybindings.md)
+
+---
+
+### Skills
+
+- **New `paths` field for skill auto-activation scoping**: Skills now support a `paths` field with glob patterns that control when the skill is automatically activated based on the files being worked on.
+
+  > Glob patterns that limit when this skill is activated. Accepts a comma-separated string or a YAML list. When set, Claude loads the skill automatically only when working with files matching the patterns. Uses the same format as path-specific rules.
+
+  - *Implication*: Skills can be scoped to specific parts of a repository (e.g., `src/frontend/**` for a frontend-focused skill), avoiding unnecessary context loading when working in unrelated directories.
+  - *Source*: [skills.md](https://code.claude.com/docs/en/skills.md)
+
+---
+
+### MCP
+
+- **Local configuration takes precedence over claude.ai connectors**: Clarification added that when a server is configured both locally and through a claude.ai connector, the local configuration wins and the connector entry is skipped entirely.
+
+  > If a server is configured both locally and through a claude.ai connector, the local configuration takes precedence and the connector entry is skipped.
+
+  - *Source*: [mcp.md](https://code.claude.com/docs/en/mcp.md)
+
+- **Tool description and server instruction size limit documented**: Claude Code truncates both tool descriptions and server instructions at 2KB each. The documentation advises keeping descriptions concise and front-loading critical details.
+
+  > Claude Code truncates tool descriptions and server instructions at 2KB each. Keep them concise to avoid truncation, and put critical details near the start.
+
+  - *Implication*: MCP server authors — especially those generating descriptions from OpenAPI specs — should audit description lengths and reorganize content to ensure critical information appears within the first 2KB.
+  - *Source*: [mcp.md](https://code.claude.com/docs/en/mcp.md)
+
+---
+
+### Remote Control Troubleshooting
+
+Three new error message entries were added to the Remote Control troubleshooting section:
+
+- **"Remote Control requires a claude.ai subscription"**: Not authenticated with a claude.ai account. Fix: run `claude auth login` (unset `ANTHROPIC_API_KEY` first if set in the environment).
+- **"Remote Control requires a full-scope login token"**: Authenticated with a long-lived token from `claude setup-token` or `CLAUDE_CODE_OAUTH_TOKEN` — these are inference-only and cannot establish Remote Control sessions. Fix: run `claude auth login` to get a full-scope session token.
+- **"Unable to determine your organization for Remote Control eligibility"**: Stale or incomplete cached account information. Fix: run `claude auth login` to refresh.
+
+  - *Implication*: These messages were presumably already surfaced in the CLI; the documentation now provides concrete resolution steps for each.
+  - *Source*: [remote-control.md](https://code.claude.com/docs/en/remote-control.md)
+
+---
+
+### Permissions (Managed Settings)
+
+- **New `allowedChannelPlugins` managed setting**: Administrators can now specify an allowlist of channel plugins permitted to push messages. When set, this replaces the default Anthropic allowlist. Requires `channelsEnabled: true`.
+
+  > Allowlist of channel plugins that may push messages. Replaces the default Anthropic allowlist when set. Requires `channelsEnabled: true`. See Restrict which channel plugins can run.
+
+  - *Source*: [permissions.md](https://code.claude.com/docs/en/permissions.md)
 
 ---
 
 ## Notable Details
 
-- The `env-vars.md` change (+119/-109) is primarily a formatting reflow — column separator widths were widened to accommodate longer new variable names (`ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES`). Net new variables: `CLAUDE_CODE_USE_POWERSHELL_TOOL` and the nine `ANTHROPIC_DEFAULT_*_MODEL_{NAME,DESCRIPTION,SUPPORTED_CAPABILITIES}` vars.
-- `setup.md` code blocks gained duplicate `theme={null}` attributes (a doc tooling artifact, not a functional change), plus a new paragraph pointing Windows users to the PowerShell tool documentation.
-- The `plugins.md` change corrects the namespace example from `/greet:hello` to `/my-first-plugin:hello`, matching the actual plugin name used in the quickstart.
-- The v2.1.84 changelog entry also restores two items that were removed from the v2.1.83 entry in the prior diff: `disableDeepLinkRegistration` and transcript search — both now appear in 2.1.84 instead.
+- **MEMORY.md load limit now includes a size cap**: The auto memory load threshold changed from "first 200 lines" to "first 200 lines or 25KB, whichever comes first." This is documented in both `memory.md` and `how-claude-code-works.md`. Repositories with wide or dense MEMORY.md content (long lines, log-style entries) may now see fewer lines loaded at session start than before.
+  - *Source*: [memory.md](https://code.claude.com/docs/en/memory.md)
+
+- **`Ctrl+U` description clarified**: The shortcut was described as "Delete entire line" and is now "Delete from cursor to line start" with an added note: "Repeat to clear across lines in multiline input." This is a documentation correction for existing behavior.
+  - *Source*: [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md)
+
+- **`setup.md` code block formatting cleanup**: Duplicate `theme={null}` attributes were removed from all install command blocks (e.g., `theme={null} theme={null} theme={null} theme={null}` → `theme={null}`). No content change.
+  - *Source*: [setup.md](https://code.claude.com/docs/en/setup.md)
+
+- **`ENABLE_CLAUDEAI_MCP_SERVERS` anchor link fixed**: The link in the env vars table was corrected from `#use-mcp-servers-from-claudeai` to `#use-mcp-servers-from-claude-ai`.
+  - *Source*: [env-vars.md](https://code.claude.com/docs/en/env-vars.md)
+
+- **`TaskCompleted` section moved earlier in `hooks.md`**: `TaskCompleted` was previously documented after `TeammateIdle` near the end of the hook events section. It now appears alongside the new `TaskCreated` section, grouped before `Stop`. The content itself is unchanged; only the position shifted.
 
 ---
 
@@ -126,18 +193,21 @@ The following changes appear in the v2.1.84 release entry and are not yet fully 
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +45/-0 | Added v2.1.84 release entry (March 26, 2026) |
-| tools-reference.md | Modified | +37/-0 | New PowerShell tool section with enable instructions, shell selection, and preview limitations |
-| env-vars.md | Modified | +119/-109 | Added `CLAUDE_CODE_USE_POWERSHELL_TOOL` and 9 new `ANTHROPIC_DEFAULT_*_MODEL_*` vars; column formatting reflow |
-| model-config.md | Modified | +35/-0 | New "Customize pinned model display and capabilities" section for third-party providers |
-| hooks.md | Modified | +40/-12 | Added `shell` hook field, HTTP support for `WorktreeCreate`, Windows PowerShell section, corrected hook type support table |
-| skills.md | Modified | +14/-13 | Added `shell` frontmatter field; column formatting reflow |
-| keybindings.md | Modified | +8/-6 | Added `footer:up` and `footer:down` keybinding actions |
-| setup.md | Modified | +7/-5 | Added PowerShell tool reference for Windows; code block attribute cleanup |
-| settings.md | Modified | +1/-0 | Added `defaultShell` setting |
-| cli-reference.md | Modified | +1/-1 | Updated `code-review` plugin install example to `claude-plugins-official` |
-| commands.md | Modified | +1/-1 | Updated `/review` deprecation URL to `claude-plugins-official` |
-| plugins.md | Modified | +1/-1 | Fixed namespace example from `/greet:hello` to `/my-first-plugin:hello` |
+| hooks.md | Modified | +135/-77 | New `TaskCreated` hook event with full input schema, decision control docs, and code examples; `TaskCompleted` section relocated earlier in reference |
+| claude-code-on-the-web.md | Modified | +25/-1 | New "Auto-fix pull requests" section with behavior details and activation methods |
+| keybindings.md | Modified | +33/-13 | New `chat:newline` action; chord unbinding documentation added |
+| hooks-guide.md | Modified | +18/-17 | `TaskCreated` added to event table and matcher reference table |
+| skills.md | Modified | +15/-14 | New `paths` field for glob-based skill auto-activation scoping |
+| remote-control.md | Modified | +12/-0 | Three new troubleshooting entries for subscription, token scope, and org eligibility errors |
+| permissions.md | Modified | +10/-9 | New `allowedChannelPlugins` managed setting |
+| interactive-mode.md | Modified | +8/-8 | `Ctrl+U` description clarified for multiline context |
+| mcp.md | Modified | +4/-0 | Local config precedence over connectors; 2KB tool description truncation limit documented |
+| memory.md | Modified | +3/-3 | MEMORY.md load threshold updated to 200 lines or 25KB, whichever comes first |
+| agent-teams.md | Modified | +2/-1 | `TaskCreated` hook referenced in quality gates section |
+| env-vars.md | Modified | +2/-1 | New `CLAUDE_STREAM_IDLE_TIMEOUT_MS`; anchor link fix for `ENABLE_CLAUDEAI_MCP_SERVERS` |
+| plugins-reference.md | Modified | +2/-1 | `TaskCreated` added to plugin hook event table |
+| how-claude-code-works.md | Modified | +1/-1 | MEMORY.md load limit description updated to match new 25KB cap |
+| setup.md | Modified | +5/-5 | Code block `theme` attribute deduplication (formatting only) |
 
 ---
 
