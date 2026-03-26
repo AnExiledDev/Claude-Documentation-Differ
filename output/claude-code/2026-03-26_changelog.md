@@ -2,197 +2,123 @@
 
 ## Summary
 
-This update is dominated by two new hook events (`CwdChanged` and `FileChanged`) for reactive environment management, plus expanded enterprise channel controls (`allowedChannelPlugins`). Several smaller additions fill out the VS Code integration, plugin manifest schema, interactive mode keybindings, and CLI surface area.
+Version 2.1.84 was released on March 26, 2026, introducing a Windows PowerShell tool as an opt-in preview, new environment variables for customizing pinned model display and capability detection on third-party providers (Bedrock, Vertex AI, Foundry), and a `TaskCreated` hook event. Hooks gained HTTP support for `WorktreeCreate` and a per-hook `shell` field for PowerShell. Several UI improvements were documented including new footer keybindings and a VSCode rate-limit warning banner, alongside numerous bug fixes.
 
 ---
 
 ## Significant Changes
 
-### Hooks
+### Features — Windows PowerShell Tool (Preview)
 
-- **Two new hook events: `CwdChanged` and `FileChanged`**: The hooks system gains reactive environment management events. `CwdChanged` fires whenever Claude changes the working directory (e.g., via a `cd` command). `FileChanged` fires when a watched file changes on disk; the `matcher` field configures which filenames to watch (pipe-separated basenames like `.envrc|.env`).
+- **New `PowerShell` tool for Windows**: Claude Code can now run PowerShell commands natively on Windows instead of routing through Git Bash. This is an opt-in preview requiring `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
+  > "On Windows, Claude Code can run PowerShell commands natively instead of routing through Git Bash. This is an opt-in preview."
+  > "Claude Code auto-detects `pwsh.exe` (PowerShell 7+) with a fallback to `powershell.exe` (PowerShell 5.1). The Bash tool remains registered alongside the PowerShell tool, so you may need to ask Claude to use PowerShell."
+  - *Implication*: Windows users can now write PowerShell-native scripts and commands without Git Bash translation. The `PowerShell` tool requires permission (same as `Bash`).
+  - *Source*: [Tools Reference](https://code.claude.com/docs/en/tools-reference.md)
 
-  > "A `CwdChanged` hook fixes this: it runs each time Claude changes directory, so you can reload the correct variables for the new location. The hook writes the updated values to `CLAUDE_ENV_FILE`, which Claude Code applies before each Bash command."
+- **Preview limitations**: Auto mode, PowerShell profiles, and sandboxing are not yet supported. Native Windows only (not WSL). Git Bash is still required to start Claude Code.
+  - *Source*: [Tools Reference](https://code.claude.com/docs/en/tools-reference.md)
 
-  Both events have access to `CLAUDE_ENV_FILE` for injecting environment variables into subsequent Bash commands — the same mechanism previously exclusive to `SessionStart` hooks. `CwdChanged` provides `old_cwd` and `new_cwd` input fields. `FileChanged` provides `file_path` and `event` (`change`, `add`, or `unlink`).
+- **`defaultShell` setting**: New `settings.json` key routes interactive `!` commands through PowerShell. Accepts `"bash"` (default) or `"powershell"`. Requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-  Both hooks can return a `watchPaths` array in their output to dynamically update which files `FileChanged` monitors. Neither event supports decision control (they cannot block the directory or file change). Only `type: "command"` hooks are supported for these events.
+- **`shell` field on command hooks**: Individual hooks can now run in PowerShell by setting `"shell": "powershell"`. This works regardless of whether `CLAUDE_CODE_USE_POWERSHELL_TOOL` is set, because hooks spawn PowerShell directly.
+  > "`shell`: Shell to use for this hook. Accepts `"bash"` (default) or `"powershell"`. Setting `"powershell"` runs the command via PowerShell on Windows. Does not require `CLAUDE_CODE_USE_POWERSHELL_TOOL` since hooks spawn PowerShell directly"
+  - *Implication*: Teams can migrate individual hooks to PowerShell incrementally without enabling the full PowerShell tool.
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
 
-  - *Implication*: Teams using `direnv` or per-directory virtualenvs can now have Claude's Bash tool automatically pick up environment changes as it moves between directories — closing a long-standing gap between interactive shell behavior and Claude's Bash environment.
-  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md), [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md)
-
-- **`CwdChanged` added to matcher-exempt events**: The reference table listing events that silently ignore `matcher` fields was updated to include `CwdChanged`.
-
-  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md)
-
-- **`CLAUDE_ENV_FILE` scope expanded**: Previously documented as available only for `SessionStart` hooks; now documented as available to `SessionStart`, `CwdChanged`, and `FileChanged` hooks.
-
-  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md), [Hooks reference](https://code.claude.com/docs/en/hooks.md)
-
----
-
-### Channels (Enterprise)
-
-- **New `allowedChannelPlugins` managed setting**: Team and Enterprise admins can now replace the Anthropic default channel plugin allowlist with their own list. Each entry specifies a `marketplace` and `plugin` name. When set, it replaces the Anthropic allowlist entirely — only listed plugins can register as channels.
-
-  > "Admins on Team and Enterprise plans can replace that allowlist with their own by setting `allowedChannelPlugins` in managed settings. Use this to restrict which official plugins are allowed, approve channels from your own internal marketplace, or both."
-
-  ```json
-  {
-    "channelsEnabled": true,
-    "allowedChannelPlugins": [
-      { "marketplace": "claude-plugins-official", "plugin": "telegram" },
-      { "marketplace": "acme-corp-plugins", "plugin": "internal-alerts" }
-    ]
-  }
-  ```
-
-  An empty array blocks all allowlisted plugins (though `--dangerously-load-development-channels` can still bypass it). To block channels entirely including the dev flag, leave `channelsEnabled` unset instead.
-
-  - *Implication*: Enterprises can now approve internal or custom channel plugins without requiring Anthropic marketplace submission, and can restrict which official channels (Telegram, Discord, iMessage) users can connect.
-  - *Source*: [Channels](https://code.claude.com/docs/en/channels.md), [Channels reference](https://code.claude.com/docs/en/channels-reference.md)
-
-- **Enterprise controls table restructured**: The previous single-row plan-type table was replaced with a two-row table covering both `channelsEnabled` and `allowedChannelPlugins`, with "When not configured" column clarifying defaults.
-
-  - *Source*: [Channels](https://code.claude.com/docs/en/channels.md)
+- **`shell` frontmatter field in skills**: Skills can declare `shell: powershell` to run `` !`command` `` blocks via PowerShell on Windows. Requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
+  - *Source*: [Skills](https://code.claude.com/docs/en/skills.md)
 
 ---
 
-### Plugins Reference
+### Features — Model Configuration (Third-Party Providers)
 
-- **New `userConfig` plugin manifest field**: Plugins can now declare configuration values that Claude Code prompts users for when the plugin is enabled — eliminating the need to hand-edit `settings.json` for plugin credentials.
+- **Pinned model display name and capability overrides**: New companion environment variables allow operators on Bedrock, Vertex AI, and Foundry to customize how pinned models appear in the `/model` picker and declare which features they support. These variables have no effect when using the Anthropic API directly.
 
-  > "The `userConfig` field declares values that Claude Code prompts the user for when the plugin is enabled. Use this instead of requiring users to hand-edit `settings.json`."
+  New variables follow the pattern `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL_{NAME,DESCRIPTION,SUPPORTED_CAPABILITIES}`:
 
-  Keys are substituted as `${user_config.KEY}` in MCP/LSP server configs and hook commands. Non-sensitive values go to `settings.json` under `pluginConfigs[<plugin-id>].options`; sensitive values go to the system keychain (with an ~2 KB limit). Both are exported as `CLAUDE_PLUGIN_OPTION_<KEY>` environment variables to subprocesses.
+  | Variable suffix | Purpose |
+  |---|---|
+  | `_NAME` | Display name in `/model` picker |
+  | `_DESCRIPTION` | Display description in `/model` picker |
+  | `_SUPPORTED_CAPABILITIES` | Comma-separated capability declarations |
 
-  - *Implication*: Plugin authors can build a first-run configuration flow without requiring users to know internal file paths or JSON structure.
-  - *Source*: [Plugins reference](https://code.claude.com/docs/en/plugins-reference.md)
+  Supported capability values: `effort`, `max_effort`, `thinking`, `adaptive_thinking`, `interleaved_thinking`.
 
-- **New `channels` plugin manifest field**: Plugins can declare message channels that push events into a running session, binding each channel to a plugin-provided MCP server. Per-channel `userConfig` is supported for credentials like bot tokens.
+  > "Claude Code enables features like effort levels and extended thinking by matching the model ID against known patterns. Provider-specific IDs such as Bedrock ARNs or custom deployment names often don't match these patterns, leaving supported features disabled. Set `_SUPPORTED_CAPABILITIES` to tell Claude Code which features the model actually supports."
 
-  - *Source*: [Plugins reference](https://code.claude.com/docs/en/plugins-reference.md)
-
----
-
-### VS Code Integration
-
-- **New URI handler for launching tabs from external tools**: The extension now registers a URI handler at `vscode://anthropic.claude-code/open`. Any script, shell alias, or browser bookmarklet can open a new Claude Code tab directly.
-
-  > "Use it to open a new Claude Code tab from your own tooling: a shell alias, a browser bookmarklet, or any script that can open a URL. If VS Code isn't already running, opening the URL launches it first."
-
-  Two optional query parameters:
-
-  | Parameter | Description |
-  |-----------|-------------|
-  | `prompt`  | URL-encoded text to pre-fill in the prompt box (not auto-submitted) |
-  | `session` | Session ID to resume; falls back to a new conversation if not found |
-
-  Invoked via `open "vscode://anthropic.claude-code/open"` on macOS, `xdg-open` on Linux, or `start` on Windows.
-
-  - *Implication*: Enables custom automation workflows — e.g., git hooks that open a pre-filled Claude tab, CI integrations that resume an existing session, or IDE extensions that hand off to Claude.
-  - *Source*: [VS Code](https://code.claude.com/docs/en/vs-code.md)
+  - *Implication*: Bedrock/Vertex/Foundry operators who pin models with non-standard IDs (ARNs, deployment names) can now unlock effort levels and thinking features that were previously silently disabled.
+  - *Source*: [Model Configuration](https://code.claude.com/docs/en/model-config.md), [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
 ---
 
-### Memory
+### Features — Hooks
 
-- **AGENTS.md interoperability guidance**: New section documents how to integrate Claude Code in repos that already use `AGENTS.md` for other coding agents. Recommends creating a `CLAUDE.md` that imports `AGENTS.md` via the `@` syntax, avoiding duplication while still supporting Claude-specific additions.
+- **`WorktreeCreate` now supports HTTP hooks**: Previously only `type: "command"` hooks were supported for `WorktreeCreate`. HTTP hooks can now return the created worktree path via `hookSpecificOutput.worktreePath` in the response JSON.
+  > "Command hooks (`type: "command"`): print the path on stdout. HTTP hooks (`type: "http"`): return `{ "hookSpecificOutput": { "hookEventName": "WorktreeCreate", "worktreePath": "/absolute/path" } }` in the response body."
+  - *Implication*: `WorktreeCreate` hooks can now be implemented as remote HTTP endpoints, enabling centralized worktree management services.
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
 
-  > "If your repository already uses `AGENTS.md` for other coding agents, create a `CLAUDE.md` that imports it so both tools read the same instructions without duplicating them."
+- **`WorktreeRemove` no longer restricted to command hooks**: The documentation previously stated `WorktreeRemove` only supports `type: "command"` hooks. This restriction has been removed.
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
 
-  Example:
-  ```markdown
-  @AGENTS.md
+- **`TaskCreated` hook event added**: A new hook fires when a task is created via `TaskCreate`.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  ## Claude Code
-
-  Use plan mode for changes under `src/billing/`.
-  ```
-
-  - *Implication*: Teams already using Codex or other AGENTS.md-aware agents get a clean integration path with Claude Code.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
-
----
-
-### CLI & Commands
-
-- **New top-level `claude plugin` command**: Added to the CLI reference as a first-class command (alias: `claude plugins`) for managing Claude Code plugins. Previously plugin management was primarily done via the in-session `/plugin` slash command.
-
-  - *Source*: [CLI reference](https://code.claude.com/docs/en/cli-reference.md)
-
-- **`/plan` accepts an optional description argument**: The `/plan` command signature changed from `/plan` to `/plan [description]`. Passing a description enters plan mode and immediately starts with that task (e.g., `/plan fix the auth bug`).
-
-  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
-
-- **`/copy` can write to file over SSH**: The picker that appears when code blocks are present now supports pressing `w` to write the selection to a file instead of the clipboard — useful when clipboard access is unavailable in remote SSH sessions.
-
-  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
-
-- **`/status` works mid-response**: `/status` can now be used while Claude is actively responding, without waiting for the current response to finish.
-
-  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
-
-- **`/loop` added to bundled skills list**: The bundled skills description in `commands.md` was updated to explicitly include `/loop` alongside `/simplify`, `/batch`, and `/debug`.
-
-  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
+- **Corrected hook type support table**: Several events previously listed as "only `command`" now document support for both `command` and `http` hooks. `SessionStart` is explicitly called out as supporting only `command` hooks.
+  > "Events that support `command` and `http` hooks but not `prompt` or `agent`: [ConfigChange, CwdChanged, FileChanged, InstructionsLoaded, Notification, PostCompact, PreCompact, SessionEnd, StopFailure, SubagentStart, TeammateIdle, WorktreeCreate, WorktreeRemove]"
+  > "`SessionStart` supports only `command` hooks."
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
 
 ---
 
-### Interactive Mode & Keybindings
+### Features — Keybindings
 
-- **Kill background agents: `Ctrl+F` → `Ctrl+X Ctrl+K`**: The keyboard shortcut to kill all background agents changed from `Ctrl+F` to `Ctrl+X Ctrl+K`.
-
-  - *Implication*: Developers relying on `Ctrl+F` for this action will need to update their muscle memory.
-  - *Source*: [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md)
-
-- **New shortcut: `Option+O` / `Alt+O` toggles fast mode**: Added to the general controls table alongside the existing model and extended thinking shortcuts.
-
-  - *Source*: [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md)
-
-- **`Ctrl+X Ctrl+E` added as alias for external editor**: The readline-native binding `Ctrl+X Ctrl+E` is now documented alongside `Ctrl+G` for opening a prompt in the default text editor.
-
-  - *Source*: [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md)
-
-- **New "Transcript viewer" shortcuts section**: Documents shortcuts active when the transcript viewer (`Ctrl+O`) is open: `Ctrl+E` toggles show-all content (rebindable via `transcript:toggleShowAll`), and `q` / `Ctrl+C` / `Esc` exit the viewer (latter two rebindable via `transcript:exit`).
-
-  - *Source*: [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md)
-
-- **Background task output mechanism clarified**: Changed from "Output is buffered and Claude can retrieve it using the TaskOutput tool" to "Output is written to a file and Claude can retrieve it using the Read tool."
-
-  - *Source*: [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md)
-
-- **Paste image description updated**: `Ctrl+V` / `Cmd+V` / `Alt+V` description now specifies that pasting an image "inserts an `[Image #N]` chip at the cursor so you can reference it positionally in your prompt" rather than the previous generic description.
-
-  - *Source*: [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md)
+- **New footer navigation actions**: Two keybinding actions were added to the `Footer` context: `footer:up` (Up arrow, deselects at top) and `footer:down` (Down arrow). This corresponds to the bug fix for up/down arrow keys being unresponsive when a footer item is focused.
+  - *Source*: [Keybindings](https://code.claude.com/docs/en/keybindings.md)
 
 ---
 
-### Environment Variables
+### Version 2.1.84 — Additional Changes (from changelog)
 
-- **New `CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK`**: Set to `1` to disable the non-streaming fallback when a streaming request fails mid-stream. Streaming errors propagate to the retry layer instead. Useful for proxy/gateway setups where the fallback causes duplicate tool execution.
+The following changes appear in the v2.1.84 release entry and are not yet fully reflected in the reference documentation:
 
-  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
+- **`CLAUDE_STREAM_IDLE_TIMEOUT_MS`**: New env var to configure the streaming idle watchdog threshold (default 90s).
+- **`allowedChannelPlugins` managed setting**: Allows team/enterprise admins to define a channel plugin allowlist.
+- **`x-client-request-id` header**: Added to API requests to aid in debugging timeouts.
+- **Idle-return prompt**: After 75+ minutes away, users are nudged to `/clear` to avoid unnecessary token re-caching.
+- **Deep link terminal preference**: `claude-cli://` links now open in the user's preferred terminal instead of the first terminal detected.
+- **`paths:` frontmatter accepts YAML list**: Rules and skills `paths:` now accepts a YAML list of globs (not just a single glob).
+- **MCP tool description cap**: Tool descriptions and server instructions are capped at 2KB to prevent OpenAPI-generated servers from bloating context.
+- **MCP server deduplication**: Servers configured both locally and via claude.ai connectors are deduplicated — local config wins.
+- **Background bash interactive-prompt detection**: Tasks stuck on an interactive prompt surface a notification after ~45 seconds.
+- **Token count display**: Counts ≥1M now display as "1.5m" instead of "1512.6k".
+- **Global system-prompt caching**: Now works when `ToolSearch` is enabled, including with MCP tools configured.
+- **`#123` auto-link removed**: Issue/PR references are only clickable when written as `owner/repo#123` — bare `#123` no longer auto-links.
+- **Unavailable slash commands hidden**: Commands unavailable for the current auth setup (`/voice`, `/mobile`, `/chrome`, `/upgrade`, etc.) are now hidden rather than shown.
+- **[VSCode] Rate limit warning banner**: Shows usage percentage and reset time.
+- **Stats screenshot speed**: Ctrl+S in `/stats` now works in all builds and is 16× faster.
+- **Bug fixes**: Voice push-to-talk, `Ctrl+U` kill-to-line-start, null chord unbinding, mouse events in transcript search, workflow subagent API 400 errors, emoji background color, `Edit(.claude)` permission sticking, large file attachment hang, MCP tool/resource cache leak on reconnect, partial clone repository startup (Scalar/GVFS), IME composition/CJK input, transient macOS keychain errors, cold-start race with core tool deferral.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **New `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`**: Set to `1` to strip Anthropic and cloud provider credentials from subprocess environments (Bash tool, hooks, MCP stdio servers). The parent Claude process retains credentials; child processes cannot read them, reducing prompt injection exposure. `claude-code-action` sets this automatically when `allowed_non_write_users` is configured.
+---
 
-  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
+### Plugin Marketplace URL Update
+
+- **`code-review` plugin reference updated**: The install command for the `code-review` plugin changed from `claude-code-marketplace` to `claude-plugins-official` in both the CLI reference and the `/review` deprecation notice.
+  > `claude plugin install code-review@claude-plugins-official`
+  - *Implication*: Existing install commands referencing `claude-code-marketplace` for `code-review` are outdated. The GitHub URL also changed to `github.com/anthropics/claude-plugins-official`.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md), [Commands](https://code.claude.com/docs/en/commands.md)
 
 ---
 
 ## Notable Details
 
-- **Changelog entries removed**: Two recent changelog entries were removed from `changelog.md`: `disableDeepLinkRegistration` (setting to prevent `claude-cli://` protocol handler registration) and transcript search (press `/` in transcript mode to search, `n`/`N` to step through matches). This may indicate these features were rolled back or consolidated differently before the public release.
-
-- **`CwdChanged` `watchPaths` output controls `FileChanged` watch list**: The two new hook events are designed to work together. A `CwdChanged` hook can return a fresh `watchPaths` array to reset which files `FileChanged` monitors when entering a new directory — important for tools like `direnv` where the relevant files change per-directory. Returning an empty array clears the dynamic list.
-
-- **`FileChanged` matcher serves dual purpose**: Unlike other hook matchers that are purely filters, the `FileChanged` matcher both *configures* which files to watch (setting up the file system watcher) and *filters* which hooks run when a change occurs.
-
-- **Plugin `userConfig` sensitive values and keychain limits**: Plugin-declared sensitive config values go to the system keychain (or `~/.claude/.credentials.json` as fallback), which is shared with OAuth tokens and has an approximately 2 KB total limit. Plugin authors should keep sensitive values small.
-
-- **`allowedChannelPlugins` requires `channelsEnabled: true`**: Setting `allowedChannelPlugins` alone has no effect; `channelsEnabled` must be `true`. An empty `allowedChannelPlugins` array still allows `--dangerously-load-development-channels` to bypass it for local testing.
-
-- **Settings page restructured with scopes section**: `settings.md` gained a prominent "Configuration scopes" section documenting the four-tier hierarchy (Managed → Command line → Local → Project → User), with a "What uses scopes" table mapping features like subagents, MCP servers, and plugins to their file locations per scope.
+- The `env-vars.md` change (+119/-109) is primarily a formatting reflow — column separator widths were widened to accommodate longer new variable names (`ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES`). Net new variables: `CLAUDE_CODE_USE_POWERSHELL_TOOL` and the nine `ANTHROPIC_DEFAULT_*_MODEL_{NAME,DESCRIPTION,SUPPORTED_CAPABILITIES}` vars.
+- `setup.md` code blocks gained duplicate `theme={null}` attributes (a doc tooling artifact, not a functional change), plus a new paragraph pointing Windows users to the PowerShell tool documentation.
+- The `plugins.md` change corrects the namespace example from `/greet:hello` to `/my-first-plugin:hello`, matching the actual plugin name used in the quickstart.
+- The v2.1.84 changelog entry also restores two items that were removed from the v2.1.83 entry in the prior diff: `disableDeepLinkRegistration` and transcript search — both now appear in 2.1.84 instead.
 
 ---
 
@@ -200,26 +126,18 @@ This update is dominated by two new hook events (`CwdChanged` and `FileChanged`)
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| `hooks.md` | Modified | +129/-52 | Added `CwdChanged` and `FileChanged` event reference sections with full schemas; updated matcher table, decision control table, and event type support table |
-| `plugins-reference.md` | Modified | +95/-45 | Added `userConfig` and `channels` manifest fields with schemas and examples |
-| `hooks-guide.md` | Modified | +88/-39 | Added "Reload environment when directory or files change" example section; updated hook events table |
-| `settings.md` | Modified | +66/-57 | Added Configuration scopes section with four-tier hierarchy and scope feature table |
-| `commands.md` | Modified | +67/-67 | Table reformatting; added `/loop` to bundled skills list; updated `/plan`, `/copy`, `/status` descriptions |
-| `vs-code.md` | Modified | +25/-0 | Added "Launch a VS Code tab from other tools" section with URI handler documentation |
-| `channels.md` | Modified | +27/-6 | Added `allowedChannelPlugins` enterprise setting section; restructured enterprise controls table |
-| `memory.md` | Modified | +19/-5 | Added AGENTS.md interop section |
-| `interactive-mode.md` | Modified | +14/-4 | Updated keybindings (`Ctrl+X Ctrl+K`, `Ctrl+X Ctrl+E`, `Option+O`); added transcript viewer shortcuts; clarified background task output mechanism |
-| `keybindings.md` | Modified | +14/-12 | Minor updates to keybinding action table |
-| `cli-reference.md` | Modified | +18/-17 | Added `claude plugin` as a top-level command |
-| `sub-agents.md` | Modified | +9/-1 | Minor documentation updates |
-| `env-vars.md` | Modified | +3/-1 | Added `CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK` and `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`; updated `CLAUDE_ENV_FILE` description |
-| `monitoring-usage.md` | Modified | +3/-2 | Minor updates |
-| `sandboxing.md` | Modified | +2/-0 | Minor additions |
-| `channels-reference.md` | Modified | +1/-1 | Added note that Team/Enterprise admins can use `allowedChannelPlugins` as alternative to official submission |
-| `features-overview.md` | Modified | +1/-1 | Fixed anchor link for `.claude/rules/` |
-| `skills.md` | Modified | +1/-1 | Minor update |
-| `tools-reference.md` | Modified | +1/-1 | Minor update |
-| `changelog.md` | Modified | +0/-2 | Removed two changelog entries (`disableDeepLinkRegistration` and transcript search) |
+| changelog.md | Modified | +45/-0 | Added v2.1.84 release entry (March 26, 2026) |
+| tools-reference.md | Modified | +37/-0 | New PowerShell tool section with enable instructions, shell selection, and preview limitations |
+| env-vars.md | Modified | +119/-109 | Added `CLAUDE_CODE_USE_POWERSHELL_TOOL` and 9 new `ANTHROPIC_DEFAULT_*_MODEL_*` vars; column formatting reflow |
+| model-config.md | Modified | +35/-0 | New "Customize pinned model display and capabilities" section for third-party providers |
+| hooks.md | Modified | +40/-12 | Added `shell` hook field, HTTP support for `WorktreeCreate`, Windows PowerShell section, corrected hook type support table |
+| skills.md | Modified | +14/-13 | Added `shell` frontmatter field; column formatting reflow |
+| keybindings.md | Modified | +8/-6 | Added `footer:up` and `footer:down` keybinding actions |
+| setup.md | Modified | +7/-5 | Added PowerShell tool reference for Windows; code block attribute cleanup |
+| settings.md | Modified | +1/-0 | Added `defaultShell` setting |
+| cli-reference.md | Modified | +1/-1 | Updated `code-review` plugin install example to `claude-plugins-official` |
+| commands.md | Modified | +1/-1 | Updated `/review` deprecation URL to `claude-plugins-official` |
+| plugins.md | Modified | +1/-1 | Fixed namespace example from `/greet:hello` to `/my-first-plugin:hello` |
 
 ---
 
