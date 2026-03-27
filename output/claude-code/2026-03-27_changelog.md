@@ -2,62 +2,69 @@
 
 ## Summary
 
-A new interactive context window visualization page was added, and MCP Tool Search behavior was updated from threshold-based to always-on by default. Several pages received cross-reference links to the new visualization, and a `.worktreeinclude` file feature for copying gitignored files into worktrees was documented.
+This update adds a new interactive `.claude` directory explorer page, documents the `2.1.85` release with 25+ fixes and improvements, expands the Code Review page with a new "Check run output" section, and clarifies that `OTEL_LOG_TOOL_DETAILS=1` is now required to emit `tool_parameters` for all tool types (including Bash) in OpenTelemetry `tool_result` events.
 
 ## Significant Changes
 
 ### Features
 
-- **New interactive context window visualization**: A new `context-window.md` page provides a step-by-step animated simulation of how Claude Code's context window fills during a real session, showing what loads automatically (system prompt, CLAUDE.md, auto memory, MCP tool names, skill descriptions), what each file read costs, when path-scoped rules fire, and how subagents keep heavy work isolated.
-  > "An interactive simulation of how Claude Code's context window fills during a session. See what loads automatically, what each file read costs, and when rules and hooks fire."
-  - *Implication*: Developers can now see concrete token counts for each context source and understand exactly what Claude sees vs. what appears in the terminal.
-  - *Source*: [Explore the context window](https://code.claude.com/docs/en/context-window.md)
+- **Code Review: Check run output section**: A new `### Check run output` section documents the **Claude Code Review** check run that appears alongside CI checks on GitHub PRs. It describes the structured findings summary, per-line annotations in the Files changed tab, and a machine-readable severity footer that CI workflows can parse to gate merges.
+  > "The check run always completes with a neutral conclusion so it never blocks merging through branch protection rules. If you want to gate merges on Code Review findings, read the severity breakdown from the check run output in your own CI. The last line of the Details text is a machine-readable comment your workflow can parse with `gh` and jq:"
+  > ```bash
+  > gh api repos/OWNER/REPO/check-runs/CHECK_RUN_ID \
+  >   --jq '.output.text | split("bughunter-severity: ")[1] | split(" -->")[0] | fromjson'
+  > ```
+  - *Implication*: Teams that want to enforce merge gates based on Code Review severity can now do so by parsing the `bughunter-severity` JSON object. The `normal` key holds the count of Important (red) findings; a non-zero value signals a bug worth fixing before merge.
+  - *Source*: [Code Review](https://code.claude.com/docs/en/code-review.md)
 
-- **`.worktreeinclude` file for copying gitignored files to worktrees**: A new workflow was documented for automatically copying gitignored files (such as `.env`, `.env.local`, `config/secrets.json`) into new git worktrees. Place a `.worktreeinclude` file in the project root using `.gitignore` syntax to specify which files to copy.
-  > "Git worktrees are fresh checkouts, so they don't include untracked files like `.env` or `.env.local` from your main repository. To automatically copy these files when Claude creates a worktree, add a `.worktreeinclude` file to your project root."
-  > "This applies to worktrees created with `--worktree`, subagent worktrees, and parallel sessions in the desktop app."
-  - *Implication*: Eliminates the manual step of copying secrets and environment configs each time a new parallel session or worktree is created.
-  - *Source*: [Common workflows](https://code.claude.com/docs/en/common-workflows.md)
+- **v2.1.85 release notes added**: The changelog page received 33 new lines covering the March 26, 2026 release. Key items include:
+  - `CLAUDE_CODE_MCP_SERVER_NAME` and `CLAUDE_CODE_MCP_SERVER_URL` env vars in MCP `headersHelper` scripts, enabling one helper to serve multiple servers
+  - Conditional `if` field for hooks using permission rule syntax (e.g., `Bash(git *)`) to filter when hooks run, reducing process spawning overhead
+  - Timestamp markers in transcripts when scheduled tasks (`/loop`, `CronCreate`) fire
+  - Deep link queries (`claude-cli://open?q=…`) now support up to 5,000 characters
+  - MCP OAuth now follows RFC 9728 Protected Resource Metadata discovery
+  - Plugins blocked by organization policy (`managed-settings.json`) can no longer be installed, enabled, or seen in marketplace views
+  - PreToolUse hooks can satisfy `AskUserQuestion` by returning `updatedInput` alongside `permissionDecision: "allow"`, enabling headless integrations
+  - `tool_parameters` in OpenTelemetry `tool_result` events are now gated behind `OTEL_LOG_TOOL_DETAILS=1`
+  - Scroll performance improved by replacing WASM yoga-layout with pure TypeScript in large transcripts
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-### Configuration
+### Monitoring / Observability
 
-- **MCP Tool Search is now always-on by default**: The previous behavior loaded all MCP tool schemas at session start and only deferred them when they exceeded 10% of the context window. Tool search now defers schemas unconditionally — only tool names enter context at startup, with full schemas loaded on demand when Claude uses a specific tool.
-  > "Tool search is enabled by default. MCP tools are deferred rather than loaded into context upfront, and Claude uses a search tool to discover relevant ones when a task needs them. Only the tools Claude actually uses enter context."
-  > "If you prefer threshold-based loading, set `ENABLE_TOOL_SEARCH=auto` to load schemas upfront when they fit within 10% of the context window and defer only the overflow."
-  - *Implication*: Adding more MCP servers now has near-zero context cost at idle. The old opt-in threshold behavior (`ENABLE_TOOL_SEARCH=auto`) is still available for those who prefer it.
-  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
+- **`OTEL_LOG_TOOL_DETAILS` now gates `tool_parameters` for all tools**: Previously, `tool_parameters` was described as always present for Bash tools, with only MCP and Skill sub-fields conditionally gated. The documentation now consistently puts the entire `tool_parameters` field behind `OTEL_LOG_TOOL_DETAILS=1` for all tool types.
+  > Before: `` `tool_parameters`: JSON string containing tool-specific parameters (when available) ``
+  > After: `` `tool_parameters` (when `OTEL_LOG_TOOL_DETAILS=1`): JSON string containing tool-specific parameters ``
+  - *Implication*: If your telemetry pipeline relies on `tool_parameters` (including Bash command details) appearing in `tool_result` events without setting `OTEL_LOG_TOOL_DETAILS=1`, that data will no longer be present. Set the env var explicitly to retain it.
+  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
 
-- **Subagent memory limit clarified as 200 lines or 25KB (whichever comes first)**: The memory loading limit for subagents with persistent memory enabled was documented imprecisely as "first 200 lines". The spec now matches the behavior described elsewhere for auto memory.
-  > "The subagent's system prompt also includes the first 200 lines or 25KB of `MEMORY.md` in the memory directory, whichever comes first, with instructions to curate `MEMORY.md` if it exceeds that limit."
-  - *Implication*: Large MEMORY.md files with short lines may hit the 25KB cap before the 200-line limit; subagents should keep memory files concise to stay within bounds.
-  - *Source*: [Create custom subagents](https://code.claude.com/docs/en/sub-agents.md)
+- **`OTEL_LOG_TOOL_DETAILS` description expanded in config reference table**: The variable's description was updated to be more precise about what it gates.
+  > Before: "Enable logging of tool input arguments, MCP server/tool names, and skill names in tool events"
+  > After: "Enable logging of tool parameters (bash commands, MCP server/tool names, skill names) and tool input arguments in tool events"
+  - *Implication*: The updated wording makes explicit that bash commands are part of `tool_parameters`, not only MCP and skill identifiers.
+  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
+
+- **Security and privacy section rewritten**: The privacy note was consolidated to cover both `tool_parameters` and `tool_input` together under `OTEL_LOG_TOOL_DETAILS=1`.
+  > Before: Two separate bullets — one for Bash commands/file paths in `tool_parameters`, one for tool input arguments behind the flag.
+  > After: "Tool input arguments and parameters are not logged by default. To include them, set `OTEL_LOG_TOOL_DETAILS=1`. When enabled, tool_result events include a `tool_parameters` attribute (bash commands, MCP server/tool names, skill names) and a `tool_input` attribute (file paths, URLs, search patterns, and other arguments)."
+  - *Implication*: Both potentially sensitive attributes are now described together, making the privacy posture and the single flag that controls them easier to understand.
+  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
 
 ## New Pages
 
-- **context-window.md** — Interactive animated visualization of Claude Code's context window filling during a session. Covers all auto-loaded startup content (system prompt, CLAUDE.md, auto memory, MCP tool names, skill descriptions), file read costs, path-scoped rule triggers, hook output, subagent isolation, and the effect of `/compact`. Includes `What the timeline shows` and `Check your own session` sections. [View](https://code.claude.com/docs/en/context-window.md)
+- **claude-directory.md** — An interactive explorer for the `.claude` directory structure covering both project-level (`.claude/`) and global (`~/.claude/`) files. Documents `CLAUDE.md`, `settings.json`, `settings.local.json`, `.mcp.json`, `rules/`, `skills/`, `commands/`, `agents/`, `output-styles/`, `agent-memory/`, `keybindings.json`, and auto memory under `~/.claude/projects/`. Each entry includes load timing, tips, and inline examples. [View](https://code.claude.com/docs/en/claude-directory.md)
 
 ## Notable Details
 
-- **MCP context cost table updated**: The features overview table previously read "All tool definitions and schemas / Every request" for MCP servers. It now reads "Tool names; full schemas on demand / Low until a tool is used" — directly reflecting the always-on deferred loading behavior.
-- **Context-loading diagram updated**: The `context-loading.svg` image on `features-overview.md` was replaced with a new version; the alt text changed from "CLAUDE.md and MCP load at session start and stay in every request" to "CLAUDE.md loads at session start... MCP tool names load at start with full schemas deferred until use."
-- **Cross-reference links added to new context-window page**: Four pages (`best-practices.md`, `features-overview.md`, `how-claude-code-works.md`, `memory.md`, `sub-agents.md`) received added links to the new `/en/context-window` visualization — all in context-management-adjacent sections.
-- **Desktop parallel sessions page updated**: A cross-reference to `.worktreeinclude` was added to the desktop parallel sessions section alongside the existing worktree documentation.
-- **costs.md MCP section simplified**: The bullet point explaining the `ENABLE_TOOL_SEARCH=auto:<N>` threshold override was removed. The section now just states that MCP tool definitions are deferred by default and recommends disabling unused servers.
+- The `tool_input` field description in the `tool_result` event was simplified: the explicit "over 512 characters" per-value truncation threshold was removed in favor of "long strings truncated," while the overall ~4 K payload cap remains.
+- The `@claude review once` command is now documented more prominently in the Code Review page — it starts a single review without subscribing the PR to future push-triggered reviews, useful for long-running PRs with frequent pushes.
+- The `claude-directory.md` page embeds a full React component (`ClaudeExplorer`) rendered as JSX source rather than plain markdown — it is an interactive UI component, not a static doc page.
+- Total tracked documentation pages increased from 71 to 72 with the addition of `claude-directory.md`.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| context-window.md | New | +1596 | Interactive context window visualization with animated session timeline |
-| common-workflows.md | Modified | +14/-0 | Added "Copy gitignored files to worktrees" section with `.worktreeinclude` |
-| features-overview.md | Modified | +5/-5 | Updated MCP context cost table and diagram; added context-window link |
-| mcp.md | Modified | +3/-6 | Rewrote Tool Search section: always-on by default, not threshold-based |
-| how-claude-code-works.md | Modified | +3/-1 | Updated MCP context description; added context-window link |
-| costs.md | Modified | +2/-3 | Updated MCP overhead section for deferred-by-default tool loading |
-| sub-agents.md | Modified | +2/-2 | Added context-window link; fixed memory limit to "200 lines or 25KB" |
-| desktop.md | Modified | +2/-0 | Added `.worktreeinclude` cross-reference in parallel sessions section |
-| memory.md | Modified | +1/-1 | Added context-window visualization link in "Write effective instructions" |
-| best-practices.md | Modified | +1/-1 | Added context-window interactive walkthrough link |
-
----
-*Generated from Claude Code CLI documentation changes detected on 2026-03-27*
+| claude-directory.md | New | +1432 / -0 | Interactive explorer for `.claude` directory covering all project and global config files |
+| changelog.md | Modified | +33 / -0 | Added v2.1.85 release notes (25+ fixes and improvements, March 26 2026) |
+| code-review.md | Modified | +37 / -7 | New "Check run output" section: check run details, annotations, and machine-readable severity JSON |
+| monitoring-usage.md | Modified | +26 / -26 | `tool_parameters` now gated behind `OTEL_LOG_TOOL_DETAILS=1` for all tools; config table and privacy section updated |
