@@ -2,69 +2,91 @@
 
 ## Summary
 
-This update adds a new interactive `.claude` directory explorer page, documents the `2.1.85` release with 25+ fixes and improvements, expands the Code Review page with a new "Check run output" section, and clarifies that `OTEL_LOG_TOOL_DETAILS=1` is now required to emit `tool_parameters` for all tool types (including Bash) in OpenTelemetry `tool_result` events.
+Nine pages were modified in this update (240 additions, 136 deletions), with no new or removed pages. The largest changes land in the hooks system: the reference page gained a complete hook-resolution walkthrough and documentation for the new `if` field for per-handler filtering, while the hooks guide adds a corresponding new section. The settings page was significantly revised with several new settings entries and a Windows managed-settings migration notice tied to v2.1.75.
 
 ## Significant Changes
 
-### Features
+### Hooks
 
-- **Code Review: Check run output section**: A new `### Check run output` section documents the **Claude Code Review** check run that appears alongside CI checks on GitHub PRs. It describes the structured findings summary, per-line annotations in the Files changed tab, and a machine-readable severity footer that CI workflows can parse to gate merges.
-  > "The check run always completes with a neutral conclusion so it never blocks merging through branch protection rules. If you want to gate merges on Code Review findings, read the severity breakdown from the check run output in your own CI. The last line of the Details text is a machine-readable comment your workflow can parse with `gh` and jq:"
-  > ```bash
-  > gh api repos/OWNER/REPO/check-runs/CHECK_RUN_ID \
-  >   --jq '.output.text | split("bughunter-severity: ")[1] | split(" -->")[0] | fromjson'
+- **New `if` field for per-hook-handler filtering**: Hook handlers now support an `if` field using permission rule syntax to filter which tool calls spawn a given handler. Unlike `matcher` (which filters at the matcher-group level by tool name), `if` evaluates the tool name and arguments together, allowing finer-grained process-spawn avoidance.
+  > "`if`: Permission rule syntax to filter when this hook runs, such as `'Bash(git *)'` or `'Edit(*.ts)'`. The hook only spawns if the tool call matches the pattern. Only evaluated on tool events: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, and `PermissionRequest`. On other events, a hook with `if` set never runs."
+  - *Implication*: Developers can now skip spawning a hook process entirely when the command arguments don't match, reducing overhead for hooks that should only run on specific patterns (for example, blocking `rm -rf` without spawning a script for every `rm` call).
+  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md)
+
+- **Hook resolution walkthrough added to reference**: The hooks reference page added a step-by-step "How a hook resolves" section with an annotated diagram (`hook-resolution.svg`) tracing the full sequence: event fires → matcher checks → `if` condition checks → handler runs → Claude Code acts on result.
+  > "The `if` condition `'Bash(rm *)'` matches because the command starts with `rm`, so this handler spawns. If the command had been `npm test`, the `if` check would fail and `block-rm.sh` would never run, avoiding the process spawn overhead. The `if` field is optional; without it, every handler in the matched group runs."
+  - *Implication*: The walkthrough clarifies the two-level filtering (matcher then `if`) and when hooks do and do not fire.
+  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md)
+
+- **Hooks guide: new section on `if` field filtering**: The hooks guide added a new subsection covering the `if` field, with examples showing how it works in combination with `matcher`.
+  - *Implication*: New users setting up hooks via the guide will now see `if` field filtering presented as part of the standard workflow.
+  - *Source*: [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md)
+
+### Configuration / Settings
+
+- **`showClearContextOnPlanAccept` setting added**: A new boolean setting controls whether the "clear context" option appears on the plan accept screen. It defaults to `false`, meaning the option is now hidden by default.
+  > "`showClearContextOnPlanAccept` — Show the 'clear context' option on the plan accept screen. Defaults to `false`. Set to `true` to restore the option."
+  - *Implication*: Users who relied on clearing context after accepting a plan must now opt back in by setting this to `true`.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+
+- **`feedbackSurveyRate` setting added**: A new setting controls the probability (0–1) that a session quality survey appears after a session ends.
+  > "`feedbackSurveyRate` — Probability (0–1) that the session quality survey appears when eligible. Set to `0` to suppress entirely. Useful when using Bedrock, Vertex, or Foundry where the default sample rate does not apply."
+  - *Implication*: Bedrock, Vertex, and Foundry deployments can now explicitly suppress or tune survey frequency.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+
+- **`fastModePerSessionOptIn` setting added**: When `true`, fast mode does not persist across sessions and users must re-enable it with `/fast` each session.
+  > "`fastModePerSessionOptIn` — When `true`, fast mode does not persist across sessions. Each session starts with fast mode off, requiring users to enable it with `/fast`. The user's fast mode preference is still saved."
+  - *Implication*: Administrators can enforce explicit per-session opt-in to fast mode, useful for cost control.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+
+- **`spinnerTipsOverride` setting added**: Organizations can now replace or supplement built-in spinner tips with custom strings.
+  > "`spinnerTipsOverride` — Override spinner tips with custom strings. `tips`: array of tip strings. `excludeDefault`: if `true`, only show custom tips; if `false` or absent, custom tips are merged with built-in tips."
+  - *Implication*: Enterprise deployments can use the spinner tip area to surface organization-specific guidance.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+
+- **Legacy Windows managed settings path deprecated as of v2.1.75**: A new warning block in the settings page documents a required migration for Windows administrators.
+  > "The legacy Windows path `C:\ProgramData\ClaudeCode\managed-settings.json` is no longer supported as of v2.1.75. Administrators who deployed settings to that location must migrate files to `C:\Program Files\ClaudeCode\managed-settings.json`."
+  - *Implication*: Windows enterprise deployments on v2.1.75+ that have not migrated will silently stop receiving managed settings.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+
+### Directory Explorer
+
+- **"API credentials" example added to `.worktreeinclude` documentation**: The `.claude` directory explorer page added a new section in the `.worktreeinclude` example showing `config/secrets.json` listed under an `# API credentials` comment.
   > ```
-  - *Implication*: Teams that want to enforce merge gates based on Code Review severity can now do so by parsing the `bughunter-severity` JSON object. The `normal` key holds the count of Important (red) findings; a non-zero value signals a bug worth fixing before merge.
-  - *Source*: [Code Review](https://code.claude.com/docs/en/code-review.md)
+  > # API credentials
+  > config/secrets.json
+  > ```
+  - *Implication*: The explorer now explicitly documents that `.worktreeinclude` supports credential file patterns alongside the pre-existing `.env` example.
+  - *Source*: [Explore the .claude directory](https://code.claude.com/docs/en/claude-directory.md)
 
-- **v2.1.85 release notes added**: The changelog page received 33 new lines covering the March 26, 2026 release. Key items include:
-  - `CLAUDE_CODE_MCP_SERVER_NAME` and `CLAUDE_CODE_MCP_SERVER_URL` env vars in MCP `headersHelper` scripts, enabling one helper to serve multiple servers
-  - Conditional `if` field for hooks using permission rule syntax (e.g., `Bash(git *)`) to filter when hooks run, reducing process spawning overhead
-  - Timestamp markers in transcripts when scheduled tasks (`/loop`, `CronCreate`) fire
-  - Deep link queries (`claude-cli://open?q=…`) now support up to 5,000 characters
-  - MCP OAuth now follows RFC 9728 Protected Resource Metadata discovery
-  - Plugins blocked by organization policy (`managed-settings.json`) can no longer be installed, enabled, or seen in marketplace views
-  - PreToolUse hooks can satisfy `AskUserQuestion` by returning `updatedInput` alongside `permissionDecision: "allow"`, enabling headless integrations
-  - `tool_parameters` in OpenTelemetry `tool_result` events are now gated behind `OTEL_LOG_TOOL_DETAILS=1`
-  - Scroll performance improved by replacing WASM yoga-layout with pure TypeScript in large transcripts
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### MCP
 
-### Monitoring / Observability
-
-- **`OTEL_LOG_TOOL_DETAILS` now gates `tool_parameters` for all tools**: Previously, `tool_parameters` was described as always present for Bash tools, with only MCP and Skill sub-fields conditionally gated. The documentation now consistently puts the entire `tool_parameters` field behind `OTEL_LOG_TOOL_DETAILS=1` for all tool types.
-  > Before: `` `tool_parameters`: JSON string containing tool-specific parameters (when available) ``
-  > After: `` `tool_parameters` (when `OTEL_LOG_TOOL_DETAILS=1`): JSON string containing tool-specific parameters ``
-  - *Implication*: If your telemetry pipeline relies on `tool_parameters` (including Bash command details) appearing in `tool_result` events without setting `OTEL_LOG_TOOL_DETAILS=1`, that data will no longer be present. Set the env var explicitly to retain it.
-  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
-
-- **`OTEL_LOG_TOOL_DETAILS` description expanded in config reference table**: The variable's description was updated to be more precise about what it gates.
-  > Before: "Enable logging of tool input arguments, MCP server/tool names, and skill names in tool events"
-  > After: "Enable logging of tool parameters (bash commands, MCP server/tool names, skill names) and tool input arguments in tool events"
-  - *Implication*: The updated wording makes explicit that bash commands are part of `tool_parameters`, not only MCP and skill identifiers.
-  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
-
-- **Security and privacy section rewritten**: The privacy note was consolidated to cover both `tool_parameters` and `tool_input` together under `OTEL_LOG_TOOL_DETAILS=1`.
-  > Before: Two separate bullets — one for Bash commands/file paths in `tool_parameters`, one for tool input arguments behind the flag.
-  > After: "Tool input arguments and parameters are not logged by default. To include them, set `OTEL_LOG_TOOL_DETAILS=1`. When enabled, tool_result events include a `tool_parameters` attribute (bash commands, MCP server/tool names, skill names) and a `tool_input` attribute (file paths, URLs, search patterns, and other arguments)."
-  - *Implication*: Both potentially sensitive attributes are now described together, making the privacy posture and the single flag that controls them easier to understand.
-  - *Source*: [Monitoring](https://code.claude.com/docs/en/monitoring-usage.md)
-
-## New Pages
-
-- **claude-directory.md** — An interactive explorer for the `.claude` directory structure covering both project-level (`.claude/`) and global (`~/.claude/`) files. Documents `CLAUDE.md`, `settings.json`, `settings.local.json`, `.mcp.json`, `rules/`, `skills/`, `commands/`, `agents/`, `output-styles/`, `agent-memory/`, `keybindings.json`, and auto memory under `~/.claude/projects/`. Each entry includes load timing, tips, and inline examples. [View](https://code.claude.com/docs/en/claude-directory.md)
+- **Clearer `--` separator guidance for stdio server commands**: The MCP page was updated to more prominently explain that all `claude mcp add` options must come before the server name, and `--` separates the server name from the command passed to the MCP server.
+  > "All options (`--transport`, `--env`, `--scope`, `--header`) must come **before** the server name. The `--` (double dash) then separates the server name from the command and arguments that get passed to the MCP server."
+  - *Implication*: Reduces a common configuration error where server-level flags are misinterpreted as Claude CLI flags.
+  - *Source*: [Connect Claude Code to tools via MCP](https://code.claude.com/docs/en/mcp.md)
 
 ## Notable Details
 
-- The `tool_input` field description in the `tool_result` event was simplified: the explicit "over 512 characters" per-value truncation threshold was removed in favor of "long strings truncated," while the overall ~4 K payload cap remains.
-- The `@claude review once` command is now documented more prominently in the Code Review page — it starts a single review without subscribing the PR to future push-triggered reviews, useful for long-running PRs with frequent pushes.
-- The `claude-directory.md` page embeds a full React component (`ClaudeExplorer`) rendered as JSX source rather than plain markdown — it is an interactive UI component, not a static doc page.
-- Total tracked documentation pages increased from 71 to 72 with the addition of `claude-directory.md`.
+- The hooks reference `if` field documentation explicitly notes that on non-tool events (e.g., `SessionStart`, `Stop`), a hook handler with `if` set **never runs** — this is a silent no-op, not an error. Developers adding `if` conditions to non-tool event hooks will find those handlers inactive.
+- `showClearContextOnPlanAccept` defaults to `false`, which is a behavior change: the "clear context" option after plan acceptance was previously visible and is now hidden unless opted in.
+- The Windows managed settings migration (`C:\ProgramData` → `C:\Program Files`) is scoped to v2.1.75+. Installations below that version are unaffected but must plan for the migration.
+- `interactive-mode.md` lost exactly 4 lines with no additions and no new sections, consistent with removal of a deprecated note or shortcut entry.
+- `env-vars.md` had a single-line change (+1/-1), most likely a wording correction to an existing variable description rather than a new variable.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| claude-directory.md | New | +1432 / -0 | Interactive explorer for `.claude` directory covering all project and global config files |
-| changelog.md | Modified | +33 / -0 | Added v2.1.85 release notes (25+ fixes and improvements, March 26 2026) |
-| code-review.md | Modified | +37 / -7 | New "Check run output" section: check run details, annotations, and machine-readable severity JSON |
-| monitoring-usage.md | Modified | +26 / -26 | `tool_parameters` now gated behind `OTEL_LOG_TOOL_DETAILS=1` for all tools; config table and privacy section updated |
+| claude-directory.md | Modified | +48/-17 | Added "API credentials" section to `.worktreeinclude` example; expanded explorer entries |
+| hooks-guide.md | Modified | +33/-0 | New section documenting `if` field for per-handler filtering |
+| settings.md | Modified | +63/-59 | New settings: `showClearContextOnPlanAccept`, `feedbackSurveyRate`, `fastModePerSessionOptIn`, `spinnerTipsOverride`; Windows legacy path deprecation warning added |
+| hooks.md | Modified | +41/-20 | New hook resolution walkthrough with diagram; `if` field documented in common handler fields table |
+| monitoring-usage.md | Modified | +25/-25 | Content reorganized; equal additions/deletions indicate rewriting rather than net expansion |
+| mcp.md | Modified | +17/-8 | Clarified `--` separator for stdio server commands; plugin MCP section updated |
+| common-workflows.md | Modified | +12/-2 | Minor workflow step additions |
+| interactive-mode.md | Modified | +0/-4 | Removed content (deprecated note or shortcut entry) |
+| env-vars.md | Modified | +1/-1 | Single-line wording correction |
+
+---
+*Generated from Claude Code CLI documentation changes detected on 2026-03-27*
