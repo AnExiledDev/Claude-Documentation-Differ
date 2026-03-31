@@ -2,90 +2,89 @@
 
 ## Summary
 
-A new page covering GitHub Enterprise Server (GHES) support was added, along with CLI version 2.1.88 release notes. Several existing pages were updated to reflect that auto mode is now generally available on Team, Enterprise, and API plans (removing previous "rolling out shortly" language), and the web setup flow gained a terminal-based `/web-setup` command.
+A new "fullscreen rendering" research preview was introduced (opt-in via `CLAUDE_CODE_NO_FLICKER=1`, requires v2.1.88+) that eliminates terminal flicker, keeps memory usage flat, and adds mouse support. Supporting changes landed across env vars, terminal config, agent teams, code review troubleshooting, and the desktop setup guide, with minor hook debugging clarifications.
 
 ## Significant Changes
 
-### GitHub Enterprise Server Support (New Page)
+### Features
 
-- **New GHES documentation**: A dedicated page explains how to connect Claude Code to self-hosted GitHub Enterprise Server instances for web sessions, code review, and plugin marketplaces.
-  > "GitHub Enterprise Server (GHES) support lets your organization use Claude Code with repositories hosted on your self-managed GitHub instance instead of github.com. Once an admin connects your GHES instance, developers can run web sessions, get automated code reviews, and install plugins from internal marketplaces without any per-repository configuration."
-  - *Implication*: Teams and Enterprise plan customers with self-hosted GitHub can now use Claude Code on the web and Code Review without migrating to github.com.
-  - *Source*: [GitHub Enterprise Server](https://code.claude.com/docs/en/github-enterprise-server.md)
+- **Fullscreen Rendering (Research Preview)**: A new alternate rendering mode for the Claude Code CLI that uses the terminal's alternate screen buffer (like `vim` or `htop`) to eliminate flicker, keep memory usage flat in long conversations, and add mouse support. Enabled via `CLAUDE_CODE_NO_FLICKER=1`. Requires Claude Code v2.1.88 or later.
+  > "Fullscreen rendering is an alternative rendering path for the Claude Code CLI that eliminates flicker, keeps memory usage flat in long conversations, and adds mouse support. It draws the interface on the terminal's alternate screen buffer, like vim or htop, and only renders messages that are currently visible."
+  - *Implication*: Particularly useful in VS Code integrated terminal, tmux, and iTerm2 where scroll position jumping or screen flashing during tool output streaming is common.
+  - *Source*: [Fullscreen rendering](https://code.claude.com/docs/en/fullscreen.md)
 
-### Auto Mode Plan Availability
+### Configuration
 
-- **Auto mode now generally available on Enterprise and API plans**: Multiple pages previously described auto mode as available on "Team plans, with Enterprise and API support rolling out shortly." That language has been replaced with "Team, Enterprise, and API plans" throughout.
-  > "Auto mode is available on Team, Enterprise, and API plans. On Team and Enterprise, an admin must enable it in Claude Code admin settings before users can turn it on."
-  - *Implication*: Enterprise and API customers no longer need to wait; auto mode is live for all three plan types.
-  - *Source*: [Permission Modes](https://code.claude.com/docs/en/permission-modes.md), [CLI Reference](https://code.claude.com/docs/en/cli-reference.md), [Desktop](https://code.claude.com/docs/en/desktop.md), [VS Code](https://code.claude.com/docs/en/vs-code.md)
+- **Three new environment variables for fullscreen rendering**:
+  - `CLAUDE_CODE_NO_FLICKER=1` — Enables fullscreen rendering (the research preview itself).
+  - `CLAUDE_CODE_DISABLE_MOUSE=1` — Disables mouse capture within fullscreen rendering while retaining flicker-free rendering and flat memory. Restores the terminal's native copy-on-select behavior.
+  - `CLAUDE_CODE_SCROLL_SPEED` — Sets the mouse wheel scroll multiplier (1–20). Useful when terminals send one scroll event per physical notch without amplification (e.g., VS Code integrated terminal).
+    > "Set to 3 to match vim if your terminal sends one wheel event per notch without amplification"
+  - *Implication*: `CLAUDE_CODE_DISABLE_MOUSE=1` is the recommended escape hatch for SSH or tmux users who rely on native terminal text selection.
+  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
 
-### Auto Mode Prompt Injection Defense (Expanded Description)
+### Agent Teams
 
-- **Auto mode classifier description now includes prompt injection defense details**: The permission-modes page expanded the description of how the auto mode classifier protects against hostile content.
-  > "It blocks actions that escalate beyond the task scope, target infrastructure the classifier doesn't recognize as trusted, or appear to be driven by prompt injection: hostile instructions embedded in a file, web page, or tool result that attempt to redirect Claude toward actions you never asked for. The defense is layered: a server-side probe scans incoming tool results and flags suspicious content before Claude reads it, while the classifier itself is never shown tool results, so injected instructions cannot influence its approval decisions."
-  - *Implication*: The documentation now links to an [engineering deep dive](https://www.anthropic.com/engineering/claude-code-auto-mode) alongside the existing announcement post.
-  - *Source*: [Permission Modes](https://code.claude.com/docs/en/permission-modes.md)
+- **Subagent definitions usable as teammate types**: Teammates spawned in an agent team can now reference any subagent definition (from project, user, plugin, or CLI scope). The teammate inherits the subagent's system prompt, tools, and model, letting roles like `security-reviewer` be defined once and reused across both delegated subagents and team teammates.
+  > "To use a subagent definition, mention it by name when asking Claude to spawn the teammate: `Spawn a teammate using the security-reviewer agent type to audit the auth module.`"
+  - *Implication*: Reduces duplication when a role needs to work both as a subagent and as a parallel teammate in multi-agent workflows.
+  - *Source*: [Agent teams](https://code.claude.com/docs/en/agent-teams.md)
 
-### Web Setup — Terminal Path Added
+- **Team config is runtime state — do not hand-edit**: Documentation now explicitly warns that `~/.claude/teams/{team-name}/config.json` is overwritten on every state update and must not be pre-authored or edited manually.
+  > "The team config holds runtime state such as session IDs and tmux pane IDs, so don't edit it by hand or pre-author it: your changes are overwritten on the next state update."
+  - *Implication*: Also clarifies there is no project-level team config — a file like `.claude/teams/teams.json` in the project directory is not recognized by Claude Code.
+  - *Source*: [Agent teams](https://code.claude.com/docs/en/agent-teams.md)
 
-- **`/web-setup` command documented**: The "Getting started" section of Claude Code on the web now has two subsections: "From the browser" (existing flow) and "From the terminal" (new).
-  > "Run `/web-setup` inside Claude Code to connect GitHub using your local `gh` CLI credentials. The command syncs your `gh auth token` to Claude Code on the web, creates a default cloud environment, and opens claude.ai/code in your browser when it finishes."
-  - *Implication*: Developers already authenticated with the `gh` CLI can set up web sessions without going through the browser GitHub App flow; admins can disable this with a toggle at claude.ai/admin-settings/claude-code.
-  - *Source*: [Claude Code on the Web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+### Code Review
 
-### Model Configuration — Pinning the Default Model
+- **New Troubleshooting section**: Added guidance for two common failure modes: retriggering a failed or timed-out review, and locating findings that don't appear as inline PR comments.
+  > "The Re-run button in GitHub's Checks tab does not retrigger Code Review. Use the comment command or a new push instead."
+  - *Implication*: To retrigger, comment `@claude review once` on the PR. Findings that GitHub rejected as inline comments (e.g., on lines that moved) are still available in the check run Details, Files changed annotations, and the review body under **Additional findings**.
+  - *Source*: [Code review](https://code.claude.com/docs/en/code-review.md)
 
-- **Clarified that `model` setting is an initial selection, not enforcement**: The model-config page now explains that users can bypass a `model` setting by choosing "Default" in the picker, and adds `ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL` / `ANTHROPIC_DEFAULT_HAIKU_MODEL` env vars to the recommended control pattern.
-  > "The `model` setting is an initial selection, not enforcement. It sets which model is active when a session starts, but users can still open `/model` and pick Default, which resolves to the system default for their tier regardless of what `model` is set to."
-  - *Implication*: Organizations that need to pin a specific model version must also set the corresponding `ANTHROPIC_DEFAULT_*` env var, or users can silently get the latest release instead.
-  - *Source*: [Model Configuration](https://code.claude.com/docs/en/model-config.md)
+- **Annotations are independent of inline comments**: Clarified that the severity table and per-line annotations in the **Files changed** tab are written to the check run separately from inline review comments.
+  > "Annotations and the severity table are written to the check run independently of inline review comments, so they remain available even if GitHub rejects an inline comment on a line that moved."
+  - *Source*: [Code review](https://code.claude.com/docs/en/code-review.md)
 
-### Version 2.1.88 Release
+### Desktop App
 
-- **CLI 2.1.88 changelog entry added**: The changelog page records 30+ fixes and improvements for the March 30, 2026 release. Key items include:
-  - New `CLAUDE_CODE_NO_FLICKER=1` env var for flicker-free alt-screen rendering
-  - New `PermissionDenied` hook that fires after auto mode classifier denials, supporting `{retry: true}`
-  - Named subagents added to `@` mention typeahead suggestions
-  - `showThinkingSummaries: true` setting required to restore thinking summaries (now off by default in interactive sessions)
-  - Fixed prompt cache misses in long sessions from changing tool schema bytes
-  - Fixed `StructuredOutput` schema cache bug causing ~50% failure rate in multi-schema workflows
-  - Fixed PreToolUse/PostToolUse hooks not providing `file_path` as absolute path for Write/Edit/Read tools
-  - Multiple Windows, CJK/emoji, and rendering fixes
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Computer use setup flow restructured**: The enable instructions for computer use were rewritten as a three-step guide. A new first step explicitly requires updating to the latest Claude Desktop before proceeding.
+  > "Make sure you have the latest version of Claude Desktop. Download or update at claude.com/download, then restart the app."
+  - *Implication*: The page now also notes the feature requires macOS with a Pro or Max plan, and corrects the settings path from `Settings > Desktop app > General` to `Settings > General` (under **Desktop app**).
+  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
 
-### Scheduled Tasks — Minimum Cron Interval Clarified
+### Hooks
 
-- **Scheduled tasks now document a 1-hour minimum interval**: The web-scheduled-tasks page previously told users to "set a specific schedule" via `/schedule update`; it now adds that the minimum interval is 1 hour and that sub-hourly expressions (e.g., `*/30 * * * *`) are rejected.
-  - *Source*: [Web Scheduled Tasks](https://code.claude.com/docs/en/web-scheduled-tasks.md)
+- **`TaskCreated` exit code 2 behavior clarified**: The description changed from "Prevents the task from being created" to "Rolls back the task creation" — a semantic distinction indicating the task is created first, then rolled back, rather than blocked upfront.
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
+
+- **Hook debug output updated**: The `--debug` example output was simplified, and verbose hook matching details (matcher counts, query matching) are now surfaced via a separate env var rather than `Ctrl+O`.
+  > "For more granular hook matching details, set `CLAUDE_CODE_DEBUG_LOG_LEVEL=verbose` to see additional log lines such as hook matcher counts and query matching."
+  - *Implication*: `Ctrl+O` is no longer documented as toggling verbose hook output.
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
 
 ## New Pages
 
-- **github-enterprise-server.md** — Full admin and developer guide for connecting Claude Code to self-hosted GitHub Enterprise Server instances, including setup steps, GitHub App permissions, GHES plugin marketplace configuration, and troubleshooting. [View](https://code.claude.com/docs/en/github-enterprise-server.md)
+- **[fullscreen.md](https://code.claude.com/docs/en/fullscreen.md)** — Complete reference for the fullscreen rendering research preview: how to enable it, mouse support details, scroll shortcuts and keybinding customization, transcript mode with `less`-style search (`Ctrl+o`), tmux compatibility notes (including a warning against `tmux -CC` / iTerm2 integration mode), and how to disable mouse capture while keeping flicker-free rendering.
 
 ## Notable Details
 
-- The `claude-code-on-the-web.md` limitations section now notes that self-hosted GitHub Enterprise Server instances are supported for Teams and Enterprise plans, removing a previous implicit restriction to github.com only.
-- `network-config.md` added a note that GHES instances behind a firewall must allowlist Anthropic API IP addresses for clone and review operations to work.
-- `plugin-marketplaces.md` updated the `hostPattern` description to explicitly recommend this approach for GHES or self-hosted GitLab instances.
-- `code-review.md` added a cross-reference to the new GHES page for repositories on self-hosted GitHub instances.
+- The fullscreen rendering page notes a specific incompatibility: **iTerm2's tmux integration mode (`tmux -CC`)** causes mouse wheel and double-click to malfunction. Regular tmux inside iTerm2 (without `-CC`) is fine.
+- The `CLAUDE_CODE_SCROLL_SPEED` documentation suggests `3` as the value that matches `vim`'s default scroll behavior — a practical calibration hint for users migrating muscle memory from terminal text editors.
+- The sub-agents page received a one-line cross-reference note pointing to the new agent-teams subagent integration, keeping both pages mutually consistent.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| github-enterprise-server.md | New | +188 | GHES admin setup, developer workflow, plugin marketplace config, and troubleshooting |
-| changelog.md | Modified | +44/-0 | Added v2.1.88 release entry |
-| claude-code-on-the-web.md | Modified | +17/-1 | Added "From the terminal" `/web-setup` section; GHES noted in limitations |
-| model-config.md | Modified | +14/-6 | Clarified model setting enforcement; added env vars for pinning Default resolution |
-| permission-modes.md | Modified | +4/-4 | Auto mode available on Enterprise/API (no longer "rolling out"); expanded classifier description |
-| vs-code.md | Modified | +15/-15 | Updated auto mode plan requirement wording (table reformatting only) |
-| desktop.md | Modified | +7/-7 | Updated auto mode plan requirement in permission modes table |
-| cli-reference.md | Modified | +1/-1 | Updated `--enable-auto-mode` plan requirement |
-| network-config.md | Modified | +2/-0 | Added GHES firewall allowlist note |
-| code-review.md | Modified | +1/-1 | Added GHES cross-reference |
-| plugin-marketplaces.md | Modified | +1/-1 | Added GHES recommendation to hostPattern description |
-| web-scheduled-tasks.md | Modified | +1/-1 | Added 1-hour minimum interval and rejection of sub-hourly cron expressions |
+| fullscreen.md | New | +145 | Full reference for opt-in fullscreen rendering research preview |
+| code-review.md | Modified | +22/-1 | Added Troubleshooting section; clarified annotation independence |
+| desktop.md | Modified | +21/-5 | Restructured computer use setup as a step-by-step guide; corrected settings path |
+| agent-teams.md | Modified | +16/-0 | Added subagent-as-teammate feature; clarified team config is runtime state only |
+| hooks.md | Modified | +4/-5 | Clarified TaskCreated rollback behavior; updated debug instructions |
+| terminal-config.md | Modified | +4/-0 | Added "Reduce flicker and memory usage" section pointing to fullscreen rendering |
+| env-vars.md | Modified | +3/-0 | Added CLAUDE_CODE_NO_FLICKER, CLAUDE_CODE_DISABLE_MOUSE, CLAUDE_CODE_SCROLL_SPEED |
+| sub-agents.md | Modified | +2/-0 | Added cross-reference note: subagent definitions are usable in agent teams |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-03-31*
