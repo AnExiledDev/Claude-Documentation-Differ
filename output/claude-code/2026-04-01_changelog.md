@@ -121,3 +121,41 @@ Notable fixes in this release:
 ---
 
 *Generated from Claude Code CLI documentation changes detected on 2026-04-01*
+
+---
+
+# Claude Code Documentation Changes — 2026-04-01 (18:20 UTC update)
+
+## Summary
+
+Four pages were updated in a second batch with 10 additions and no deletions. Three installation pages (overview, quickstart, and setup) received identical Windows shell disambiguation guidance for the CMD install command. The plugin marketplaces page gained a note clarifying path resolution behavior for local marketplace sources when using git worktrees.
+
+## Significant Changes
+
+### Installation
+
+- **Windows CMD vs. PowerShell disambiguation**: A clarifying hint was added to the Windows CMD install block across three pages (overview, quickstart, and setup). Users who accidentally run the CMD command in a PowerShell session encounter the error `The token '&&' is not a valid statement separator`; the docs now identify this and redirect to the correct command.
+  > If you see `The token '&&' is not a valid statement separator`, you're in PowerShell, not CMD. Use the PowerShell command above instead. Your prompt shows `PS C:\` when you're in PowerShell.
+  - *Implication*: Addresses a common Windows onboarding stumbling block where users in PowerShell terminals receive a cryptic error running the CMD install command.
+  - *Source*: [Overview](https://code.claude.com/docs/en/overview.md), [Quickstart](https://code.claude.com/docs/en/quickstart.md), [Advanced Setup](https://code.claude.com/docs/en/setup.md)
+
+### Plugin Marketplaces
+
+- **Worktree and path resolution behavior for local marketplace sources**: A new note documents how relative `directory` or `file` source paths resolve when Claude Code is run from a git worktree, and confirms that marketplace state is a per-user (not per-project) file.
+  > If you use a local `directory` or `file` source with a relative path, the path resolves against your repository's main checkout. When you run Claude Code from a git worktree, the path still points at the main checkout, so all worktrees share the same marketplace location. Marketplace state is stored once per user in `~/.claude/plugins/known_marketplaces.json`, not per project.
+  - *Implication*: Teams using git worktrees with local plugin marketplaces now have documented confirmation that all worktrees share a single marketplace source. The `known_marketplaces.json` path (`~/.claude/plugins/known_marketplaces.json`) is explicitly documented for the first time.
+  - *Source*: [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces.md)
+
+## Notable Details
+
+- The Windows CMD clarification is word-for-word identical across all three pages where it appears, indicating a coordinated update.
+- The marketplace state file path (`~/.claude/plugins/known_marketplaces.json`) was not previously called out explicitly in the plugin marketplace page.
+
+## Changes by Page
+
+| Page | Type | Lines Changed | Summary |
+|------|------|---------------|---------|
+| `docs/claude-code/en/overview.md` | Modified | +2 / -0 | Added Windows CMD vs. PowerShell disambiguation hint |
+| `docs/claude-code/en/quickstart.md` | Modified | +2 / -0 | Added Windows CMD vs. PowerShell disambiguation hint |
+| `docs/claude-code/en/setup.md` | Modified | +2 / -0 | Added Windows CMD vs. PowerShell disambiguation hint |
+| `docs/claude-code/en/plugin-marketplaces.md` | Modified | +4 / -0 | Added note on local path resolution and worktree behavior |
