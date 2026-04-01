@@ -2,184 +2,122 @@
 
 ## Summary
 
-22 pages were modified across the Claude Code documentation, with no new or removed pages. The most substantive updates are a large expansion of the environment variables reference (~62 net new lines), clarification of what `--add-dir` does and does not configure, new tooling reference sections for LSP behavior and tool discovery, new CLI flags, and refined guidance on hooks and managed settings precedence. The upstream changelog entry for version 2.1.88 was removed from the docs changelog (it has now scrolled off the visible top of the page).
+Two documentation pages were updated with no new or removed pages. The Claude Code changelog received the full v2.1.89 release notes (55 lines added), documenting new hook features, several behavior changes, and approximately 30 bug fixes. The Amazon Bedrock troubleshooting page gained two new sections covering SSO authentication loop issues and region configuration problems.
+
+---
 
 ## Significant Changes
 
-### CLI Flags
+### New CLI Features (v2.1.89)
 
-- **`--agent-teams` flag added**: A new explicit flag `--agent-teams` enables the experimental agent teams feature, equivalent to setting `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. This makes `SendMessage`, `TeamCreate`, and `TeamDelete` tools available without setting the environment variable.
-  > `--agent-teams` Enable experimental [agent teams](/en/agent-teams). Makes the `SendMessage`, `TeamCreate`, and `TeamDelete` tools available.
-  - *Implication*: Teams using agent teams in scripts can now enable the feature via a flag rather than an env var.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **`defer` permission decision in `PreToolUse` hooks**: Headless sessions can now pause at a tool call and resume with `-p --resume`, allowing the hook to re-evaluate rather than requiring a binary allow/deny at hook time.
+  > `Added "defer" permission decision to PreToolUse hooks — headless sessions can pause at a tool call and resume with -p --resume to have the hook re-evaluate`
+  - *Implication*: Enables more sophisticated headless automation workflows where tool approval requires external input or async logic.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`--debug-file <path>` flag added**: Writes debug logs to a specific file path and implicitly enables debug mode in one step. Takes precedence over `CLAUDE_CODE_DEBUG_LOGS_DIR`.
-  > Takes precedence over `CLAUDE_CODE_DEBUG_LOGS_DIR`
-  - *Implication*: Simplifies debug log capture in CI or scripted environments — no need to separately enable `--debug`.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **`PermissionDenied` hook event**: A new hook fires after auto mode classifier denials. Returning `{retry: true}` from this hook instructs the model to retry the denied operation.
+  > `Added PermissionDenied hook that fires after auto mode classifier denials — return {retry: true} to tell the model it can retry`
+  - *Implication*: Gives hook authors the ability to intercept and conditionally unblock auto-mode denials programmatically.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`--replay-user-messages` flag added**: Re-emits user messages from stdin back on stdout for acknowledgment. Requires `--print`, `--input-format stream-json`, `--output-format stream-json`, and `--verbose`.
-  - *Implication*: Useful for SDK integrations that need to confirm receipt of user messages in the stream.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **Flicker-free rendering opt-in**: New `CLAUDE_CODE_NO_FLICKER=1` environment variable enables flicker-free alt-screen rendering with virtualized scrollback.
+  - *Implication*: Useful for terminal environments prone to rendering artifacts; opt-in rather than default to avoid regressions across terminal types.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`--include-partial-messages` requirement tightened**: Now also requires `--verbose` in addition to `--print` and `--output-format stream-json` (previously only required the latter two).
-  > Requires `--print`, `--output-format stream-json`, and `--verbose`
-  - *Implication*: Scripts using `--include-partial-messages` without `--verbose` will now need to add that flag.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **`MCP_CONNECTION_NONBLOCKING=true` for `-p` mode**: Skips the MCP connection wait entirely in non-interactive mode. `--mcp-config` server connections are now also capped at 5 seconds instead of blocking on the slowest server.
+  - *Implication*: Reduces startup latency in scripted/headless usage where MCP server availability is not guaranteed.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`--add-dir` description clarified**: The description now explicitly states that `--add-dir` grants file access but most `.claude/` configuration is not discovered from added directories.
-  > Add additional working directories for Claude to read and edit files. Grants file access; most `.claude/` configuration is [not discovered] from these directories.
-  - *Implication*: This is a documentation-only change; behavior is unchanged, but users expecting hooks or subagents from `--add-dir` paths will now see a clear explanation.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **Named subagents in `@` mention typeahead**: Subagent names now appear in `@`-mention suggestions alongside files and MCP resources.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-### Environment Variables
+- **`TaskCreated` hook event documented**: The `TaskCreated` hook event and its blocking behavior are now officially documented.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-The env vars reference gained approximately 30 new entries and updated descriptions on ~15 existing ones. Key additions:
+### Behavior Changes (v2.1.89)
 
-- **`ANTHROPIC_BEDROCK_BASE_URL`** and **`ANTHROPIC_VERTEX_BASE_URL`**: Override the endpoint URL for Bedrock and Vertex respectively, enabling LLM gateway routing for both providers.
-- **`ANTHROPIC_BETAS`**: Comma-separated list of additional `anthropic-beta` header values, and unlike the `--betas` flag, this works with all auth methods including Claude.ai subscriptions.
-- **`API_TIMEOUT_MS`**: Controls API request timeout (default: 600000ms / 10 minutes).
-- **`CLAUDE_CODE_OAUTH_REFRESH_TOKEN`** / **`CLAUDE_CODE_OAUTH_TOKEN`** / **`CLAUDE_CODE_OAUTH_SCOPES`**: Enable non-interactive OAuth authentication, useful for provisioning automated environments.
-- **`CLAUDE_CODE_DEBUG_LOGS_DIR`** and **`CLAUDE_CODE_DEBUG_LOG_LEVEL`**: Fine-grained debug log configuration. Note: `CLAUDE_CODE_DEBUG_LOGS_DIR` sets a file path (not a directory) and requires debug mode to be separately enabled.
-- **`CLAUDE_CODE_RESUME_INTERRUPTED_TURN`**: For SDK mode; automatically resumes if the previous session ended mid-turn.
-- **`CLAUDE_ENABLE_STREAM_WATCHDOG`**: Enables a 90-second idle stream watchdog. `CLAUDE_STREAM_IDLE_TIMEOUT_MS` now requires this to be set — previously the watchdog appeared to be always-on.
-- **`DISABLE_AUTO_COMPACT`** and **`DISABLE_COMPACT`**: Two new separate controls — one disables only automatic compaction (manual `/compact` still works), the other disables all compaction.
-- **`DISABLE_DOCTOR_COMMAND`**, **`DISABLE_EXTRA_USAGE_COMMAND`**, **`DISABLE_INSTALL_GITHUB_APP_COMMAND`**, **`DISABLE_LOGIN_COMMAND`**, **`DISABLE_LOGOUT_COMMAND`**, **`DISABLE_UPGRADE_COMMAND`**: New variables for hiding individual commands, useful for managed deployments.
-- **`CLAUDE_CODE_GLOB_HIDDEN`**, **`CLAUDE_CODE_GLOB_NO_IGNORE`**, **`CLAUDE_CODE_GLOB_TIMEOUT_SECONDS`**: New controls for Glob tool behavior.
-- **`OTEL_LOG_TOOL_CONTENT`**, **`OTEL_LOG_TOOL_DETAILS`**, **`OTEL_LOG_USER_PROMPTS`**, **`OTEL_METRICS_INCLUDE_ACCOUNT_UUID`**, **`OTEL_METRICS_INCLUDE_SESSION_ID`**, **`OTEL_METRICS_INCLUDE_VERSION`**: New fine-grained OpenTelemetry output controls.
-- **`VERTEX_REGION_CLAUDE_4_5_SONNET`**, **`VERTEX_REGION_CLAUDE_4_6_SONNET`**, **`VERTEX_REGION_CLAUDE_HAIKU_4_5`**, **`VERTEX_REGION_CLAUDE_3_5_SONNET`**: New per-model Vertex regional override variables.
-- **Several env vars standardized from `true`/`false` to `1`**: `FORCE_AUTOUPDATE_PLUGINS`, `CLAUDE_CODE_PROXY_RESOLVES_HOSTS`, `CLAUDE_CODE_ENABLE_TASKS`, `CLAUDE_CODE_NEW_INIT`, and `IS_DEMO` all moved from `true` to `1` as the documented value.
-- **`CLAUDE_CONFIG_DIR`**: Description expanded to include an example usage for running multiple accounts side-by-side.
-- *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+- **Thinking summaries disabled by default in interactive sessions**: Previously generated by default; now requires explicit opt-in.
+  > `Changed thinking summaries to no longer be generated by default in interactive sessions — set showThinkingSummaries: true in settings.json to restore`
+  - *Implication*: Users who relied on thinking summaries will need to add `showThinkingSummaries: true` to `settings.json`.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-### Permissions
+- **`cleanupPeriodDays: 0` now a validation error**: Previously setting this to `0` silently disabled transcript persistence; it now rejects with a validation error.
+  > `Changed cleanupPeriodDays: 0 in settings.json to be rejected with a validation error — it previously silently disabled transcript persistence`
+  - *Implication*: Any config or automation relying on `0` to disable transcripts must be updated.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`--add-dir` grants file access only, not configuration**: A new section explicitly documents what is and isn't loaded from directories added via `--add-dir`.
-  > Adding a directory extends where Claude can read and edit files. It does not make that directory a full configuration root: most `.claude/` configuration is not discovered from additional directories, though a few types are loaded as exceptions.
+- **Hook output over 50K characters saved to disk**: Large hook outputs are no longer injected directly into context; they are written to disk and a file path + preview is provided instead.
+  - *Implication*: Prevents context bloat in sessions with verbose hooks; hook consumers must account for the new disk-file format.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  The documented exceptions are:
-  | Configuration | Loaded from `--add-dir` |
-  |---|---|
-  | Skills in `.claude/skills/` | Yes, with live reload |
-  | Plugin settings `enabledPlugins` / `extraKnownMarketplaces` | Yes |
-  | CLAUDE.md / `.claude/rules/` | Only with `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` |
+- **Auto mode denied commands surfaced in `/permissions`**: Denied commands now trigger a notification and appear in the `/permissions` → Recent tab, where they can be retried with `r`.
+  - *Implication*: Improves discoverability of blocked operations in auto mode without requiring log inspection.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-  Subagents, hooks, output styles, and other settings are **not** loaded from added directories.
-  - *Implication*: Teams that pass multiple repos via `--add-dir` expecting full configuration sharing will need to use user-level config (`~/.claude/`) or plugins instead.
-  - *Source*: [Permissions](https://code.claude.com/docs/en/permissions.md)
+- **`Edit` works on files viewed via `sed -n` or `cat` in Bash**: No longer requires a separate `Read` call after viewing a file through Bash.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **`skipDangerousModePermissionPrompt` setting added**: New permission setting that skips the confirmation prompt before entering bypass permissions mode. Ignored in project settings to prevent untrusted repos from auto-bypassing.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **`/env` now applies to PowerShell tool commands**: Previously only affected the Bash tool.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-### Hooks
+- **`/usage` hides redundant bar for Pro and Enterprise**: The "Current week (Sonnet only)" bar is now hidden for Pro and Enterprise plan users.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-- **Multi-hook conflict resolution documented**: Added explicit guidance on what happens when multiple hooks match the same event.
-  > For decisions, Claude Code picks the most restrictive answer. A `PreToolUse` hook returning `deny` cancels the tool call no matter what the others return. One hook returning `ask` forces the permission prompt even if the rest return `allow`. Text from `additionalContext` is kept from every hook and passed to Claude together.
-  - *Implication*: Developers building hook stacks now have documented conflict resolution semantics.
-  - *Source*: [Hooks Guide](https://code.claude.com/docs/en/hooks-guide.md)
+### Bug Fixes (v2.1.89)
 
-- **New "Hooks and permission modes" section**: Clarifies the interaction between `PreToolUse` hooks and permission mode bypass.
-  > PreToolUse hooks fire before any permission-mode check. A hook that returns `permissionDecision: "deny"` blocks the tool even in `bypassPermissions` mode or with `--dangerously-skip-permissions`.
-  > The reverse is not true: a hook returning `"allow"` does not bypass deny rules from settings.
-  - *Implication*: Hooks can be used to enforce policy that users cannot sidestep by changing permission mode.
-  - *Source*: [Hooks Guide](https://code.claude.com/docs/en/hooks-guide.md)
+Notable fixes in this release:
 
-- **Non-deterministic `updatedInput` warning added**: When multiple `PreToolUse` hooks return `updatedInput` to rewrite a tool's arguments, the last to finish wins — order is non-deterministic because hooks run in parallel.
-  - *Source*: [Hooks Guide](https://code.claude.com/docs/en/hooks-guide.md)
+- **Symlink resolution for allow rules**: `Edit(//path/**)` and `Read(//path/**)` allow rules now check the resolved symlink target, not just the requested path.
+- **CRLF and Markdown line breaks on Windows**: Edit/Write tools were doubling CRLF line endings and stripping Markdown hard line breaks (two trailing spaces).
+- **`StructuredOutput` schema cache**: Resolved ~50% failure rate when using multiple schemas in a session.
+- **Memory leak in long-running sessions**: Large JSON inputs were being retained as LRU cache keys.
+- **LSP server zombie state after crash**: Server now restarts on the next request instead of failing until session restart.
+- **CJK/emoji prompt history loss**: Entries containing CJK characters or emoji were silently dropped when they fell on a 4KB boundary in `~/.claude/history.jsonl`.
+- **`/stats` token undercounting**: Was excluding subagent usage and losing historical data beyond 30 days when the stats cache format changes.
+- **`-p --resume` hangs**: Fixed hangs when deferred tool input exceeded 64KB or no deferred marker existed; also fixed `-p --continue` not resuming deferred tools.
+- **Autocompact thrash loop**: Now detects when context immediately refills to the limit after three consecutive compactions and halts with an actionable error instead of burning API calls.
+- **Nested `CLAUDE.md` re-injection**: Files were being re-injected dozens of times in long sessions that read many files.
+- **Misleading "Rate limit reached" error**: Corrected to show the actual entitlement error with actionable hints.
+- **Hook `if` condition filtering**: Now correctly matches compound commands (`ls && git push`) and commands with env-var prefixes (`FOO=bar git push`).
+- **`PreToolUse`/`PostToolUse` `file_path` field**: Now correctly provides an absolute path for Write/Edit/Read tools, matching documented behavior.
+- **Devanagari and combining-mark text truncation** in assistant output.
+- **Voice mode**: Fixed push-to-talk modifier-combo bindings, macOS Apple Silicon microphone permission requests, and Windows WebSocket upgrade failures.
+- **Windows-specific**: Fixed Shift+Enter submitting on Windows Terminal Preview 1.25; fixed PowerShell incorrectly reporting failures when `git push` wrote progress to stderr on PS 5.1.
+- **OOM crash on large files**: Fixed a potential out-of-memory crash when the Edit tool was used on files larger than 1 GiB.
+- **Prompt cache misses**: Fixed mid-session tool schema byte changes causing cache misses in long sessions.
+- **`--resume` crash**: Fixed crash when transcript contained a tool result from an older CLI version or an interrupted write.
 
-### Tools Reference
+### Amazon Bedrock Troubleshooting
 
-- **New "LSP tool behavior" section**: Describes what the LSP tool does in detail — automatic type error reporting after edits, navigation capabilities (jump to definition, find references, call hierarchies, etc.). Notes that the tool is inactive until a code intelligence plugin is installed.
-  - *Source*: [Tools Reference](https://code.claude.com/docs/en/tools-reference.md)
-
-- **New "Check which tools are available" section**: Advises users to ask Claude directly (`What tools do you have access to?`) to discover what's loaded, since the exact tool set depends on provider, platform, and settings.
-  - *Source*: [Tools Reference](https://code.claude.com/docs/en/tools-reference.md)
-
-- **`SendMessage` and `TeamCreate`/`TeamDelete` added to tool table**: These were previously absent from the reference table. `SendMessage` is now documented as only available when agent teams are enabled via flag or env var.
-  - *Source*: [Tools Reference](https://code.claude.com/docs/en/tools-reference.md)
-
-- **`MCPSearch` renamed to `ToolSearch`**: The tool name used in permission deny rules has changed.
-  > `"deny": ["ToolSearch"]`
-  - *Implication*: Any existing config that uses `"deny": ["MCPSearch"]` will need to be updated to `ToolSearch`.
-  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
-
-### Managed Settings
-
-- **Managed settings precedence clarified**: Server-managed and endpoint-managed settings no longer simply "both occupy the highest tier" — server-managed is checked first, and if it delivers any keys at all, endpoint-managed settings are ignored entirely (no merging).
-  > Sources do not merge: if server-managed settings deliver any keys at all, endpoint-managed settings are ignored entirely.
-  - *Implication*: Organizations using both server and endpoint managed settings need to be aware that clearing server-managed settings does not immediately fall back to endpoint settings due to client-side caching.
-  - *Source*: [Server-Managed Settings](https://code.claude.com/docs/en/server-managed-settings.md)
-
-- **Managed-only settings table updated**: `channelsEnabled`, `pluginTrustMessage`, and `sandbox.filesystem.allowManagedReadPathsOnly` explicitly added to the managed-only settings list. Description for `sandbox.filesystem.allowManagedReadPathsOnly` corrected: `denyRead` still merges from all sources (not just managed).
-  - *Source*: [Server-Managed Settings](https://code.claude.com/docs/en/server-managed-settings.md)
-
-### Integrations
-
-- **Vertex AI: example updated to newer model names**: The global endpoint example was updated from `VERTEX_REGION_CLAUDE_3_5_HAIKU`, `VERTEX_REGION_CLAUDE_3_5_SONNET`, and `VERTEX_REGION_CLAUDE_4_0_*` to `VERTEX_REGION_CLAUDE_HAIKU_4_5` and `VERTEX_REGION_CLAUDE_4_6_SONNET`. A note was added directing to the full env vars list and Vertex Model Garden for global endpoint support status.
-  - *Source*: [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai.md)
-
-- **Bedrock custom endpoint documented**: `ANTHROPIC_BEDROCK_BASE_URL` added as a commented example in the Bedrock setup code block.
+- **New section — Authentication loop with SSO and corporate proxies**: Documents an infinite browser-tab loop that can occur when corporate VPNs or TLS inspection proxies interrupt the SSO browser flow.
+  > `If browser tabs spawn repeatedly when using AWS SSO, remove the awsAuthRefresh setting from your settings file. This can occur when corporate VPNs or TLS inspection proxies interrupt the SSO browser flow. Claude Code treats the interrupted connection as an authentication failure, re-runs awsAuthRefresh, and loops indefinitely.`
+  > `If your network environment interferes with automatic browser-based SSO flows, use aws sso login manually before starting Claude Code instead of relying on awsAuthRefresh.`
+  - *Implication*: Affected users should remove `awsAuthRefresh` from settings and run `aws sso login` manually before launching Claude Code.
   - *Source*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md)
 
-- **Web auto-fix warning added**: A new warning block cautions that Claude can reply to PR review comments using your GitHub account, which can trigger comment-based automation (Atlantis, Terraform Cloud, custom GitHub Actions on `issue_comment` events).
-  > If your repository uses comment-triggered automation such as Atlantis, Terraform Cloud, or custom GitHub Actions that run on `issue_comment` events, be aware that Claude can reply on your behalf, which can trigger those workflows.
-  - *Implication*: Users with infrastructure-as-code repos using auto-fix should audit their automation before enabling.
-  - *Source*: [Claude Code on the Web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+- **New section heading — Region issues**: An explicit `### Region issues` heading was added to demarcate existing region troubleshooting content, improving navigability within the Troubleshooting section.
+  - *Source*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md)
 
-### Configuration
-
-- **`strictKnownMarketplaces` is now a managed-only setting**: The settings table now marks this as `(Managed settings only)`, matching the other managed-only keys.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
-
-- **Settings table alphabetized**: The available settings table was reorganized alphabetically. No keys added or removed, but the ordering is now consistent.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+---
 
 ## Notable Details
 
-- **CLAUDE.md size guideline reduced from ~500 to 200 lines**: Both `costs.md` and `features-overview.md` changed this recommendation. The tilde was also removed, making it a hard target rather than an approximation.
-  > Keep CLAUDE.md under 200 lines. Move reference material to skills, which load on-demand.
+- **`/buddy` April Fools feature**: The 2.1.89 changelog includes `/buddy` — described as "hatch a small creature that watches you code" — released for April 1st. This is an April Fools' Day feature and likely ephemeral.
+- **`TaskCreated` hook blocking behavior now documented**: The hook existed previously but was undocumented; this entry formalizes it. Developers using hooks should review the blocking semantics.
+- **PowerShell 5.1 argument-splitting hardening**: External-command arguments containing both a double-quote and whitespace now prompt instead of auto-allowing — a targeted security tightening specific to PS 5.1.
+- **`@`-mention ranking**: Source files are now ranked above MCP resources with similar names in typeahead, prioritizing local context over remote resources.
+- **Pasting `!command` behavior**: Pasting a `!command` into an empty prompt now enters bash mode, matching the behavior of typing `!` directly.
+- **Image paste**: No longer inserts a trailing space after the image reference.
 
-- **`CLAUDE_CODE_NEW_INIT` changed from `true` to `1`**: Documented in `memory.md`, `commands.md`, and `env-vars.md`. Consistent with the broader pattern of normalizing boolean env vars to `1`/`0`.
-
-- **`/init` environment variable format**: The commands reference changed `CLAUDE_CODE_NEW_INIT=true` to `CLAUDE_CODE_NEW_INIT=1`, matching the env vars reference update.
-
-- **Prompt suggestion acceptance**: Right arrow key added alongside Tab as an accepted gesture for completing prompt suggestions.
-  > Press **Tab** or **Right arrow** to accept the suggestion
-
-- **Terminal: Ctrl+J for newlines**: Added as an explicit option for inserting a newline without terminal-specific configuration.
-
-- **Subagents and `--add-dir`**: Documentation now explicitly states that project subagents in `.claude/agents/` are discovered by walking up from the current working directory and that `--add-dir` paths are not scanned for subagents.
-
-- **`SendMessage` tool gated on agent teams**: The docs now clarify that `SendMessage` (used to resume subagents) is only available when agent teams are enabled. Previously this was unstated.
-
-- **`disableBypassPermissionsMode` scope**: Now documented to work from any settings scope (not just managed), including user settings — meaning a user can lock themselves out of bypass mode via their own settings.
+---
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| amazon-bedrock.md | Modified | +3/-0 | Added `ANTHROPIC_BEDROCK_BASE_URL` as commented example |
-| changelog.md | Modified | +0/-44 | v2.1.88 entry scrolled off the visible page |
-| claude-code-on-the-web.md | Modified | +4/-0 | Added warning about comment-triggered automation with auto-fix |
-| cli-reference.md | Modified | +62/-59 | Added `--agent-teams`, `--debug-file`, `--replay-user-messages`; tightened `--include-partial-messages` requirements; clarified `--add-dir` |
-| commands.md | Modified | +2/-2 | Updated `/add-dir` description and `CLAUDE_CODE_NEW_INIT` value from `true` to `1` |
-| costs.md | Modified | +1/-1 | CLAUDE.md size guideline changed from ~500 to 200 lines |
-| discover-plugins.md | Modified | +4/-4 | `FORCE_AUTOUPDATE_PLUGINS` and `DISABLE_AUTOUPDATER` values standardized to `1` from `true` |
-| env-vars.md | Modified | +77/-15 | ~30 new variables; ~15 description updates; `1` standardized over `true`; OTel and Glob tuning vars added |
-| features-overview.md | Modified | +1/-1 | CLAUDE.md size guideline changed from ~500 to 200 lines |
-| google-vertex-ai.md | Modified | +8/-9 | Updated global endpoint example to newer model names; added `ANTHROPIC_VERTEX_BASE_URL` |
-| hooks-guide.md | Modified | +10/-1 | Added multi-hook conflict resolution, "Hooks and permission modes" section, `updatedInput` non-determinism warning |
-| interactive-mode.md | Modified | +1/-1 | Right arrow key added for prompt suggestion acceptance |
-| mcp.md | Modified | +2/-2 | `MCPSearch` renamed to `ToolSearch` in deny rule example |
-| memory.md | Modified | +1/-1 | `CLAUDE_CODE_NEW_INIT` value from `true` to `1` |
-| permissions.md | Modified | +26/-4 | New "Additional directories grant file access, not configuration" section with exceptions table |
-| sandboxing.md | Modified | +1/-1 | Clarified `denyRead` still merges from all sources when `allowManagedReadPathsOnly` is set |
-| server-managed-settings.md | Modified | +12/-3 | Managed settings precedence clarified (no merging); managed-only settings section expanded |
-| settings.md | Modified | +51/-50 | Table alphabetized; `skipDangerousModePermissionPrompt` added; `strictKnownMarketplaces` marked managed-only |
-| skills.md | Modified | +3/-1 | Clarified skills are an exception to `--add-dir`'s file-access-only semantics |
-| sub-agents.md | Modified | +5/-1 | Added note that `--add-dir` paths aren't scanned for subagents; `SendMessage` gated on agent teams flag |
-| terminal-config.md | Modified | +1/-0 | Added Ctrl+J as a newline option |
-| tools-reference.md | Modified | +64/-35 | New LSP behavior section, "Check which tools are available" section; `SendMessage`/`TeamCreate`/`TeamDelete` added to table; introductory text expanded |
+| `changelog.md` | Modified | +55 / -0 | Added v2.1.89 release notes: new hook features, behavior changes, ~30 bug fixes |
+| `amazon-bedrock.md` | Modified | +8 / -0 | Added two new Troubleshooting subsections: SSO auth loop fix and Region issues heading |
 
 ---
+
 *Generated from Claude Code CLI documentation changes detected on 2026-04-01*
