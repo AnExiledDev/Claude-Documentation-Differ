@@ -2,96 +2,89 @@
 
 ## Summary
 
-Version 2.1.92 was released on April 4, 2026, adding enterprise policy controls, an interactive Bedrock setup wizard, per-model cost breakdowns, and an interactive `/release-notes` version picker, along with eleven bug fixes. The environment variables reference dropped `CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS` and corrected the `CLAUDE_CODE_TMPDIR` documentation to reflect platform-specific temp path behavior.
+15 pages were modified in this update with 142 additions and 89 deletions. The most substantive changes cover a new interactive Bedrock setup wizard, a new `forceRemoteSettingsRefresh` fail-closed enforcement mechanism for managed deployments, a new `--remote-control-session-name-prefix` flag, multi-line shell execution blocks in skills, and the removal of two slash commands (`/pr-comments` in v2.1.91 and `/vim` in v2.1.92).
 
 ## Significant Changes
 
-### Features
+### Configuration & Enterprise Policy
 
-- **`forceRemoteSettingsRefresh` policy setting**: A new managed policy option blocks CLI startup until remote managed settings are freshly fetched, exiting if the fetch fails (fail-closed behavior).
-  > "when set, the CLI blocks startup until remote managed settings are freshly fetched, and exits if the fetch fails (fail-closed)"
-  - *Implication*: Enterprise admins can enforce that all clients always run with up-to-date remote policy — clients cannot start with stale or cached settings.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Fail-closed startup enforcement (`forceRemoteSettingsRefresh`)**: A new managed setting blocks CLI startup until remote managed settings are freshly fetched from the server. If the fetch fails, the CLI exits rather than proceeding with cached or no settings.
+  > "When this setting is active, the CLI blocks at startup until remote settings are freshly fetched. If the fetch fails, the CLI exits rather than proceeding without the policy. This setting self-perpetuates: once delivered from the server, it is also cached locally so that subsequent startups enforce the same behavior even before the first successful fetch of a new session."
+  - *Implication*: Enterprises requiring strict policy enforcement can guarantee managed settings are always applied at startup. Requires connectivity to `api.anthropic.com`; if unreachable, users cannot start Claude Code.
+  - *Source*: [server-managed-settings.md](https://code.claude.com/docs/en/server-managed-settings.md), [permissions.md](https://code.claude.com/docs/en/permissions.md), [settings.md](https://code.claude.com/docs/en/settings.md)
 
-- **Interactive Bedrock setup wizard**: A guided onboarding flow for AWS Bedrock is now accessible from the login screen when selecting "3rd-party platform".
-  > "guides you through AWS authentication, region configuration, credential verification, and model pinning"
-  - *Implication*: Users setting up Bedrock no longer need to manually configure AWS credentials and model settings; the wizard handles the full configuration flow interactively.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New `disableSkillShellExecution` setting**: Disables inline shell execution for `` !`...` `` and ` ```! ` blocks in skills and custom commands from user, project, plugin, or additional-directory sources.
+  > "Commands are replaced with `[shell command execution disabled by policy]` instead of being run. Bundled and managed skills are not affected. Most useful in managed settings where users cannot override it."
+  - *Implication*: Managed deployments can lock down shell execution within user-defined skills without affecting built-in functionality.
+  - *Source*: [settings.md](https://code.claude.com/docs/en/settings.md), [skills.md](https://code.claude.com/docs/en/skills.md)
 
-- **Per-model and cache-hit cost breakdown in `/cost`**: Subscription users now see a more detailed breakdown in the `/cost` command, including per-model and cache-hit statistics.
-  - *Implication*: Easier to audit token spend across models and understand caching efficiency during a session.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Amazon Bedrock
 
-- **`/release-notes` is now an interactive version picker**: Previously a static display; now allows navigating release notes by version interactively.
-  - *Implication*: Users can browse historical release notes without leaving the CLI.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Interactive Bedrock setup wizard**: A new guided wizard is available from the login screen and via the `/setup-bedrock` command for configuring Bedrock credentials without manual environment variable editing.
+  > "Select **3rd-party platform** at the `claude` login prompt, then choose **Amazon Bedrock** to launch it. The wizard guides you through each step and writes the resulting configuration to your settings: AWS authentication, Region selection, Credential verification, Model pinning."
+  - *Implication*: First-time Bedrock users get a streamlined setup path. Returning users can update credentials, region, or model pins via `/setup-bedrock`.
+  - *Source*: [amazon-bedrock.md](https://code.claude.com/docs/en/amazon-bedrock.md), [commands.md](https://code.claude.com/docs/en/commands.md)
 
-- **Remote Control session name prefix uses hostname**: Session names now default to the machine hostname as a prefix (e.g., `myhost-graceful-unicorn`), overridable with `--remote-control-session-name-prefix`.
-  - *Implication*: Easier to identify which machine a remote session belongs to when managing multiple machines.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Remote Control
 
-- **Prompt cache expiry hint for Pro users**: When returning to a session after the prompt cache has expired, Pro users now see a footer hint showing roughly how many tokens the next turn will send uncached.
-  - *Implication*: Helps users make informed decisions about continuing a session versus starting fresh to control token costs.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New `--remote-control-session-name-prefix` flag**: Controls the prefix used for auto-generated Remote Control session names. Previously, auto-generated names always used the machine hostname as the prefix with no way to override it via a flag.
+  > "Prefix for auto-generated Remote Control session names when no explicit name is set. Defaults to your machine's hostname, producing names like `myhost-graceful-unicorn`."
+  - *Implication*: Useful for distinguishing sessions from multiple machines or environments sharing the same Remote Control pool. The environment variable `CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX` provides a persistent alternative.
+  - *Source*: [remote-control.md](https://code.claude.com/docs/en/remote-control.md), [cli-reference.md](https://code.claude.com/docs/en/cli-reference.md), [env-vars.md](https://code.claude.com/docs/en/env-vars.md)
 
-### Performance
+- **Clarified session title fallback order**: The fourth fallback for a Remote Control session name is now an auto-generated name (e.g., `myhost-graceful-unicorn`) rather than the first prompt message. The prompt still updates the title once sent, but no longer serves as the initial fallback.
+  - *Source*: [remote-control.md](https://code.claude.com/docs/en/remote-control.md)
 
-- **Write tool diff speed improvement (~60% faster for large files)**: Diff computation for the Write tool is significantly faster on files containing tabs, `&`, or `$` characters.
-  - *Implication*: Noticeably faster feedback when Claude applies edits to large files with these common characters.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Skills
 
-- **Linux sandbox `apply-seccomp` helper restored**: Ships the `apply-seccomp` helper in both npm and native builds, restoring unix-socket blocking for sandboxed commands.
-  - *Implication*: Linux users on both npm-installed and native builds now have consistent sandboxing behavior.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Multi-line shell blocks (` ```! `)**: Skills now support fenced code blocks opened with ` ```! ` for multi-line inline shell execution, in addition to the existing single-line `` !`command` `` form.
+  > "For multi-line commands, use a fenced code block opened with ` ```! ` instead of the inline form."
+  - *Implication*: Skills that previously needed workarounds for multi-command shell snippets can now use a cleaner block syntax.
+  - *Source*: [skills.md](https://code.claude.com/docs/en/skills.md)
 
-### Removed Commands
+### MCP
 
-- **`/tag` command removed**: The `/tag` command has been removed with no replacement documented.
-  - *Implication*: Any workflows using `/tag` will need to be updated.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Clarified `anthropic/maxResultSizeChars` behavior**: The annotation raises a per-tool persist-to-disk threshold but does not bypass the global `MAX_MCP_OUTPUT_TOKENS` cap.
+  > "The annotation raises the per-tool persist threshold but does not bypass the global `MAX_MCP_OUTPUT_TOKENS` limit, which defaults to 25,000 tokens or roughly 100,000 characters. To return results larger than that, users must also raise `MAX_MCP_OUTPUT_TOKENS`."
+  - *Implication*: MCP server authors relying solely on the annotation to deliver very large results need to also account for the token cap.
+  - *Source*: [mcp.md](https://code.claude.com/docs/en/mcp.md)
 
-- **`/vim` command removed**: Vim mode toggle is now accessible exclusively through `/config` → Editor mode.
-  > "toggle vim mode via `/config` → Editor mode"
-  - *Implication*: The shortcut is gone; vim mode is still available but requires navigating the config menu.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Removed / Deprecated Commands
 
-### Bug Fixes
+- **`/pr-comments` removed (v2.1.91+)**: The command is removed as of v2.1.91. The documentation now directs users to ask Claude directly to view pull request comments instead.
+  - *Source*: [commands.md](https://code.claude.com/docs/en/commands.md)
 
-- **tmux subagent spawning**: Subagents no longer permanently fail with "Could not determine pane count" after tmux windows are killed or renumbered during a long-running session.
-- **Stop hook `ok:false` handling**: Prompt-type Stop hooks no longer incorrectly fail when the small fast model returns `ok:false`; `preventContinuation:true` semantics restored for non-Stop prompt-type hooks.
-- **Tool input validation**: Fixed failures when streaming emits array/object fields as JSON-encoded strings.
-- **Extended thinking whitespace text block**: Fixed an API 400 error that could occur when extended thinking produced a whitespace-only text block alongside real content.
-- **Feedback survey accidental submissions**: Fixed unintended survey submissions from auto-pilot keypresses and consecutive-prompt digit collisions.
-- **Fullscreen "esc to interrupt" hint**: The misleading hint no longer appears alongside "esc to clear" when a text selection exists in fullscreen mode during processing.
-- **Homebrew update prompts**: Update prompts now correctly reference the cask's release channel (`claude-code` → stable, `claude-code@latest` → latest).
-- **`ctrl+e` in multiline prompts**: Fixed `ctrl+e` jumping to the end of the next line when the cursor was already at the end of the current line.
-- **Duplicate message when scrolling**: Fixed an issue where the same message could appear at two positions when scrolling up in fullscreen mode (affects iTerm2, Ghostty, and other terminals with DEC 2026 support).
-- **Idle-return token hint**: The "/clear to save X tokens" hint now correctly shows the current context size instead of cumulative session tokens.
-- **Plugin MCP servers stuck connecting**: Fixed plugin MCP servers getting stuck in "connecting" on session start when they duplicate a claude.ai connector that is unauthenticated.
-
-### Configuration / Environment Variables
-
-- **`CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS` removed**: This variable, which allowed fast mode when the organization status check failed due to a network error (e.g., a corporate proxy blocking the status endpoint), has been removed from the documentation.
-  - *Implication*: Users who relied on this variable to work around corporate proxy issues will need to find an alternative approach.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
-
-- **`CLAUDE_CODE_TMPDIR` platform behavior corrected**: The temp path suffix and default directory are now documented as platform-specific.
-  > "Claude Code appends `/claude-{uid}/` (Unix) or `/claude/` (Windows) to this path. Default: `/tmp` on macOS, `os.tmpdir()` on Linux/Windows"
-  - *Implication*: On Unix, the temp directory is now user-scoped (`/claude-{uid}/`) rather than shared (`/claude/`), which matters for security on multi-user systems. The previous docs incorrectly grouped Linux with macOS for the default path.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+- **`/vim` removed (v2.1.92+)**: The toggle command is removed as of v2.1.92. Vim mode is now configured exclusively through `/config` → Editor mode.
+  > "Removed in v2.1.92. To toggle between Vim and Normal editing modes, use `/config` → Editor mode."
+  - *Implication*: Any scripts or documentation referencing `/vim` need to be updated. The underlying `editorMode` setting in `~/.claude.json` is unchanged.
+  - *Source*: [commands.md](https://code.claude.com/docs/en/commands.md), [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md), [keybindings.md](https://code.claude.com/docs/en/keybindings.md), [terminal-config.md](https://code.claude.com/docs/en/terminal-config.md)
 
 ## Notable Details
 
-- The `CLAUDE_CODE_TMPDIR` change corrects a meaningful inaccuracy: the old docs described a single Unix/macOS default of `/tmp` with a shared `/claude/` suffix. The updated docs separate macOS (`/tmp`) from Linux (`os.tmpdir()`) and switch the Unix suffix to the user-scoped `/claude-{uid}/`. This affects multi-user Linux environments.
-- The removal of `CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS` with no documented replacement is notable for teams operating behind corporate proxies that block the organization status endpoint.
-- Version 2.1.92 is a large release with 22 changelog bullet points — 11 of which are bug fixes — suggesting a stabilization pass following recent feature work.
+- **`/release-notes` updated**: The command now opens an interactive version picker rather than showing all versions in a single scroll. "Select a specific version to see its release notes, or choose to show all versions."
+- **WSL sandboxing note added**: The troubleshooting page documents that sandboxed commands cannot launch Windows binaries (e.g., `cmd.exe`, `powershell.exe`, or executables under `/mnt/c/`). The workaround is to add them to `excludedCommands`. — *Source*: [troubleshooting.md](https://code.claude.com/docs/en/troubleshooting.md)
+- **`editorMode` setting description updated**: The entry no longer states "Written automatically when you run `/vim`" (consistent with `/vim` removal). The `/config` UI label is now documented as "Editor mode" rather than "Key binding mode". — *Source*: [settings.md](https://code.claude.com/docs/en/settings.md)
+- **`data-usage.md` link wording**: Minor wording change; "read more" link updated to "see settings reference".
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +24/-0 | Added 2.1.92 release notes |
-| env-vars.md | Modified | +1/-2 | Removed `CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS`; corrected `CLAUDE_CODE_TMPDIR` platform details |
+| [amazon-bedrock.md](https://code.claude.com/docs/en/amazon-bedrock.md) | Modified | +11 / -0 | New "Set up with the interactive wizard" section |
+| [cli-reference.md](https://code.claude.com/docs/en/cli-reference.md) | Modified | +63 / -62 | Added `--remote-control-session-name-prefix` flag; table reformatted |
+| [commands.md](https://code.claude.com/docs/en/commands.md) | Modified | +4 / -3 | `/pr-comments` and `/vim` marked removed; `/setup-bedrock` added; `/release-notes` updated |
+| [data-usage.md](https://code.claude.com/docs/en/data-usage.md) | Modified | +1 / -1 | Minor link text update |
+| [env-vars.md](https://code.claude.com/docs/en/env-vars.md) | Modified | +1 / -0 | Added `CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX` variable |
+| [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md) | Modified | +1 / -1 | Removed `/vim` reference; now points to `/config` → Editor mode |
+| [keybindings.md](https://code.claude.com/docs/en/keybindings.md) | Modified | +1 / -1 | Vim mode activation description updated to reflect `/vim` removal |
+| [mcp.md](https://code.claude.com/docs/en/mcp.md) | Modified | +5 / -3 | Clarified `anthropic/maxResultSizeChars` annotation vs. `MAX_MCP_OUTPUT_TOKENS` |
+| [permissions.md](https://code.claude.com/docs/en/permissions.md) | Modified | +1 / -0 | Added `forceRemoteSettingsRefresh` to managed-only settings table |
+| [remote-control.md](https://code.claude.com/docs/en/remote-control.md) | Modified | +11 / -8 | New `--remote-control-session-name-prefix` flag; session title fallback order updated |
+| [server-managed-settings.md](https://code.claude.com/docs/en/server-managed-settings.md) | Modified | +23 / -7 | New "Enforce fail-closed startup" section; security table updated |
+| [settings.md](https://code.claude.com/docs/en/settings.md) | Modified | +3 / -1 | Added `disableSkillShellExecution` and `forceRemoteSettingsRefresh`; `editorMode` description updated |
+| [skills.md](https://code.claude.com/docs/en/skills.md) | Modified | +14 / -1 | New "Environment" section documenting ` ```! ` multi-line blocks; `disableSkillShellExecution` policy noted |
+| [terminal-config.md](https://code.claude.com/docs/en/terminal-config.md) | Modified | +1 / -1 | Vim Mode activation updated to reference `/config` → Editor mode |
+| [troubleshooting.md](https://code.claude.com/docs/en/troubleshooting.md) | Modified | +2 / -0 | Added WSL sandbox note about Windows binary restrictions |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-04-04*
