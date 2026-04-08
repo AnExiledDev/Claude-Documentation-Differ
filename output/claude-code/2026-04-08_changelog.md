@@ -2,207 +2,152 @@
 
 ## Summary
 
-This update is dominated by a major new feature: Amazon Bedrock Mantle endpoint support, documented across four pages (amazon-bedrock, env-vars, model-config, troubleshooting). Alongside this, the `~/.claude` directory reference gained a full new "Application data" section covering transcript storage, retention, and data clearing, and hooks documentation was overhauled to clarify how debug output reaches developers. Version 2.1.94 changelog entries also landed.
+This update splits the Claude Code on the web documentation into a new dedicated quickstart (`web-quickstart.md`) and a restructured reference page. A new `CCR_FORCE_BUNDLE` environment variable enables cloud sessions for non-GitHub repositories. Version 2.1.96 shipped a fix for a Bedrock authentication regression. Smaller additions include a troubleshooting entry for auto-compaction thrashing, a corrected status line cache pattern, and two previously undocumented commands (`/teleport`, `/web-setup`) added to the command reference.
 
 ---
 
 ## Significant Changes
 
-### Features
+### Web Features
 
-- **Amazon Bedrock Mantle Endpoint**: A new AWS endpoint that serves Claude models using the native Anthropic API shape (rather than the Bedrock Invoke API), while reusing existing AWS credentials and IAM permissions. Requires Claude Code v2.1.94 or later.
+- **New web quickstart page**: A dedicated getting-started guide for Claude Code on the web replaces what was previously buried inside the main reference page. It walks through connecting GitHub, creating a cloud environment, submitting tasks, and reviewing diffs — including a comparison table of all four execution surfaces (On the web / Remote Control / Terminal CLI / Desktop app) and a troubleshooting section for common setup failures.
+  > "Run Claude Code in the cloud from your browser or phone. Connect a GitHub repository, submit a task, and review the PR without local setup."
+  - *Implication*: Operators and teams should link to `/en/web-quickstart` for onboarding; the existing `claude-code-on-the-web` page is now a reference for advanced configuration.
+  - *Source*: [Get started with Claude Code on the web](https://code.claude.com/docs/en/web-quickstart.md)
 
-  > *"Mantle is an Amazon Bedrock endpoint that serves Claude models through the native Anthropic API shape rather than the Bedrock Invoke API. It uses the same AWS credentials, IAM permissions, and `awsAuthRefresh` configuration described earlier on this page."*
+- **Web reference page major restructure**: `claude-code-on-the-web.md` was reorganized around reference rather than onboarding. Key structural additions:
+  - **"GitHub authentication options"** — new table comparing GitHub App (per-repo authorization) vs `/web-setup` (`gh` CLI token sync).
+  - **"What's available in cloud sessions"** — explicit table listing which repo-committed config carries over (`.claude/skills/`, `.mcp.json`, repo hooks) vs what does not (user `~/.claude/CLAUDE.md`, user-level MCP servers added via `claude mcp add`, API tokens, AWS SSO).
+  - **"Resource limits"** — cloud sessions now document explicit ceilings: 4 vCPUs, 16 GB RAM, 30 GB disk.
+  - **"Allow specific domains"** — new section covering Custom network access, including `*.` wildcard subdomain syntax.
+  - **Removed sections**: "What is Claude Code on the web?", "Who can use it?", "Best practices", "Pricing and rate limits" (now folded into Limitations), and per-category domain lists (collapsed into accordions).
+  > "Cloud sessions start from a fresh clone of your repository. Anything committed to the repo is available. Anything you've installed or configured only on your own machine is not."
+  - *Implication*: Old section anchors are broken. `#cloud-environment` → `#the-cloud-environment`, `#managing-sessions` → `#work-with-sessions`, `#deleting-sessions` → `#delete-sessions`, `#requirements-for-teleporting` → `#teleport-requirements`.
+  - *Source*: [Use Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
-  Activation is as simple as:
-  ```bash
-  export CLAUDE_CODE_USE_MANTLE=1
-  export AWS_REGION=us-east-1
-  ```
+- **Send local repositories without GitHub**: `claude --remote` now automatically bundles and uploads a local repository when GitHub access isn't configured. A new `CCR_FORCE_BUNDLE=1` environment variable forces this path even when GitHub is available.
+  > "When you run `claude --remote` from a repository that isn't connected to GitHub, Claude Code bundles your local repository and uploads it directly to the cloud session. The bundle includes your full repository history across all branches, plus any uncommitted changes to tracked files."
+  Limits: repository under 100 MB; untracked files not included; sessions created from a bundle can't push back to a remote without GitHub auth.
+  - *Implication*: Teams on GitLab, Bitbucket, or local-only repos can now use `--remote` cloud sessions for read/analyze workflows, with the trade-off that push-back requires GitHub.
+  - *Source*: [Use Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
-  - Run `/status` to confirm; the provider line reads `Amazon Bedrock (Mantle)` when active.
-  - Mantle model IDs use the `anthropic.` prefix without a version suffix (e.g. `anthropic.claude-haiku-4-5`), distinct from the standard Bedrock catalog.
-  - **Mixed-mode supported**: Setting both `CLAUDE_CODE_USE_BEDROCK=1` and `CLAUDE_CODE_USE_MANTLE=1` lets Claude Code route requests to whichever endpoint has the requested model, with `/status` showing `Amazon Bedrock + Amazon Bedrock (Mantle)`.
-  - **Gateway support**: Use `CLAUDE_CODE_SKIP_MANTLE_AUTH=1` to disable client-side SigV4 signing when routing through an LLM gateway.
-  - *Implication*: Enterprise/team users with existing Bedrock deployments can opt into the native API shape without new credentials; model IDs with `anthropic.` prefix listed in `availableModels` are automatically routed to Mantle.
-  - *Source*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md)
+- **`--remote` behavior clarified**: The documentation now explicitly states that `--remote` clones from GitHub at your current branch — local commits not yet pushed to GitHub won't be visible in the VM. Also clarified that `--remote` and `--remote-control` are unrelated:
+  > "`--remote` creates cloud sessions. `--remote-control` is unrelated: it exposes a local CLI session for monitoring from the web."
+  - *Source*: [Use Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
-- **`UserPromptSubmit` hook: `sessionTitle` output field**: Hooks responding to `UserPromptSubmit` events can now set the session title by returning `sessionTitle` in `hookSpecificOutput`, equivalent to running `/rename`.
+- **Cloud context management documented**: A new "Manage context" subsection documents which commands work inside cloud sessions. `/compact` (with optional focus) and `/context` work; `/clear` does not (start a new session from the sidebar instead). Also documents `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW` for tuning compaction in cloud environments.
+  - *Source*: [Use Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
-  > *"`sessionTitle`: Sets the session title, same effect as `/rename`. Use to name sessions automatically based on the prompt content"*
-
-  ```json
-  {
-    "hookSpecificOutput": {
-      "hookEventName": "UserPromptSubmit",
-      "additionalContext": "My additional context here",
-      "sessionTitle": "My session title"
-    }
-  }
-  ```
-
-  - *Implication*: Hooks can now programmatically name sessions as they start, useful for auto-labeling sessions by project, ticket number, or prompt keyword.
-  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md)
-
-- **Code review: Rate and reply to findings**: GitHub PR review comments from Claude now include pre-attached 👍/👎 reactions for one-click feedback.
-
-  > *"Each review comment from Claude arrives with 👍 and 👎 already attached so both buttons appear in the GitHub UI for one-click rating. Click 👍 if the finding was useful or 👎 if it was wrong or noisy. Anthropic collects reaction counts after the PR merges and uses them to tune the reviewer."*
-
-  - Replying inline to a comment does not re-trigger Claude; to get a fresh review without pushing, use `@claude review once` as a top-level PR comment.
-  - *Implication*: Direct in-PR feedback loop for improving review quality over time.
-  - *Source*: [Code review](https://code.claude.com/docs/en/code-review.md)
-
-- **Plugin skills: stable invocation name via frontmatter**: When a skill path points to a directory containing `SKILL.md` directly (e.g. `"skills": ["./"]`), the `name` field in the frontmatter is now used as the invocation name rather than the directory basename.
-
-  > *"When a skill path points to a directory that contains a `SKILL.md` directly, for example `'skills': ['./']` pointing to the plugin root, the frontmatter `name` field in `SKILL.md` determines the skill's invocation name. This gives a stable name regardless of the install directory."*
-
-  - *Implication*: Plugin skills now have portable, install-path-independent invocation names; previously the name depended on where the plugin was cloned.
-  - *Source*: [Plugins reference](https://code.claude.com/docs/en/plugins-reference.md)
-
-- **Output styles: plugins can ship styles**: Plugins can now include an `output-styles/` directory, making output styles a distributable plugin component.
-
-  > *"[Plugins](/en/plugins-reference) can also ship output styles in an `output-styles/` directory."*
-
-  - *Source*: [Output styles](https://code.claude.com/docs/en/output-styles.md)
+- **`--teleport` vs `/teleport` distinguished**: The "From web to terminal" section now documents both the CLI flag and the in-session command, and explicitly distinguishes teleport from resume:
+  > "`--teleport` is distinct from `--resume`. `--resume` reopens a conversation from this machine's local history and doesn't list cloud sessions; `--teleport` pulls a cloud session and its branch."
+  A new subsection also explains when teleport is unavailable: API key, Bedrock, Vertex AI, and Microsoft Foundry users cannot teleport because it requires a claude.ai subscription.
+  - *Source*: [Use Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
 ---
 
-### Configuration & Environment Variables
+### Bug Fixes & Release Notes
 
-- **Three new Mantle environment variables** added to the env-vars reference:
-
-  | Variable | Purpose |
-  |---|---|
-  | `CLAUDE_CODE_USE_MANTLE` | Enable the Mantle endpoint (set to `1` or `true`) |
-  | `ANTHROPIC_BEDROCK_MANTLE_BASE_URL` | Override the default Mantle endpoint URL |
-  | `CLAUDE_CODE_SKIP_MANTLE_AUTH` | Skip client-side auth for proxy/gateway setups |
-
-  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
-
-- **Timeout variables now document their defaults**: `API_TIMEOUT_MS`, `BASH_DEFAULT_TIMEOUT_MS`, `BASH_MAX_TIMEOUT_MS`, `MCP_TIMEOUT`, and `MCP_TOOL_TIMEOUT` now include explicit default values in their descriptions. Notably:
-  - `API_TIMEOUT_MS` now documents a **maximum value of 2147483647**; values above this overflow the underlying timer and cause requests to fail immediately.
-  - `BASH_DEFAULT_TIMEOUT_MS`: default 120000 (2 minutes)
-  - `BASH_MAX_TIMEOUT_MS`: default 600000 (10 minutes)
-  - `MCP_TIMEOUT`: default 30000 (30 seconds)
-  - `MCP_TOOL_TIMEOUT`: default 100000000 (~28 hours)
-  - *Implication*: The `API_TIMEOUT_MS` overflow warning is a meaningful safety note — values set higher than ~2.1 billion will silently break rather than extend the timeout.
-  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
-
-- **Default effort level changed for most users**: The effort level documentation was updated to reflect that only Pro and Max subscribers default to medium effort; all other users (API key, Team, Enterprise, Bedrock, Vertex AI, Foundry) now default to **high effort**.
-
-  > *"The default effort level depends on your plan. Pro and Max subscribers default to medium effort. All other users default to high effort: API key, Team, Enterprise, and third-party provider (Bedrock, Vertex AI, Foundry) users."*
-
-  - Also: "ultrathink" in a prompt now has no effect if the session is already at high or max effort.
-  - *Implication*: This is a behavioral change for non-Pro/Max users — they will consume more tokens per request by default without any configuration change.
-  - *Source*: [Model configuration](https://code.claude.com/docs/en/model-config.md)
-
----
-
-### Hooks Debugging Overhaul
-
-The hooks documentation received a significant rewrite around how hook output reaches developers, replacing "verbose mode (`Ctrl+O`)" with a more precise model using the debug log file.
-
-- **Hook stdout behavior clarified**: Plain stdout on exit 0 now goes to the **debug log**, not the verbose transcript.
-
-  > *"For most events, stdout is written to the debug log but not shown in the transcript."*
-
-  Previously the docs said stdout was "only shown in verbose mode (`Ctrl+O`)". This is a documentation correction that reflects actual runtime behavior.
-
-- **Non-blocking errors (non-0, non-2 exit codes)**: The transcript now shows a one-line `<hook name> hook error` notice instead of sending stderr to verbose mode.
-
-  > *"Any other exit code is a non-blocking error for most hook events. The transcript shows a one-line `<hook name> hook error` notice and execution continues. The full stderr is written to the debug log."*
-
-- **New debug guidance**: The recommended debug workflow now uses `--debug-file`:
-
-  > *"Start Claude Code with `claude --debug-file /tmp/claude.log` to write to a known path, then `tail -f /tmp/claude.log` in another terminal. If you started without that flag, run `/debug` mid-session to enable logging and find the log path."*
-
-- **`suppressOutput` JSON field**: The description was corrected from "hides stdout from verbose mode output" to "omits stdout from the debug log".
-
-- **Exit code 1 clarification** — a new warning block was added:
-
-  > *"For most hook events, only exit code 2 blocks the action. Claude Code treats exit code 1 as a non-blocking error and proceeds with the action, even though 1 is the conventional Unix failure code. If your hook is meant to enforce a policy, use `exit 2`. The exception is `WorktreeCreate`, where any non-zero exit code aborts worktree creation."*
-
-  - *Implication*: Hook authors relying on `exit 1` to block actions were silently broken; only `exit 2` blocks. This is important for policy-enforcement hooks.
-  - *Source*: [Hooks reference](https://code.claude.com/docs/en/hooks.md), [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md)
-
----
-
-### Data Storage & Privacy
-
-- **New `~/.claude` Application Data section**: The `claude-directory.md` reference gained a comprehensive new section documenting every file Claude Code writes at runtime, organized into "swept automatically" (default: 30 days) and "not swept" (persist until deleted) categories.
-
-  Swept automatically:
-  | Path | Contents |
-  |---|---|
-  | `projects/<project>/<session>.jsonl` | Full conversation transcript |
-  | `projects/<project>/<session>/tool-results/` | Large spilled tool outputs |
-  | `file-history/<session>/` | Pre-edit file snapshots for checkpoint restore |
-  | `plans/` | Plan mode plan files |
-  | `debug/` | Per-session debug logs |
-  | `paste-cache/`, `image-cache/` | Large pastes and attached images |
-
-  Not swept (persists until manually deleted):
-  | Path | Contents |
-  |---|---|
-  | `history.jsonl` | Every typed prompt with timestamp; used for up-arrow recall |
-  | `statsig/` | Feature-flag cache and stable anonymous device ID |
-  | `stats-cache.json` | Token/cost counts shown by `/cost` |
-  | `todos/` | Legacy per-session task lists (no longer written; safe to delete) |
-
-  - **Plaintext storage warning**: Transcripts are not encrypted at rest. Credentials read from `.env` files or printed by commands are written to `projects/<project>/<session>.jsonl`. Options to reduce exposure: lower `cleanupPeriodDays`, use `--no-session-persistence` in headless mode, or use permission rules to deny credential file reads.
-  - *Source*: [`.claude` directory](https://code.claude.com/docs/en/claude-directory.md)
-
-- **Data usage page updated**: The local caching description was updated to point to the new Application Data section and confirm transcripts are stored in plaintext:
-
-  > *"Claude Code clients store session transcripts locally in plaintext under `~/.claude/projects/` for 30 days by default (configurable via `cleanupPeriodDays`) to enable session resumption."*
-
-  - *Source*: [Data usage](https://code.claude.com/docs/en/data-usage.md)
-
----
-
-### Keybindings & UI
-
-- **`Ctrl+L` rebinding**: `Ctrl+L` was previously bound to `app:redraw` ("Redraw the screen"). It is now bound to `chat:clearInput` ("Clear prompt input — clears typed text, keeps conversation history"). The redraw action (`app:redraw`) is now **unbound** by default.
-
-  > *"`chat:clearInput` | Ctrl+L | Clear prompt input"*
-
-  - *Implication*: Users who relied on `Ctrl+L` to repaint the terminal will need to rebind `app:redraw` manually. The new default aligns with shell readline behavior where `Ctrl+L` clears the line.
-  - *Source*: [Keybindings](https://code.claude.com/docs/en/keybindings.md)
+- **Version 2.1.96 — Bedrock auth regression fix**: A regression introduced in 2.1.94 caused Bedrock requests to fail with `403 "Authorization header is missing"` when using `AWS_BEARER_TOKEN_BEDROCK` or `CLAUDE_CODE_SKIP_BEDROCK_AUTH`. This is now fixed.
+  > "Fixed Bedrock requests failing with `403 \"Authorization header is missing\"` when using `AWS_BEARER_TOKEN_BEDROCK` or `CLAUDE_CODE_SKIP_BEDROCK_AUTH` (regression in 2.1.94)"
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
 ---
 
 ### Troubleshooting
 
-- **New "Model not found or not accessible" entry**: Step-by-step guide for resolving model resolution errors, including priority order for where the model setting is read and how to clear a stale value.
-
-  > *"To clear a stale value, remove the `model` field from your settings or unset `ANTHROPIC_MODEL`, and Claude Code will fall back to the default model for your account."*
-
-  - *Source*: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting.md)
-
-- **macOS Keychain login failure guidance**: Added step-by-step fix for macOS-specific login failures when the login Keychain is locked or out of sync.
-
-  > *"On macOS, login can also fail when the Keychain is locked or its password is out of sync with your account password... Run `claude doctor` to check Keychain access. To unlock the Keychain manually, run `security unlock-keychain ~/Library/Keychains/login.keychain-db`."*
-
+- **New: Auto-compaction thrashing error**: A new troubleshooting entry covers the case where a file or tool output immediately refills the context window after compaction, causing Claude Code to stop retrying to avoid infinite API loops.
+  > "If you see `Autocompact is thrashing: the context refilled to the limit...`, automatic compaction succeeded but a file or tool output immediately refilled the context window several times in a row. Claude Code stops retrying to avoid wasting API calls on a loop that isn't making progress."
+  Recovery options: read the oversized file in smaller chunks, run `/compact` with a focus to drop the large output, delegate large-file work to a subagent, or run `/clear` if the earlier conversation is no longer needed.
   - *Source*: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting.md)
 
 ---
 
-### Other Notable Details
+### Configuration & Settings
 
-- **`--resume` cross-worktree improvement**: The `/resume` picker now directly resumes sessions from other worktrees of the same repository, without requiring a `cd` first. The docs previously said it would "print a `cd` command".
-  - *Source*: [Common workflows](https://code.claude.com/docs/en/common-workflows.md)
+- **MCP scopes: "Choosing the right scope" section replaced with summary table**: The verbose prose section was replaced with a concise table and clarified descriptions for each scope. An example JSON block now shows exactly what `~/.claude.json` looks like after adding a local-scoped server.
 
-- **Ultraplan: explicit third-party provider exclusion**: Ultraplan documentation now states it is unavailable when using Amazon Bedrock, Google Cloud Vertex AI, or Microsoft Foundry (runs on Anthropic's cloud infrastructure). Also now requires v2.1.91 or later.
-  - *Source*: [Ultraplan](https://code.claude.com/docs/en/ultraplan.md)
+  | Scope | Loads in | Shared with team | Stored in |
+  |---|---|---|---|
+  | Local | Current project only | No | `~/.claude.json` |
+  | Project | Current project only | Yes, via version control | `.mcp.json` in project root |
+  | User | All your projects | No | `~/.claude.json` |
 
-- **Plugin cache cleanup timing**: Orphaned plugin versions (after update or uninstall) are now documented as removed automatically **7 days later**, with an explanation that the grace period supports concurrent sessions using the old version.
-  - *Source*: [Plugins reference](https://code.claude.com/docs/en/plugins-reference.md)
+  - *Source*: [Connect Claude Code to tools via MCP](https://code.claude.com/docs/en/mcp.md)
 
-- **Installed plugins path added to "What's not shown"**: `~/.claude/plugins/` now appears in the file table with a description of what it stores and a link to plugin caching docs.
-  - *Source*: [`.claude` directory](https://code.claude.com/docs/en/claude-directory.md)
+- **Desktop local environment editor for secrets**: The `env` field documentation in `launch.json` now points to the desktop's **local environment editor** (gear icon in the prompt box dropdown) for managing dev server secrets. Previously the docs said to use the shell profile.
+  > "To pass secrets to your dev server, set them in the [local environment editor](#local-sessions) instead."
+  The local environment editor stores variables encrypted on disk and applies them to both Claude sessions and preview servers.
+  - *Source*: [Use Claude Code Desktop](https://code.claude.com/docs/en/desktop.md)
 
-- **VS Code troubleshooting anchor**: An explicit `<a id="troubleshooting" />` anchor was added before the "Fix common issues" section, enabling direct links to VS Code troubleshooting.
-  - *Source*: [VS Code](https://code.claude.com/docs/en/vs-code.md)
+- **Desktop `MAX_THINKING_TOKENS` clarification**: On Opus 4.6 and Sonnet 4.6, any `MAX_THINKING_TOKENS` value other than `0` is ignored due to adaptive reasoning. To use a fixed thinking budget on these models, also set `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1`. The variable should now be set in the local environment editor, not the shell profile.
+  - *Source*: [Use Claude Code Desktop](https://code.claude.com/docs/en/desktop.md)
+
+- **Desktop plan mode description corrected**: Plan mode was previously described as "analyzes your code and creates a plan without modifying files or running commands." It now reads "reads files and runs commands to explore, then proposes a plan without editing your source code" — acknowledging that read-only commands (like `npm test --dry-run`) can run in plan mode.
+  - *Source*: [Use Claude Code Desktop](https://code.claude.com/docs/en/desktop.md)
+
+- **`CLAUDE_CONFIG_DIR` noted in directory reference**: The `.claude` directory page now states that when `CLAUDE_CONFIG_DIR` is set, every `~/.claude` path documented on that page lives under that directory instead.
+  - *Source*: [Explore the .claude directory](https://code.claude.com/docs/en/claude-directory.md)
+
+- **New env var `CCR_FORCE_BUNDLE`**: Set to `1` to force `claude --remote` to bundle and upload the local repository even when GitHub access is available.
+  - *Source*: [Environment variables](https://code.claude.com/docs/en/env-vars.md)
+
+- **Hardware requirements updated**: Setup page now specifies x64 or ARM64 processor alongside the existing 4 GB+ RAM requirement.
+  - *Source*: [Setup](https://code.claude.com/docs/en/setup.md)
+
+---
+
+### Commands
+
+- **`/teleport` and `/web-setup` added to command reference**: Both commands were previously absent from the built-in commands table.
+  - `/teleport`: "Pull a Claude Code on the web session into this terminal: opens a picker, then fetches the branch and conversation. Also available as `/tp`. Requires a claude.ai subscription."
+  - `/web-setup`: "Connect your GitHub account to Claude Code on the web using your local `gh` CLI credentials. `/schedule` prompts for this automatically if GitHub isn't connected."
+  - *Source*: [Built-in commands](https://code.claude.com/docs/en/commands.md)
+
+---
+
+### Status Line
+
+- **Cache file naming fix for concurrent sessions**: The caching example in the status line docs was updated to derive the cache filename from `session_id` (from the JSON input) rather than a fixed path. The previous approach caused concurrent sessions in different repositories to share stale git state.
+  > "The cache filename needs to be stable across status line invocations within a session, but unique across sessions so concurrent sessions in different repositories don't read each other's cached git state. Process-based identifiers like `$$`, `os.getpid()`, or `process.pid` change on every invocation and defeat the cache. Use the `session_id` from the JSON input instead."
+  Cache file is now `/tmp/statusline-git-cache-$SESSION_ID` across all three language examples (Bash, Python, Node.js).
+  - *Source*: [Customize your status line](https://code.claude.com/docs/en/statusline.md)
+
+---
+
+### Skills
+
+- **Argument quoting behavior documented**: The skills reference now notes that indexed arguments use shell-style quoting.
+  > "Indexed arguments use shell-style quoting, so wrap multi-word values in quotes to pass them as a single argument. For example, `/my-skill \"hello world\" second` makes `$0` expand to `hello world` and `$1` to `second`. The `$ARGUMENTS` placeholder always expands to the full argument string as typed."
+  - *Source*: [Skills](https://code.claude.com/docs/en/skills.md)
+
+---
+
+### Authentication
+
+- **Browser login code fallback documented**: The authentication page now documents that if the browser shows a login code instead of redirecting back after sign-in, users should paste it into the terminal at the `Paste code here if prompted` prompt.
+  - *Source*: [Authentication](https://code.claude.com/docs/en/authentication.md)
+
+---
+
+## New Pages
+
+- **[web-quickstart.md](https://code.claude.com/docs/en/web-quickstart.md)** — Step-by-step guide to getting started with Claude Code on the web: connecting GitHub (browser and terminal paths), creating cloud environments, submitting tasks, reviewing diffs, and creating PRs. Includes a surface comparison table and setup troubleshooting.
+
+---
+
+## Notable Details
+
+- **Agent SDK links switched to relative paths**: Multiple pages (`headless.md`, `github-actions.md`, `gitlab-ci-cd.md`, `legal-and-compliance.md`, `cli-reference.md`, `overview.md`) updated Agent SDK references from `platform.claude.com/docs/en/agent-sdk/...` to relative `/en/agent-sdk/...`, indicating the Agent SDK docs are now co-hosted under the Claude Code documentation domain.
+
+- **Devcontainer first-run instructions added**: `devcontainer.md` now includes a post-build step: open a terminal with `` Ctrl+` `` and run `claude` to authenticate. Small addition that addresses a common first-run gap.
+
+- **`.claude` directory cleanup tables expanded**: The "Kept until you delete them" table (formerly "Not swept") now explicitly includes `stats-cache.json` and `backups/` as items to consider clearing, while `statsig/` and `downloads/` were removed from that list. The `debug/` directory entry now clarifies it is only written when `--debug` or `/debug` is active.
+
+- **Default allowed domains updated**: The new `claude-code-on-the-web.md` adds several domains to the Trusted allowlist that were absent before: `docs.claude.com` (Anthropic services), `downloads.sentry-cdn.com` and `api.honeycomb.io` (cloud monitoring), `fonts.googleapis.com` and `fonts.gstatic.com` (content delivery), `pkg.stainless.com` and `binaries.prisma.sh` (development tools), and `repo.maven.apache.org` and `kotlinlang.org` (JVM package managers).
+
+- **Slack prerequisites updated**: The requirements table now lists "premium seats or Chat + Claude Code seats" for Enterprise, where previously only "premium seats" appeared.
+
+- **`cleanupPeriodDays` wording clarified**: The settings reference changed "Sessions inactive for longer than this period" to "Session files older than this period" — a small but more accurate description of what gets cleaned up.
 
 ---
 
@@ -210,27 +155,34 @@ The hooks documentation received a significant rewrite around how hook output re
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| amazon-bedrock.md | Modified | +80/-0 | Full Mantle endpoint documentation: setup, model selection, dual-mode, gateway routing, env vars, and error reference |
-| claude-directory.md | Modified | +62/-5 | New Application Data section covering all runtime-written files, retention, plaintext warning, and data clearing guide |
-| changelog.md | Modified | +28/-0 | Version 2.1.94 release notes |
-| troubleshooting.md | Modified | +24/-0 | New "Model not found" section; macOS Keychain login fix |
-| hooks.md | Modified | +11/-5 | Debug log clarifications, exit-code-1 warning block, `sessionTitle` output field, `suppressOutput` correction |
-| hooks-guide.md | Modified | +5/-3 | Debug workflow rewrite: transcript summary vs. debug log distinction |
-| env-vars.md | Modified | +8/-5 | Three new Mantle variables; default values added to timeout variables |
-| keybindings.md | Modified | +8/-7 | `Ctrl+L` rebound from `app:redraw` to `chat:clearInput`; `app:redraw` unbound |
-| model-config.md | Modified | +7/-3 | Mantle model IDs section; effort level default changed for non-Pro/Max users |
-| plugins-reference.md | Modified | +3/-0 | Skill frontmatter name behavior; orphaned version cleanup timing |
-| plugins.md | Modified | +6/-6 | JSON indentation fix in quickstart example |
-| code-review.md | Modified | +6/-0 | New "Rate and reply to findings" section with 👍/👎 feedback |
-| output-styles.md | Modified | +2/-1 | Plugins can ship output styles |
-| vs-code.md | Modified | +2/-0 | Added `#troubleshooting` anchor |
-| ultraplan.md | Modified | +2/-2 | Version requirement (v2.1.91+); third-party provider exclusion noted |
-| data-usage.md | Modified | +1/-1 | Local caching description updated with plaintext/path/cleanup details |
-| common-workflows.md | Modified | +1/-1 | `--resume` cross-worktree behavior clarified |
-| context-window.md | Modified | +2/-2 | Hook stdout description corrected: debug log, not verbose mode |
-| how-claude-code-works.md | Modified | +1/-1 | Sessions described as plaintext JSONL; link to new Application Data section |
-| interactive-mode.md | Modified | +1/-1 | `Ctrl+L` description updated to match rebinding |
+| web-quickstart.md | New | +203 | New getting-started guide for Claude Code on the web |
+| claude-code-on-the-web.md | Modified | +575/-547 | Major restructure: new quickstart split out, resource limits, local bundle support, context management, network access overhaul |
+| claude-directory.md | Modified | +31/-28 | Renamed cleanup sections; CLAUDE_CONFIG_DIR note; expanded clear-data table |
+| mcp.md | Modified | +25/-18 | Replaced "Choosing the right scope" section with summary table and JSON example |
+| desktop.md | Modified | +18/-16 | Local environment editor for secrets; MAX_THINKING_TOKENS clarification; plan mode description fix |
+| troubleshooting.md | Modified | +11/-0 | New: auto-compaction thrashing error and recovery steps |
+| statusline.md | Modified | +7/-4 | Cache file naming fix: use session_id for concurrent-session safety |
+| web-scheduled-tasks.md | Modified | +7/-5 | Minor wording and link anchor updates |
+| slack.md | Modified | +7/-7 | Updated prerequisites (Chat + Claude Code seats); fixed sharing link anchor |
+| overview.md | Modified | +8/-8 | Agent SDK links made relative; web onboarding link updated to web-quickstart |
+| commands.md | Modified | +3/-1 | Added /teleport and /web-setup; fixed /remote-env anchor |
+| setup.md | Modified | +6/-6 | Added ARM64 processor requirement; code block formatting |
+| headless.md | Modified | +4/-4 | Agent SDK links made relative |
+| changelog.md | Modified | +4/-0 | Version 2.1.96: Bedrock auth regression fix |
+| cli-reference.md | Modified | +3/-3 | Agent SDK and structured-outputs links made relative |
+| how-claude-code-works.md | Modified | +2/-0 | Link to new thrashing error troubleshooting entry |
+| devcontainer.md | Modified | +2/-0 | First-run instructions added after container build |
+| skills.md | Modified | +2/-0 | Shell-style quoting behavior for indexed arguments |
+| authentication.md | Modified | +2/-0 | Browser login code fallback note |
+| github-enterprise-server.md | Modified | +2/-2 | /teleport → --teleport; updated teleport requirements anchor |
+| data-usage.md | Modified | +2/-2 | Session deletion link updated to new anchor |
+| env-vars.md | Modified | +1/-0 | Added CCR_FORCE_BUNDLE variable |
+| settings.md | Modified | +1/-1 | Clarified cleanupPeriodDays description |
+| ultraplan.md | Modified | +2/-2 | Updated cloud-environment anchor links |
+| fast-mode.md | Modified | +1/-1 | "extra usage credits" → "extra usage" |
+| github-actions.md | Modified | +1/-1 | Agent SDK link made relative |
+| gitlab-ci-cd.md | Modified | +1/-1 | Agent SDK link made relative |
+| legal-and-compliance.md | Modified | +1/-1 | Agent SDK link made relative |
 
 ---
-
 *Generated from Claude Code CLI documentation changes detected on 2026-04-08*
