@@ -60,6 +60,8 @@ Upload File
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
 
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
+
 ### Returns
 
 - `class FileMetadata:`
@@ -95,6 +97,18 @@ Upload File
   - `Boolean Downloadable`
 
     Whether the file can be downloaded.
+
+  - `BetaFileScope? Scope`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `required string ID`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `JsonElement Type "session"constant`
+
+      The type of scope (e.g., `"session"`).
 
 ### Example
 
@@ -134,6 +148,10 @@ List Files
     Query param: Number of items to return per page.
 
     Defaults to `20`. Ranges from `1` to `1000`.
+
+  - `string scopeID`
+
+    Query param: Filter by scope ID. Only returns files associated with the specified scope (e.g., a session ID).
 
   - `IReadOnlyList<AnthropicBeta> betas`
 
@@ -179,6 +197,8 @@ List Files
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
 
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
+
 ### Returns
 
 - `class FileListPageResponse:`
@@ -218,6 +238,18 @@ List Files
     - `Boolean Downloadable`
 
       Whether the file can be downloaded.
+
+    - `BetaFileScope? Scope`
+
+      The scope of this file, indicating the context in which it was created (e.g., a session).
+
+      - `required string ID`
+
+        The ID of the scoping resource (e.g., the session ID).
+
+      - `JsonElement Type "session"constant`
+
+        The type of scope (e.g., `"session"`).
 
   - `string? FirstID`
 
@@ -303,6 +335,8 @@ Download File
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
 
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
+
 ### Example
 
 ```csharp
@@ -373,6 +407,8 @@ Get File Metadata
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
 
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
+
 ### Returns
 
 - `class FileMetadata:`
@@ -408,6 +444,18 @@ Get File Metadata
   - `Boolean Downloadable`
 
     Whether the file can be downloaded.
+
+  - `BetaFileScope? Scope`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `required string ID`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `JsonElement Type "session"constant`
+
+      The type of scope (e.g., `"session"`).
 
 ### Example
 
@@ -479,6 +527,8 @@ Delete File
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
 
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
+
 ### Returns
 
 - `class DeletedFile:`
@@ -506,6 +556,18 @@ Console.WriteLine(deletedFile);
 ```
 
 ## Domain Types
+
+### Beta File Scope
+
+- `class BetaFileScope:`
+
+  - `required string ID`
+
+    The ID of the scoping resource (e.g., the session ID).
+
+  - `JsonElement Type "session"constant`
+
+    The type of scope (e.g., `"session"`).
 
 ### Deleted File
 
@@ -558,3 +620,15 @@ Console.WriteLine(deletedFile);
   - `Boolean Downloadable`
 
     Whether the file can be downloaded.
+
+  - `BetaFileScope? Scope`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `required string ID`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `JsonElement Type "session"constant`
+
+      The type of scope (e.g., `"session"`).

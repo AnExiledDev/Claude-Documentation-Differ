@@ -70,6 +70,8 @@ The Models API response can be used to determine which models are available for 
 
     - `FAST_MODE_2026_02_01("fast-mode-2026-02-01")`
 
+    - `OUTPUT_300K_2026_03_24("output-300k-2026-03-24")`
+
 ### Returns
 
 - `class BetaModelInfo:`

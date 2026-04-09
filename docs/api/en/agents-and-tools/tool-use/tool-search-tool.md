@@ -110,6 +110,44 @@ curl https://api.anthropic.com/v1/messages \
     }'
 ```
 
+```bash CLI
+ant messages create <<'YAML'
+model: claude-opus-4-6
+max_tokens: 2048
+messages:
+  - role: user
+    content: What is the weather in San Francisco?
+tools:
+  - type: tool_search_tool_regex_20251119
+    name: tool_search_tool_regex
+  - name: get_weather
+    description: Get the weather at a specific location
+    input_schema:
+      type: object
+      properties:
+        location:
+          type: string
+        unit:
+          type: string
+          enum: [celsius, fahrenheit]
+      required: [location]
+    defer_loading: true
+  - name: search_files
+    description: Search through files in the workspace
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+        file_types:
+          type: array
+          items:
+            type: string
+      required: [query]
+    defer_loading: true
+YAML
+```
+
 ```python Python hidelines={1..2}
 import anthropic
 
@@ -819,7 +857,7 @@ For ZDR eligibility across all features, see [API and data retention](/docs/en/b
 - **Maximum tools:** 10,000 tools in your catalog
 - **Search results:** Returns 3-5 most relevant tools per search
 - **Pattern length:** Maximum 200 characters for regex patterns
-- **Model support:** Sonnet 4.0+, Opus 4.0+ only (no Haiku)
+- **Model support:** [Claude Mythos Preview](https://anthropic.com/glasswing), Sonnet 4.0+, Opus 4.0+ only (no Haiku)
 
 ### When to use tool search
 

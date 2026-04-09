@@ -51,7 +51,7 @@ dotnet add package Anthropic.Foundry
 <Tabs>
 <Tab title="Gradle">
 ```kotlin
-implementation("com.anthropic:anthropic-java-foundry:2.18.0")
+implementation("com.anthropic:anthropic-java-foundry:2.20.0")
 ```
 </Tab>
 <Tab title="Maven">
@@ -59,7 +59,7 @@ implementation("com.anthropic:anthropic-java-foundry:2.18.0")
 <dependency>
     <groupId>com.anthropic</groupId>
     <artifactId>anthropic-java-foundry</artifactId>
-    <version>2.18.0</version>
+    <version>2.20.0</version>
 </dependency>
 ```
 </Tab>
@@ -146,6 +146,21 @@ curl https://{resource}.services.ai.azure.com/anthropic/v1/messages \
       {"role": "user", "content": "Hello!"}
     ]
   }'
+```
+</Tab>
+
+<Tab title="CLI">
+
+```bash CLI nocheck
+# ant reads ANTHROPIC_API_KEY and sends it as x-api-key, which Foundry accepts
+export ANTHROPIC_API_KEY="YOUR_AZURE_API_KEY"
+
+ant messages create \
+  --base-url https://example-resource.services.ai.azure.com/anthropic \
+  --model claude-opus-4-6 \
+  --max-tokens 1024 \
+  --message '{role: user, content: "Hello!"}' \
+  --transform content
 ```
 </Tab>
 
@@ -471,7 +486,7 @@ Claude on Foundry supports most of Claude's powerful features. You can find all 
 
 ### Context window
 
-Claude Opus 4.6 and Sonnet 4.6 have a [1M-token context window](/docs/en/build-with-claude/context-windows) on Microsoft Foundry. Other Claude models, including Sonnet 4.5, have a 200k-token context window.
+Claude Opus 4.6 and Claude Sonnet 4.6 have a [1M-token context window](/docs/en/build-with-claude/context-windows) on Microsoft Foundry. Other Claude models, including Sonnet 4.5, have a 200k-token context window.
 
 ### Features not supported
 
@@ -481,7 +496,7 @@ Claude Opus 4.6 and Sonnet 4.6 have a [1M-token context window](/docs/en/build-w
 
 ## API responses
 
-API responses from Claude on Foundry follow the standard [Claude API response format](/docs/en/api/messages). This includes the `usage` object in response bodies, which provides detailed token consumption information for your requests. The `usage` object is consistent across all platforms (first-party API, Foundry, Amazon Bedrock, and Google Vertex AI).
+API responses from Claude on Foundry follow the standard [Claude API response format](/docs/en/api/messages/create). This includes the `usage` object in response bodies, which provides detailed token consumption information for your requests. The `usage` object is consistent across all platforms (first-party API, Foundry, Amazon Bedrock, and Google Vertex AI).
 
 For details on response headers specific to Foundry, see the [correlation request IDs section](#correlation-request-ids).
 
@@ -548,6 +563,10 @@ Foundry does not include Anthropic's standard rate limit headers (`anthropic-rat
 **Error:** `Invalid model parameter`
 
 - **Solution:** The model parameter should contain your deployment name, which can be customized in the Foundry portal. Verify the deployment exists and is properly configured.
+
+<Info>
+[Claude Mythos Preview](https://anthropic.com/glasswing) is a research preview available to invited customers on Microsoft Foundry. For more information, see [Project Glasswing](https://anthropic.com/glasswing).
+</Info>
 
 ## Additional resources
 

@@ -4,7 +4,11 @@
 
 The web search tool gives Claude direct access to real-time web content, allowing it to answer questions with up-to-date information beyond its knowledge cutoff. The response includes citations for sources drawn from search results.
 
-The latest web search tool version (`web_search_20260209`) supports **dynamic filtering** with Claude Opus 4.6 and Sonnet 4.6. Claude can write and execute code to filter search results before they reach the context window, keeping only relevant information and discarding the rest. This leads to more accurate responses while reducing token consumption. The previous tool version (`web_search_20250305`) remains available without dynamic filtering.
+The latest web search tool version (`web_search_20260209`) supports **dynamic filtering** with [Claude Mythos Preview](https://anthropic.com/glasswing), Claude Opus 4.6, and Claude Sonnet 4.6. Claude can write and execute code to filter search results before they reach the context window, keeping only relevant information and discarding the rest. This leads to more accurate responses while reducing token consumption. The previous tool version (`web_search_20250305`) remains available without dynamic filtering.
+
+<Note>
+For [Claude Mythos Preview](https://anthropic.com/glasswing), web search is supported on the Claude API, Microsoft Foundry, and Google Vertex AI. Web search is not available for Mythos Preview on Amazon Bedrock.
+</Note>
 
 For Zero Data Retention eligibility and the `allowed_callers` workaround, see [Server tools](/docs/en/agents-and-tools/tool-use/server-tools#zdr-and-allowed-callers).
 
@@ -18,7 +22,7 @@ When you add the web search tool to your API request:
 2. The API executes the searches and provides Claude with the results. This process may repeat multiple times throughout a single request.
 3. At the end of its turn, Claude provides a final response with cited sources.
 
-### Dynamic filtering with Opus 4.6 and Sonnet 4.6
+### Dynamic filtering
 
 Web search is a token-intensive task. With basic web search, Claude needs to pull search results into context, fetch full HTML from multiple websites, and reason over all of it before arriving at an answer. Often, much of this content is irrelevant, which can degrade response quality.
 
@@ -56,6 +60,21 @@ curl https://api.anthropic.com/v1/messages \
             "name": "web_search"
         }]
     }'
+```
+
+```bash CLI
+ant messages create <<'YAML'
+model: claude-opus-4-6
+max_tokens: 4096
+messages:
+  - role: user
+    content: >-
+      Search for the current prices of AAPL and GOOGL, then calculate
+      which has a better P/E ratio.
+tools:
+  - type: web_search_20260209
+    name: web_search
+YAML
 ```
 
 ```python Python hidelines={1..2}
@@ -257,6 +276,14 @@ curl https://api.anthropic.com/v1/messages \
             "max_uses": 5
         }]
     }'
+```
+
+```bash CLI
+ant messages create \
+  --model claude-opus-4-6 \
+  --max-tokens 1024 \
+  --message '{role: user, content: What is the weather in NYC?}' \
+  --tool '{type: web_search_20250305, name: web_search, max_uses: 5}'
 ```
 
 ```python Python hidelines={1..2}
@@ -486,7 +513,7 @@ The `user_location` parameter allows you to localize search results based on a u
 
 Here's an example response structure:
 
-```json
+```json Output
 {
   "role": "assistant",
   "content": [
@@ -577,7 +604,7 @@ The web search citation fields `cited_text`, `title`, and `url` do not count tow
 
 When the web search tool encounters an error (such as hitting rate limits), the Claude API still returns a 200 (success) response. The error is represented within the response body using the following structure:
 
-```json
+```json Output
 {
   "type": "web_search_tool_result",
   "tool_use_id": "servertoolu_a93jad",
@@ -608,7 +635,7 @@ For caching tool definitions across turns, see [Tool use with prompt caching](/d
 
 With streaming enabled, you'll receive search events as part of the stream. There will be a pause while the search executes:
 
-```sse
+```sse Output
 event: message_start
 data: {"type": "message_start", "message": {"id": "msg_abc123", "type": "message"}}
 

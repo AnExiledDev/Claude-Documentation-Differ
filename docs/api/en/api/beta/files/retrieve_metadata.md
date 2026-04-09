@@ -18,7 +18,7 @@ Get File Metadata
 
   - `UnionMember0 = string`
 
-  - `UnionMember1 = "message-batches-2024-09-24" or "prompt-caching-2024-07-31" or "computer-use-2024-10-22" or 17 more`
+  - `UnionMember1 = "message-batches-2024-09-24" or "prompt-caching-2024-07-31" or "computer-use-2024-10-22" or 18 more`
 
     - `"message-batches-2024-09-24"`
 
@@ -60,9 +60,11 @@ Get File Metadata
 
     - `"fast-mode-2026-02-01"`
 
+    - `"output-300k-2026-03-24"`
+
 ### Returns
 
-- `FileMetadata = object { id, created_at, filename, 4 more }`
+- `FileMetadata = object { id, created_at, filename, 5 more }`
 
   - `id: string`
 
@@ -98,10 +100,24 @@ Get File Metadata
 
     Whether the file can be downloaded.
 
+  - `scope: optional BetaFileScope`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `id: string`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `type: "session"`
+
+      The type of scope (e.g., `"session"`).
+
+      - `"session"`
+
 ### Example
 
 ```http
-curl https://api.anthropic.com/v1/files/$FILE_ID?beta=true \
+curl https://api.anthropic.com/v1/files/$FILE_ID \
     -H 'anthropic-version: 2023-06-01' \
     -H 'anthropic-beta: files-api-2025-04-14' \
     -H "X-Api-Key: $ANTHROPIC_API_KEY"

@@ -33,25 +33,25 @@ MTok = Million tokens. The "Base Input Tokens" column shows standard input prici
 
 ## Third-party platform pricing
 
-Claude models are available on [AWS Bedrock](/docs/en/build-with-claude/claude-on-amazon-bedrock), [Google Vertex AI](/docs/en/build-with-claude/claude-on-vertex-ai), and [Microsoft Foundry](/docs/en/build-with-claude/claude-in-microsoft-foundry). For official pricing, visit:
+Claude models are available on [AWS Bedrock](/docs/en/build-with-claude/claude-in-amazon-bedrock), [Google Vertex AI](/docs/en/build-with-claude/claude-on-vertex-ai), and [Microsoft Foundry](/docs/en/build-with-claude/claude-in-microsoft-foundry). For official pricing, visit:
 - [AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/)
 - [Google Vertex AI pricing](https://cloud.google.com/vertex-ai/generative-ai/pricing)
 - [Microsoft Foundry pricing](https://azure.microsoft.com/en-us/pricing/details/ai-foundry/#pricing)
 
 <Note>
-**Regional endpoint pricing for Claude 4.5 models and beyond**
+**Regional and multi-region endpoint pricing for Claude 4.5 models and beyond**
 
-Starting with Claude Sonnet 4.5 and Haiku 4.5, AWS Bedrock and Google Vertex AI offer two endpoint types:
-- **Global endpoints:** Dynamic routing across regions for maximum availability
-- **Regional endpoints:** Data routing guaranteed within specific geographic regions
+Starting with Claude Sonnet 4.5 and Haiku 4.5:
+- **AWS Bedrock** offers two endpoint types: global endpoints (dynamic routing for maximum availability) and regional endpoints (guaranteed data routing through specific geographic regions).
+- **Google Vertex AI** offers three endpoint types: global endpoints, multi-region endpoints (dynamic routing within a geographic area), and regional endpoints.
 
-Regional endpoints include a 10% premium over global endpoints. The Claude API (1P) is global by default; for 1P data residency options and pricing, see [Data residency pricing](#data-residency-pricing) below.
+Regional and multi-region endpoints include a 10% premium over global endpoints. The Claude API (1P) is global by default; for 1P data residency options and pricing, see [Data residency pricing](#data-residency-pricing) below.
 
 **Scope:** This pricing structure applies to Claude Sonnet 4.5, Haiku 4.5, and all future models. Earlier models (Claude Sonnet 4, Opus 4, and prior releases) retain their existing pricing.
 
 For implementation details and code examples:
 - [AWS Bedrock global vs regional endpoints](/docs/en/build-with-claude/claude-on-amazon-bedrock#global-vs-regional-endpoints)
-- [Google Vertex AI global vs regional endpoints](/docs/en/build-with-claude/claude-on-vertex-ai#global-vs-regional-endpoints)
+- [Google Vertex AI global, multi-region, and regional endpoints](/docs/en/build-with-claude/claude-on-vertex-ai#global-multi-region-and-regional-endpoints)
 </Note>
 
 ## Feature-specific pricing
@@ -126,7 +126,7 @@ For more information about batch processing, see the [batch processing documenta
 
 ### Long context pricing
 
-Claude Opus 4.6 and Sonnet 4.6 include the full [1M token context window](/docs/en/build-with-claude/context-windows) at standard pricing. (A 900k-token request is billed at the same per-token rate as a 9k-token request.) Prompt caching and batch processing discounts apply at standard rates across the full context window.
+[Claude Mythos Preview](https://anthropic.com/glasswing), Opus 4.6 and Sonnet 4.6 include the full [1M token context window](/docs/en/build-with-claude/context-windows) at standard pricing. (A 900k-token request is billed at the same per-token rate as a 9k-token request.) Prompt caching and batch processing discounts apply at standard rates across the full context window.
 
 ### Tool use pricing
 
@@ -281,13 +281,56 @@ Computer use follows the standard [tool use pricing](/docs/en/agents-and-tools/t
 If you're also using bash or text editor tools alongside computer use, those tools have their own token costs as documented in their respective pages.
 </Note>
 
-## Agent use case pricing examples
+## Claude Managed Agents pricing
 
-Understanding pricing for agent applications is crucial when building with Claude. These real-world examples can help you estimate costs for different agent patterns.
+[Claude Managed Agents](/docs/en/managed-agents/overview) is billed on two dimensions: tokens and session runtime.
 
-### Customer support agent example
+### Tokens
 
-When building a customer support agent, here's how costs might break down:
+All tokens consumed by a Claude Managed Agents session are billed at the rates shown in [Model pricing](#model-pricing) above. [Prompt caching](#prompt-caching) multipliers apply identically. Web search triggered inside a session incurs the standard $10 per 1,000 searches.
+
+The following Messages API modifiers do **not** apply to Claude Managed Agents sessions:
+
+| Modifier | Why it doesn't apply |
+| --- | --- |
+| [Batch API discount](#batch-processing) | Sessions are stateful and interactive. There is no batch mode. |
+| [Fast mode premium](#fast-mode-pricing) | Inference speed is managed by the runtime. |
+| [Data residency multiplier](#data-residency-pricing) | `inference_geo` is a Messages API request field. |
+| [Long context premium](#long-context-pricing) | Context window is managed by the runtime. |
+| [Third-party platform pricing](#third-party-platform-pricing) | Claude Managed Agents is available only through the Claude API directly. |
+
+### Session runtime
+
+| SKU | Rate | Metering |
+| --- | --- | --- |
+| Session runtime | $0.08 per session-hour | `running` status duration |
+
+Runtime is measured to the millisecond and accrues only while the session's status is `running`. Time spent `idle` (waiting for your next message or a tool confirmation), `rescheduling`, or `terminated` does not count toward runtime.
+
+<Note>
+Session runtime replaces the [Code Execution](#code-execution-tool) container-hour billing model when using Claude Managed Agents. You are not separately billed for container hours on top of session runtime.
+</Note>
+
+### Worked example
+
+A one-hour coding session using Claude Opus 4.6 that consumes 50,000 input tokens and 15,000 output tokens:
+
+| Line item | Calculation | Cost |
+| --- | --- | --- |
+| Input tokens | 50,000 × $5 / 1,000,000 | $0.25 |
+| Output tokens | 15,000 × $25 / 1,000,000 | $0.375 |
+| Session runtime | 1.0 hour × $0.08 | $0.08 |
+| **Total** | | **$0.705** |
+
+If prompt caching is active and 40,000 of the input tokens are cache reads:
+
+| Line item | Calculation | Cost |
+| --- | --- | --- |
+| Uncached input tokens | 10,000 × $5 / 1,000,000 | $0.05 |
+| Cache read tokens | 40,000 × $5 × 0.1 / 1,000,000 | $0.02 |
+| Output tokens | 15,000 × $25 / 1,000,000 | $0.375 |
+| Session runtime | 1.0 hour × $0.08 | $0.08 |
+| **Total** | | **$0.525** |
 
 <Note>
   Example calculation for processing 10,000 support tickets:
@@ -298,24 +341,7 @@ When building a customer support agent, here's how costs might break down:
 
 For a detailed walkthrough of this calculation, see the [customer support agent guide](/docs/en/about-claude/use-case-guides/customer-support-chat).
 
-### General agent workflow pricing
-
-For more complex agent architectures with multiple steps:
-
-1. **Initial request processing**
-   - Typical input: 500-1,000 tokens
-   - Processing cost: ~$0.003 per request
-
-2. **Memory and context retrieval**
-   - Retrieved context: 2,000-5,000 tokens
-   - Cost per retrieval: ~$0.015 per operation
-
-3. **Action planning and execution**
-   - Planning tokens: 1,000-2,000
-   - Execution feedback: 500-1,000
-   - Combined cost: ~$0.045 per action
-
-For a comprehensive guide on agent pricing patterns, see the [agent use cases guide](/docs/en/about-claude/use-case-guides).
+## Additional pricing considerations
 
 ### Cost optimization strategies
 
@@ -329,8 +355,6 @@ When building agents with Claude:
 <Tip>
   For high-volume agent applications, contact the [enterprise sales team](https://claude.com/contact-sales) for custom pricing arrangements.
 </Tip>
-
-## Additional pricing considerations
 
 ### Rate limits
 

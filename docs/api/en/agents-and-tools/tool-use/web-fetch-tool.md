@@ -6,7 +6,11 @@ Fetch and read content from specific URLs to augment Claude's context with live 
 
 The web fetch tool allows Claude to retrieve full content from specified web pages and PDF documents.
 
-The latest web fetch tool version (`web_fetch_20260209`) supports **dynamic filtering** with Claude Opus 4.6 and Sonnet 4.6. Claude can write and execute code to filter fetched content before it reaches the context window, keeping only relevant information and discarding the rest. This reduces token consumption while maintaining response quality. The previous tool version (`web_fetch_20250910`) remains available without dynamic filtering.
+The latest web fetch tool version (`web_fetch_20260209`) supports **dynamic filtering** with [Claude Mythos Preview](https://anthropic.com/glasswing), Claude Opus 4.6, and Claude Sonnet 4.6. Claude can write and execute code to filter fetched content before it reaches the context window, keeping only relevant information and discarding the rest. This reduces token consumption while maintaining response quality. The previous tool version (`web_fetch_20250910`) remains available without dynamic filtering.
+
+<Note>
+For [Claude Mythos Preview](https://anthropic.com/glasswing), web fetch is supported on the Claude API and Microsoft Foundry only. It is not available for Mythos Preview on Amazon Bedrock or Google Vertex AI.
+</Note>
 
 <Note>
 Use the [feedback form](https://forms.gle/NhWcgmkcvPCMmPE86) to provide feedback on the quality of the model responses, the API itself, or the quality of the documentation.
@@ -40,7 +44,7 @@ When you add the web fetch tool to your API request:
 The web fetch tool currently does not support websites dynamically rendered via JavaScript.
 </Note>
 
-### Dynamic filtering with Opus 4.6 and Sonnet 4.6
+### Dynamic filtering
 
 Fetching full web pages and PDFs can quickly consume tokens, especially when only specific information is needed from large documents. With the `web_fetch_20260209` tool version, Claude can write and execute code to filter the fetched content before loading it into context.
 
@@ -76,6 +80,21 @@ curl https://api.anthropic.com/v1/messages \
             "name": "web_fetch"
         }]
     }'
+```
+
+```bash CLI
+ant messages create <<'YAML'
+model: claude-opus-4-6
+max_tokens: 4096
+messages:
+  - role: user
+    content: >-
+      Fetch the content at https://example.com/research-paper
+      and extract the key findings.
+tools:
+  - type: web_fetch_20260209
+    name: web_fetch
+YAML
 ```
 
 ```python Python hidelines={1..2}
@@ -273,6 +292,14 @@ curl https://api.anthropic.com/v1/messages \
             "max_uses": 5
         }]
     }'
+```
+
+```bash CLI
+ant messages create \
+  --model claude-opus-4-6 \
+  --max-tokens 1024 \
+  --message '{role: user, content: "Please analyze the content at https://example.com/article"}' \
+  --tool '{type: web_fetch_20250910, name: web_fetch, max_uses: 5}'
 ```
 
 ```python Python hidelines={1..2}
@@ -512,7 +539,7 @@ When displaying API outputs directly to end users, citations must be included to
 
 Here's an example response structure:
 
-```json
+```json Output
 {
   "role": "assistant",
   "content": [
@@ -596,7 +623,7 @@ The web fetch tool caches results to improve performance and reduce redundant re
 
 For PDF documents, content is returned as base64-encoded data:
 
-```json
+```json Output
 {
   "type": "web_fetch_tool_result",
   "tool_use_id": "srvtoolu_02",
@@ -621,7 +648,7 @@ For PDF documents, content is returned as base64-encoded data:
 
 When the web fetch tool encounters an error, the Claude API returns a 200 (success) response with the error represented in the response body:
 
-```json
+```json Output
 {
   "type": "web_fetch_tool_result",
   "tool_use_id": "srvtoolu_a93jad",
@@ -657,7 +684,7 @@ The tool cannot fetch arbitrary URLs that Claude generates or URLs from containe
 
 Web fetch works seamlessly with web search for comprehensive information gathering:
 
-```python hidelines={1..2}
+```python Python hidelines={1..2}
 import anthropic
 
 client = anthropic.Anthropic()
@@ -697,7 +724,7 @@ For caching tool definitions across turns, see [Tool use with prompt caching](/d
 
 With streaming enabled, fetch events are part of the stream with a pause during content retrieval:
 
-```sse
+```sse Output
 event: message_start
 data: {"type": "message_start", "message": {"id": "msg_abc123", "type": "message"}}
 

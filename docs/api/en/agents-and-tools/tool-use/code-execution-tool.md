@@ -20,20 +20,7 @@ This feature is **not** eligible for [Zero Data Retention (ZDR)](/docs/en/build-
 
 ## Model compatibility
 
-The code execution tool is available on the following models:
-
-| Model | Tool Version |
-|-------|--------------|
-| Claude Opus 4.6 (`claude-opus-4-6`) | `code_execution_20250825` |
-| Claude Sonnet 4.6 (`claude-sonnet-4-6`) | `code_execution_20250825` |
-| Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`) | `code_execution_20250825` |
-| Claude Opus 4.5 (`claude-opus-4-5-20251101`) | `code_execution_20250825` |
-| Claude Opus 4.1 (`claude-opus-4-1-20250805`) | `code_execution_20250825` |
-| Claude Opus 4 (`claude-opus-4-20250514`) | `code_execution_20250825` |
-| Claude Sonnet 4 (`claude-sonnet-4-20250514`) | `code_execution_20250825` |
-| Claude Sonnet 3.7 (`claude-3-7-sonnet-20250219`) ([deprecated](/docs/en/about-claude/model-deprecations)) | `code_execution_20250825` |
-| Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) | `code_execution_20250825` |
-| Claude Haiku 3.5 (`claude-3-5-haiku-latest`) ([deprecated](/docs/en/about-claude/model-deprecations)) | `code_execution_20250825` |
+The code execution tool is available on all supported Claude models using tool version `code_execution_20250825`.
 
 <Note>
 The `code_execution_20250825` version supports Bash commands and file operations. For models that support [programmatic tool calling](/docs/en/agents-and-tools/tool-use/programmatic-tool-calling), `code_execution_20260120` adds REPL state persistence and the ability to call tools from within the sandbox. A legacy version `code_execution_20250522` (Python only) is also available; see [Upgrade to latest tool version](#upgrade-to-latest-tool-version) to migrate from it.
@@ -50,6 +37,10 @@ Code execution is available on:
 - **Microsoft Azure AI Foundry**
 
 Code execution is not currently available on Amazon Bedrock or Google Vertex AI.
+
+<Note>
+For [Claude Mythos Preview](https://anthropic.com/glasswing), code execution is supported on the Claude API and Microsoft Foundry only. It is not available for Mythos Preview on Amazon Bedrock or Google Vertex AI.
+</Note>
 
 ## Quick start
 
@@ -75,6 +66,14 @@ curl https://api.anthropic.com/v1/messages \
             "name": "code_execution"
         }]
     }'
+```
+
+```bash CLI
+ant messages create \
+  --model claude-opus-4-6 \
+  --max-tokens 4096 \
+  --message '{role: user, content: "Calculate the mean and standard deviation of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"}' \
+  --tool '{type: code_execution_20250825, name: code_execution}'
 ```
 
 ```python Python hidelines={1..2}
@@ -352,6 +351,31 @@ curl https://api.anthropic.com/v1/messages \
             "name": "code_execution"
         }]
     }'
+```
+
+```bash CLI hidelines={1}
+printf 'name,value\nfoo,1\nbar,2\n' > data.csv
+# Upload a file
+FILE_ID=$(ant beta:files upload \
+  --file ./data.csv \
+  --transform id --format yaml)
+
+# Use the file_id with code execution
+ant beta:messages create \
+  --beta files-api-2025-04-14 <<YAML
+model: claude-opus-4-6
+max_tokens: 4096
+messages:
+  - role: user
+    content:
+      - type: text
+        text: Analyze this CSV data
+      - type: container_upload
+        file_id: $FILE_ID
+tools:
+  - type: code_execution_20250825
+    name: code_execution
+YAML
 ```
 
 ```python Python nocheck hidelines={1..2}
@@ -647,6 +671,33 @@ puts response
 When Claude creates files during code execution, you can retrieve these files using the Files API:
 
 <CodeGroup>
+
+```bash CLI nocheck
+# Request code execution that creates files; extract file_ids from tool results
+TOOL_RESULT='content.#(type=="bash_code_execution_tool_result")#'
+FILE_IDS=$(ant beta:messages create \
+  --beta files-api-2025-04-14 \
+  --transform "${TOOL_RESULT}.content.content|@flatten|#.file_id" \
+  --format yaml \
+    --model claude-opus-4-6 \
+    --max-tokens 4096 \
+    --message '{role: user, content: Create a matplotlib visualization and save it as output.png}' \
+    --tool '{type: code_execution_20250825, name: code_execution}'
+)
+
+# Download each created file
+while IFS= read -r LINE; do
+  [[ "$LINE" != "- "* ]] && continue
+  FILE_ID="${LINE#- }"
+  FILENAME=$(ant beta:files retrieve-metadata \
+    --file-id "$FILE_ID" \
+    --transform filename --format yaml)
+  ant beta:files download \
+    --file-id "$FILE_ID" \
+    --output "$FILENAME" > /dev/null
+  printf 'Downloaded: %s\n' "$FILENAME"
+done <<< "$FILE_IDS"
+```
 
 ```python Python nocheck hidelines={1..2}
 from anthropic import Anthropic
@@ -1072,7 +1123,7 @@ The code execution tool can return two types of results depending on the operati
 
 ### Bash command response
 
-```json hidelines={1,-1}
+```json Output hidelines={1,-1}
 [
   {
     "type": "server_tool_use",
@@ -1098,7 +1149,7 @@ The code execution tool can return two types of results depending on the operati
 ### File operation responses
 
 **View file:**
-```json hidelines={1,-1}
+```json Output hidelines={1,-1}
 [
   {
     "type": "server_tool_use",
@@ -1125,7 +1176,7 @@ The code execution tool can return two types of results depending on the operati
 ```
 
 **Create file:**
-```json hidelines={1,-1}
+```json Output hidelines={1,-1}
 [
   {
     "type": "server_tool_use",
@@ -1149,7 +1200,7 @@ The code execution tool can return two types of results depending on the operati
 ```
 
 **Edit file (str_replace):**
-```json hidelines={1,-1}
+```json Output hidelines={1,-1}
 [
   {
     "type": "server_tool_use",
@@ -1194,7 +1245,7 @@ Additional fields for file operations:
 Each tool type can return specific errors:
 
 **Common errors (all tools):**
-```json
+```json Output
 {
   "type": "bash_code_execution_tool_result",
   "tool_use_id": "srvtoolu_01VfmxgZ46TiHbmXgy928hQR",
@@ -1214,6 +1265,7 @@ Each tool type can return specific errors:
 | All tools | `container_expired` | Container expired and is no longer available |
 | All tools | `invalid_tool_input` | Invalid parameters provided to the tool |
 | All tools | `too_many_requests` | Rate limit exceeded for tool usage |
+| bash | `output_file_too_large` | Command output exceeded the maximum size |
 | text_editor | `file_not_found` | File doesn't exist (for view/edit operations) |
 | text_editor | `string_not_found` | The `old_str` not found in file (for str_replace) |
 
@@ -1302,6 +1354,24 @@ curl https://api.anthropic.com/v1/messages \
             "name": "code_execution"
         }]
     }'
+```
+
+```bash CLI
+# First request: Create a file with a random number
+CONTAINER_ID=$(ant messages create \
+  --transform container.id --format yaml \
+    --model claude-opus-4-6 \
+    --max-tokens 4096 \
+    --message '{role: user, content: Write a file with a random number and save it to "/tmp/number.txt"}' \
+    --tool '{type: code_execution_20250825, name: code_execution}'
+)
+
+# Second request: Reuse the container to read the file
+ant messages create --container "$CONTAINER_ID" \
+  --model claude-opus-4-6 \
+  --max-tokens 4096 \
+  --message '{role: user, content: Read the number from "/tmp/number.txt" and calculate its square}' \
+  --tool '{type: code_execution_20250825, name: code_execution}'
 ```
 
 ```python Python hidelines={1..6}

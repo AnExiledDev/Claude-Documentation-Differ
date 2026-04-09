@@ -4,6 +4,10 @@ Anthropic's Claude models are now generally available through Amazon Bedrock.
 
 ---
 
+<Note>
+This page covers the legacy Amazon Bedrock integration (the `InvokeModel` API with ARN-versioned model identifiers and AWS event-stream encoding). For the new AWS-managed offering with the Messages API at `/anthropic/v1/messages` and SSE streaming, see [Claude in Amazon Bedrock](/docs/en/build-with-claude/claude-in-amazon-bedrock).
+</Note>
+
 Calling Claude through Bedrock slightly differs from how you would call Claude when using Anthropic's client SDKs. This guide walks you through completing an API call to Claude on Bedrock using one of Anthropic's [client SDKs](/docs/en/api/client-sdks).
 
 Note that this guide assumes you have already signed up for an [AWS account](https://portal.aws.amazon.com/billing/signup) and configured programmatic access.
@@ -50,14 +54,14 @@ go get github.com/anthropics/anthropic-sdk-go/bedrock
 <Tab title="Java">
 <CodeGroup>
 ```groovy Gradle
-implementation("com.anthropic:anthropic-java-bedrock:2.18.0")
+implementation("com.anthropic:anthropic-java-bedrock:2.20.0")
 ```
 
 ```xml Maven
 <dependency>
     <groupId>com.anthropic</groupId>
     <artifactId>anthropic-java-bedrock</artifactId>
-    <version>2.18.0</version>
+    <version>2.20.0</version>
 </dependency>
 ```
 
@@ -306,6 +310,10 @@ The following examples show how to print a list of all the Claude models availab
 The following examples show how to generate text from Claude on Bedrock:
 
 <CodeGroup>
+  ```bash CLI
+  # The ant CLI does not yet support Amazon Bedrock.
+  ```
+
   
   ```python Python nocheck
   from anthropic import AnthropicBedrock
@@ -640,7 +648,7 @@ For more details on the two document processing modes and their limitations, ref
 
 ### Context window
 
-Claude Opus 4.6 and Sonnet 4.6 have a [1M-token context window](/docs/en/build-with-claude/context-windows) on Amazon Bedrock. Other Claude models, including Sonnet 4.5 and Sonnet 4, have a 200k-token context window.
+Claude Opus 4.6 and Claude Sonnet 4.6 have a [1M-token context window](/docs/en/build-with-claude/context-windows) on Amazon Bedrock. Other Claude models, including Sonnet 4.5 and Sonnet 4, have a 200k-token context window.
 
 Amazon Bedrock limits request payloads to 20 MB. When sending large documents or many images, you may reach this limit before the token limit.
 
@@ -678,6 +686,9 @@ This applies to Claude Sonnet 4.5 and future models only. Older models (Claude S
 The model IDs for Claude Sonnet 4.5 and 4 already include the `global.` prefix:
 
 <CodeGroup>
+```bash CLI
+# The ant CLI does not yet support Amazon Bedrock.
+```
 
 ```python Python nocheck
 from anthropic import AnthropicBedrock
@@ -809,6 +820,9 @@ message = client.messages.create(
 To use regional endpoints, remove the `global.` prefix from the model ID:
 
 <CodeGroup>
+```bash CLI
+# The ant CLI does not yet support Amazon Bedrock.
+```
 
 ```python Python nocheck
 from anthropic import AnthropicBedrock
@@ -935,6 +949,10 @@ message = client.messages.create(
 )
 ```
 </CodeGroup>
+
+<Note>
+**Claude Mythos Preview** is a research preview model available to invited customers on Amazon Bedrock. For more information, see [Project Glasswing](https://anthropic.com/glasswing).
+</Note>
 
 ### Additional resources
 

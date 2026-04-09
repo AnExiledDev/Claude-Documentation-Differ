@@ -68,6 +68,8 @@ Create Skill Version
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
 
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
+
 ### Returns
 
 - `class VersionCreateResponse:`
@@ -197,6 +199,8 @@ List Skill Versions
     - `"skills-2025-10-02"Skills2025_10_02`
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
+
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
 
 ### Returns
 
@@ -338,6 +342,8 @@ Get Skill Version
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
 
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
+
 ### Returns
 
 - `class VersionRetrieveResponse:`
@@ -467,6 +473,8 @@ Delete Skill Version
     - `"skills-2025-10-02"Skills2025_10_02`
 
     - `"fast-mode-2026-02-01"FastMode2026_02_01`
+
+    - `"output-300k-2026-03-24"Output300k2026_03_24`
 
 ### Returns
 

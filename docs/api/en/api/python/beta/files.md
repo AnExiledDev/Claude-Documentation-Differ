@@ -20,7 +20,7 @@ Upload File
 
   - `str`
 
-  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 17 more]`
+  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 18 more]`
 
     - `"message-batches-2024-09-24"`
 
@@ -62,6 +62,8 @@ Upload File
 
     - `"fast-mode-2026-02-01"`
 
+    - `"output-300k-2026-03-24"`
+
 ### Returns
 
 - `class FileMetadata: …`
@@ -99,6 +101,20 @@ Upload File
   - `downloadable: Optional[bool]`
 
     Whether the file can be downloaded.
+
+  - `scope: Optional[BetaFileScope]`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `id: str`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `type: Literal["session"]`
+
+      The type of scope (e.g., `"session"`).
+
+      - `"session"`
 
 ### Example
 
@@ -139,13 +155,17 @@ List Files
 
   Defaults to `20`. Ranges from `1` to `1000`.
 
+- `scope_id: Optional[str]`
+
+  Filter by scope ID. Only returns files associated with the specified scope (e.g., a session ID).
+
 - `betas: Optional[List[AnthropicBetaParam]]`
 
   Optional header to specify the beta version(s) you want to use.
 
   - `str`
 
-  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 17 more]`
+  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 18 more]`
 
     - `"message-batches-2024-09-24"`
 
@@ -186,6 +206,8 @@ List Files
     - `"skills-2025-10-02"`
 
     - `"fast-mode-2026-02-01"`
+
+    - `"output-300k-2026-03-24"`
 
 ### Returns
 
@@ -225,6 +247,20 @@ List Files
 
     Whether the file can be downloaded.
 
+  - `scope: Optional[BetaFileScope]`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `id: str`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `type: Literal["session"]`
+
+      The type of scope (e.g., `"session"`).
+
+      - `"session"`
+
 ### Example
 
 ```python
@@ -259,7 +295,7 @@ Download File
 
   - `str`
 
-  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 17 more]`
+  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 18 more]`
 
     - `"message-batches-2024-09-24"`
 
@@ -300,6 +336,8 @@ Download File
     - `"skills-2025-10-02"`
 
     - `"fast-mode-2026-02-01"`
+
+    - `"output-300k-2026-03-24"`
 
 ### Returns
 
@@ -342,7 +380,7 @@ Get File Metadata
 
   - `str`
 
-  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 17 more]`
+  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 18 more]`
 
     - `"message-batches-2024-09-24"`
 
@@ -383,6 +421,8 @@ Get File Metadata
     - `"skills-2025-10-02"`
 
     - `"fast-mode-2026-02-01"`
+
+    - `"output-300k-2026-03-24"`
 
 ### Returns
 
@@ -422,6 +462,20 @@ Get File Metadata
 
     Whether the file can be downloaded.
 
+  - `scope: Optional[BetaFileScope]`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `id: str`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `type: Literal["session"]`
+
+      The type of scope (e.g., `"session"`).
+
+      - `"session"`
+
 ### Example
 
 ```python
@@ -457,7 +511,7 @@ Delete File
 
   - `str`
 
-  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 17 more]`
+  - `Literal["message-batches-2024-09-24", "prompt-caching-2024-07-31", "computer-use-2024-10-22", 18 more]`
 
     - `"message-batches-2024-09-24"`
 
@@ -499,6 +553,8 @@ Delete File
 
     - `"fast-mode-2026-02-01"`
 
+    - `"output-300k-2026-03-24"`
+
 ### Returns
 
 - `class DeletedFile: …`
@@ -531,6 +587,20 @@ print(deleted_file.id)
 ```
 
 ## Domain Types
+
+### Beta File Scope
+
+- `class BetaFileScope: …`
+
+  - `id: str`
+
+    The ID of the scoping resource (e.g., the session ID).
+
+  - `type: Literal["session"]`
+
+    The type of scope (e.g., `"session"`).
+
+    - `"session"`
 
 ### Deleted File
 
@@ -585,3 +655,17 @@ print(deleted_file.id)
   - `downloadable: Optional[bool]`
 
     Whether the file can be downloaded.
+
+  - `scope: Optional[BetaFileScope]`
+
+    The scope of this file, indicating the context in which it was created (e.g., a session).
+
+    - `id: str`
+
+      The ID of the scoping resource (e.g., the session ID).
+
+    - `type: Literal["session"]`
+
+      The type of scope (e.g., `"session"`).
+
+      - `"session"`
