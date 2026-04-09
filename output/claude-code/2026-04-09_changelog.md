@@ -2,154 +2,101 @@
 
 ## Summary
 
-Version 2.1.97 was released on April 8, 2026, bringing a new `/autofix-pr` command, status line improvements, and a large batch of bug fixes across permissions, MCP, `NO_FLICKER` mode, and session transcripts. Documentation was also updated to formally introduce Mobile as a supported platform, clarify the semantics of `allowed-tools` in skills, and expand troubleshooting guidance for Windows users.
+14 pages were modified across permission modes, MCP output limits, fullscreen navigation, status line configuration, and observability. The most substantive changes are an expansion of `acceptEdits` mode to include common filesystem commands, a revised model for per-tool MCP output size limits that decouples `anthropic/maxResultSizeChars` from `MAX_MCP_OUTPUT_TOKENS`, and new status line features including a timer-based `refreshInterval` and a new `workspace.git_worktree` data field.
 
 ## Significant Changes
 
-### New Command: `/autofix-pr`
+### Permission Modes
 
-- **`/autofix-pr [prompt]` added to built-in commands**: This new command spawns a Claude Code on the web session that watches the current branch's open PR and pushes fixes when CI fails or reviewers leave comments.
+- **`acceptEdits` mode now auto-approves common filesystem commands**: In addition to file edits, `acceptEdits` mode automatically approves `mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp`, and `sed` when they operate on paths inside the working directory or `additionalDirectories`.
+  > `acceptEdits` mode lets Claude create and edit files in your working directory without prompting. In addition to file edits, `acceptEdits` mode auto-approves common filesystem Bash commands: `mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp`, and `sed`. Like file edits, these are auto-approved only for paths inside your working directory or `additionalDirectories`. Paths outside that scope, writes to protected paths, and all other Bash commands still prompt.
+  - *Implication*: Scripts and CI jobs using `acceptEdits` will require fewer permission prompts for routine file-system scaffolding without widening the permission surface to arbitrary shell commands.
+  - *Source*: [Permission Modes](https://code.claude.com/docs/en/permission-modes.md)
 
-  > Spawn a Claude Code on the web session that watches the current branch's PR and pushes fixes when CI fails or reviewers leave comments. Detects the open PR from your checked-out branch with `gh pr view`; to watch a different PR, check out its branch first. By default the remote session is told to fix every CI failure and review comment; pass a prompt to give it different instructions, for example `/autofix-pr only fix lint and type errors`. Requires the `gh` CLI and access to Claude Code on the web.
+- **Auto mode trusts sandbox network access requests**: "Sandbox network access requests" was added to auto mode's list of pre-trusted action categories.
+  - *Implication*: Sandboxed network calls no longer trigger prompts when running in auto mode.
+  - *Source*: [Permission Modes](https://code.claude.com/docs/en/permission-modes.md)
 
-  - *Implication*: Developers can now trigger unattended PR remediation directly from the terminal without opening a browser. The optional `[prompt]` argument allows scoping fixes (e.g., lint-only). The `claude-code-on-the-web.md` page was also updated to list this as a way to enable auto-fix:
-    > **From your terminal**: run `/autofix-pr` while on the PR's branch. Claude Code detects the open PR with `gh`, spawns a web session, and turns on auto-fix in one step
-  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md) | [Claude Code on the Web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+### MCP Output Limits
 
-### Mobile Added as a Platform
+- **`anthropic/maxResultSizeChars` now applies independently of `MAX_MCP_OUTPUT_TOKENS` for text content**: The relationship between the per-tool annotation and the global environment variable has been fundamentally revised. Previously the annotation raised a persist threshold but did not bypass the global token limit, requiring users to also raise `MAX_MCP_OUTPUT_TOKENS`. Now the annotation applies independently for text content; image content from annotated tools remains subject to the token limit.
+  > The annotation applies independently of `MAX_MCP_OUTPUT_TOKENS` for text content, so users don't need to raise the environment variable for tools that declare it. Tools that return image data are still subject to the token limit.
+  - *Implication*: MCP server authors can set `_meta["anthropic/maxResultSizeChars"]` to allow large text results without requiring end-users to adjust any environment variable. The example value in the docs was reduced from 500,000 to 200,000 characters.
+  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
 
-- **Mobile platform formally documented in the platforms comparison table**: The platforms overview now lists Mobile as a distinct surface alongside CLI, Desktop, VS Code, JetBrains, and Web.
+- **Section renamed: "Override result size per tool" → "Raise the limit for a specific tool"**: The heading was updated to better reflect that the annotation raises a ceiling rather than overriding a shared limit.
+  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
 
-  > | Mobile | Starting and monitoring tasks while away from your computer | Cloud sessions from the Claude app for iOS and Android, Remote Control for local sessions, Dispatch to Desktop on Pro and Max |
+- **`MAX_MCP_OUTPUT_TOKENS` env-var description updated**: The entry now links to the `anthropic/maxResultSizeChars` section and clarifies that text content from annotated tools uses the character limit, while image content still uses the token limit.
+  > Tools that declare [`anthropic/maxResultSizeChars`](/en/mcp#raise-the-limit-for-a-specific-tool) use that character limit for text content instead, but image content from those tools is still subject to this variable (default: 25000)
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-  The prose summary was also updated:
-  > Mobile is a thin client into those same cloud sessions or into a local session via Remote Control, and can send tasks to Desktop with Dispatch.
+### Fullscreen Navigation
 
-  - *Implication*: This is the first time Mobile has appeared in the platform comparison table. It clarifies Mobile's role as a session-starting and monitoring surface (not a full development environment) and calls out its three modes: cloud sessions, Remote Control for local sessions, and Dispatch to Desktop.
-  - *Source*: [Platforms and Integrations](https://code.claude.com/docs/en/platforms.md)
+- **`Ctrl+O` now cycles through three states instead of toggling transcript mode**: Previously `Ctrl+O` toggled between the normal prompt and transcript mode. It now cycles through three states: normal prompt → transcript mode → focus view (last prompt + one-line tool summary with edit diffstats + final response) → back to normal prompt. `Esc` or `q` exit transcript mode directly back to the prompt; `Ctrl+O` no longer serves as the exit key.
+  > In fullscreen rendering, `Ctrl+O` cycles through three states: normal prompt, transcript mode, and focus view. Press it once to enter transcript mode, press it again to return to a focus view showing just your last prompt, a one-line summary of tool calls with edit diffstats, and the final response. Press it a third time to return to the normal prompt screen.
+  - *Implication*: The new focus view provides a compact summary of the last turn without scrolling the full transcript — useful for quickly reviewing what Claude just did.
+  - *Source*: [Fullscreen](https://code.claude.com/docs/en/fullscreen.md)
 
-### Skills: `allowed-tools` Semantics Clarified, Content Lifecycle Documented
+- **`Ctrl+O` description updated in keyboard shortcuts table**: The description changed from "Toggle verbose output" to "Toggle transcript viewer" and was expanded to describe the three-state cycle in fullscreen rendering.
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-- **"Restrict tool access" section replaced by two new sections**: The prior section used `allowed-tools` as a tool restriction mechanism (the example showed a `safe-reader` skill). The documentation now corrects this and restructures the content into two distinct sections.
+### Status Line
 
-  **New section — "Skill content lifecycle":**
-  > When you or Claude invoke a skill, the rendered `SKILL.md` content enters the conversation as a single message and stays there for the rest of the session. Claude Code does not re-read the skill file on later turns, so write guidance that should apply throughout a task as standing instructions rather than one-time steps.
-  >
-  > Auto-compaction preserves invoked skills. When the conversation is summarized to free context, Claude Code re-attaches the most recent invocation of each skill after the summary (truncated if the skill is very large). If you invoke the same skill more than once, only the latest copy is carried forward through compaction.
-
-  **New section — "Pre-approve tools for a skill":**
-  > The `allowed-tools` field grants permission for the listed tools while the skill is active, so Claude can use them without prompting you for approval. It does not restrict which tools are available: every tool remains callable, and your permission settings still govern tools that are not listed.
-  >
-  > To block a skill from using certain tools, add deny rules in your permission settings instead.
-
-  The example was changed from a read-only `safe-reader` skill to a `commit` skill that pre-approves specific git Bash commands:
-  ```yaml
-  name: commit
-  description: Stage and commit the current changes
-  disable-model-invocation: true
-  allowed-tools: Bash(git add *) Bash(git commit *) Bash(git status *)
-  ```
-
-  - *Implication*: This is a semantic correction — `allowed-tools` never restricted tool access; it granted pre-approval. Developers who were using `allowed-tools` expecting it to prevent tool use should instead configure deny rules in permission settings.
-  - *Source*: [Skills](https://code.claude.com/docs/en/skills.md)
-
-### Status Line: `refreshInterval`, `workspace.git_worktree`, and `FORCE_HYPERLINK`
-
-- **`refreshInterval` setting and `workspace.git_worktree` field added** (v2.1.97): The status line now supports periodic refresh and exposes git worktree context:
-
-  > Added `refreshInterval` status line setting to re-run the status line command every N seconds
-  > Added `workspace.git_worktree` to the status line JSON input, set when the current directory is inside a linked git worktree
-
-  The mock input test example in the docs was updated to reflect these additions:
-  > `echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/home/user/project"},"context_window":{"used_percentage":25},"session_id":"test-session-abc"}' | ./statusline.sh`
-
-  - *Implication*: The `workspace` and `session_id` fields are now part of the standard status line JSON schema. Scripts that read these inputs should handle the new fields.
-
-- **`FORCE_HYPERLINK` workaround documented for Windows Terminal**: A new troubleshooting entry explains how to override OSC 8 hyperlink auto-detection when link text appears but isn't clickable:
-
-  > If link text appears but isn't clickable, Claude Code may not have detected hyperlink support in your terminal. This commonly affects Windows Terminal and other emulators not in the auto-detection list. Set the `FORCE_HYPERLINK` environment variable to override detection before launching Claude Code.
-
-  Both Bash (`FORCE_HYPERLINK=1 claude`) and PowerShell (`$env:FORCE_HYPERLINK = "1"; claude`) forms are provided.
-
+- **New `refreshInterval` field for status line configuration**: An optional `refreshInterval` field (minimum: `1` second) re-runs the status line command on a fixed timer in addition to event-driven updates.
+  > The optional `refreshInterval` field re-runs your command every N seconds in addition to the event-driven updates. The minimum is `1`. Set this when your status line shows time-based data such as a clock, or when background subagents change git state while the main session is idle. Leave it unset to run only on events.
+  - *Implication*: Status lines displaying clocks, external metrics, or git state updated by background subagents can now stay current without requiring user interaction to trigger a refresh.
   - *Source*: [Status Line](https://code.claude.com/docs/en/statusline.md)
 
-### Troubleshooting: Windows Certificate Revocation Error
+- **New `workspace.git_worktree` field in status line JSON data**: Status line scripts now receive a `workspace.git_worktree` field containing the git worktree name when the current directory is inside a linked worktree created with `git worktree add`. This is distinct from `worktree.*` fields, which only appear during `--worktree` sessions.
+  > `workspace.git_worktree`: Git worktree name when the current directory is inside a linked worktree created with `git worktree add`. Absent in the main working tree. Populated for any git worktree, unlike `worktree.*` which applies only to `--worktree` sessions.
+  - *Implication*: Status line scripts can now display worktree context for ordinary `git worktree add` workflows, not just Claude-managed `--worktree` sessions.
+  - *Source*: [Status Line](https://code.claude.com/docs/en/statusline.md)
 
-- **New workaround for `CRYPT_E_REVOCATION_OFFLINE` on Windows**: Added as step 4 in the TLS certificate error section:
+### Observability / Telemetry
 
-  > On Windows, bypass certificate revocation checks if you see `CRYPT_E_REVOCATION_OFFLINE (0x80092013)`. This means curl reached the server but your network blocks the certificate revocation lookup, which is common behind corporate firewalls. Add `--ssl-revoke-best-effort` to the install command.
+- **`TRACEPARENT` propagated to Bash subprocesses when tracing is active**: Bash subprocesses now automatically inherit a `TRACEPARENT` environment variable containing the W3C trace context of the active tool execution span.
+  > When tracing is active, Bash subprocesses automatically inherit a `TRACEPARENT` environment variable containing the W3C trace context of the active tool execution span. This lets any subprocess that reads `TRACEPARENT` parent its own spans under the same trace, enabling end-to-end distributed tracing through scripts and commands that Claude runs.
+  - *Implication*: Custom scripts executed by Claude Code can participate in distributed traces without additional configuration, making it straightforward to correlate Claude-initiated shell activity in observability platforms.
+  - *Source*: [Monitoring Usage](https://code.claude.com/docs/en/monitoring-usage.md)
 
-  The `winget install Anthropic.ClaudeCode` alternative is called out as a way to avoid curl entirely.
+### Settings / Sandbox
 
-  - *Implication*: This addresses a common corporate network install failure that would previously require manual diagnosis.
-  - *Source*: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting.md)
+- **New `network.allowMachLookup` sandbox setting (macOS)**: A new sandbox network option allows specifying additional XPC/Mach service names the sandbox may look up, with support for a single trailing `*` for prefix matching.
+  > `network.allowMachLookup`: Additional XPC/Mach service names the sandbox may look up (macOS only). Supports a single trailing `*` for prefix matching. Needed for tools that communicate via XPC such as the iOS Simulator or Playwright.
+  - *Implication*: macOS users running Claude Code with sandboxing enabled can now unblock tools like iOS Simulator or Playwright that communicate via XPC without disabling the sandbox entirely.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-### Version 2.1.97 Release Notes
+### Desktop / Platform
 
-The official changelog entry for 2.1.97 (April 8, 2026) covers a large set of fixes and improvements. Key items by category:
-
-**NO_FLICKER mode fixes:**
-- Focus view toggle (`Ctrl+O`) added, showing prompt, one-line tool summary with edit diffstats, and final response
-- Fixed copying wrapped URLs inserting spaces at line breaks
-- Fixed scroll rendering artifacts inside zellij
-- Fixed crash when hovering over MCP tool results
-- Fixed memory leak from API retries leaving stale streaming state
-- Fixed slow mouse-wheel scrolling on Windows Terminal
-- Fixed custom status line not displaying on terminals shorter than 24 rows
-- Fixed Shift+Enter and Alt/Cmd+arrow shortcuts in Warp
-- Fixed Korean/Japanese/Unicode text becoming garbled when copied on Windows
-
-**Permissions and security fixes:**
-- Fixed `--dangerously-skip-permissions` being silently downgraded to accept-edits mode after approving a write to a protected path
-- Fixed and hardened Bash tool permissions (env-var prefix and network redirect checks)
-- Fixed permission rules with names matching JavaScript prototype properties (e.g. `toString`) causing `settings.json` to be silently ignored
-- Fixed managed-settings allow rules remaining active after admin removal until process restart
-- Fixed `permissions.additionalDirectories` changes not applying mid-session
-- Fixed removing a directory from `settings.permissions.additionalDirectories` revoking access to the same directory passed via `--add-dir`
-
-**MCP fixes:**
-- Fixed HTTP/SSE connections accumulating ~50 MB/hr of unreleased buffers on reconnect
-- Fixed OAuth `oauth.authServerMetadataUrl` not being honored on token refresh after restart (affects ADFS and similar IdPs)
-
-**Session and transcript fixes:**
-- Fixed several `/resume` picker issues (uneditable sessions, Ctrl+A wiping search, empty list navigation, task status replacing conversation summary, cross-project staleness)
-- Fixed file-edit diffs disappearing on `--resume` when the edited file was larger than 10KB
-- Fixed `--resume` cache misses and lost mid-turn input
-- Fixed messages typed while Claude is working not being persisted to the transcript
-- Fixed compaction writing duplicate multi-MB subagent transcript files on prompt-too-long retries
-
-**Other improvements:**
-- Accept Edits mode now auto-approves filesystem commands prefixed with safe env vars or process wrappers (e.g. `LANG=C rm foo`, `timeout 5 mkdir out`)
-- Auto mode and bypass-permissions mode now auto-approve sandbox network access prompts
-- `sandbox.network.allowMachLookup` now takes effect on macOS
-- Pasted and attached images are now compressed to the same token budget as images read via the Read tool
-- Slash command and `@`-mention completion now triggers after CJK sentence punctuation (no space needed before `/` or `@` in Japanese/Chinese input)
-- Bridge sessions now show local git repo, branch, and working directory on the claude.ai session card
-- 429 retries now apply exponential backoff as a minimum when `Retry-After` is very small
-- Fixed rate-limit upgrade options disappearing after context compaction
-- Fixed `claude plugin update` reporting "already at the latest version" for git-based marketplace plugins with newer remote commits
-- Fixed slash command picker breaking when a plugin's frontmatter `name` is a YAML boolean keyword
-- Updated `/claude-api` skill to cover Managed Agents alongside the Claude API
-
-- *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Windows ARM64 "remote sessions only" restriction removed**: The download entry for Windows ARM64 previously carried the caveat "(remote sessions only)". That restriction has been dropped, indicating full local session support on Windows ARM64.
+  - *Source*: [Overview](https://code.claude.com/docs/en/overview.md)
 
 ## Notable Details
 
-- The `/claude-api` skill description was updated: it previously mentioned "Agent SDK reference for Python and TypeScript" and auto-activation on `claude_agent_sdk` imports. The new description drops the `claude_agent_sdk` import trigger and instead lists "Managed Agents" as a topic area. This aligns with the v2.1.97 note: "Updated `/claude-api` skill to cover Managed Agents alongside the Claude API."
-- The `platforms.md` description now explicitly calls out Mobile in its tagline (was: "CLI, Desktop, VS Code, JetBrains, web, and integrations"; now: "CLI, Desktop, VS Code, JetBrains, web, **mobile**, and integrations").
-- The `allowed-tools` semantic correction in skills.md is significant: the previous example (`safe-reader`) incorrectly implied `allowed-tools` was a restriction mechanism. The replacement example (`commit`) correctly demonstrates it as a pre-approval list. This is a documentation accuracy fix, not a behavior change.
+- The `acceptEdits` expansion is consistently applied across six pages — `desktop.md`, `headless.md`, `how-claude-code-works.md`, `permission-modes.md`, `permissions.md`, and `sub-agents.md` — indicating a coordinated documentation update rather than a new behavior description added in isolation.
+- The MCP example value for `anthropic/maxResultSizeChars` in `mcp.md` was reduced from `500000` to `200000` characters. The hard ceiling of 500,000 characters is still stated in prose; the change likely reflects an updated recommended practice value.
+- The `refreshInterval` documentation note explicitly references background subagents: "while a coordinator waits on background subagents." This positions the feature as particularly relevant for multi-agent workflows where the main session may be idle for extended periods.
+- The image data carve-out for `anthropic/maxResultSizeChars` is now stated in three places: the `mcp.md` annotation description, the warning block, and the `env-vars.md` table — emphasizing it as a key behavioral boundary developers and MCP server authors should be aware of.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +49/-0 | Added v2.1.97 release entry with 40+ fixes and improvements |
-| commands.md | Modified | +72/-71 | Added `/autofix-pr` command; table column width reformatting |
-| skills.md | Modified | +19/-6 | Replaced "Restrict tool access" with "Skill content lifecycle" and "Pre-approve tools for a skill"; corrected `allowed-tools` semantics |
-| statusline.md | Modified | +16/-1 | Updated mock input example; added `FORCE_HYPERLINK` OSC 8 troubleshooting guidance |
-| platforms.md | Modified | +11/-9 | Added Mobile as a platform row and updated prose; added mobile to further reading links |
-| troubleshooting.md | Modified | +6/-0 | Added Windows `CRYPT_E_REVOCATION_OFFLINE` certificate revocation workaround |
-| claude-code-on-the-web.md | Modified | +1/-0 | Added `/autofix-pr` as a terminal-based way to enable PR auto-fix |
+| statusline.md | Modified | +38/-31 | New `refreshInterval` field; new `workspace.git_worktree` data field; JSON schema example updated |
+| interactive-mode.md | Modified | +19/-19 | Updated `Ctrl+O` description to "Toggle transcript viewer"; added fullscreen cycle behavior detail |
+| permission-modes.md | Modified | +12/-9 | `acceptEdits` expanded to include filesystem commands; auto mode trusts sandbox network |
+| fullscreen.md | Modified | +11/-8 | `Ctrl+O` three-state cycle documented; keybinding table updated; exit key clarified |
+| permissions.md | Modified | +8/-8 | `acceptEdits` description updated to reflect filesystem command auto-approval |
+| mcp.md | Modified | +7/-6 | Section renamed; `anthropic/maxResultSizeChars` now independent of token limit for text; example value lowered |
+| overview.md | Modified | +6/-6 | Windows ARM64 caveat removed; `theme={null}` attribute duplication (metadata noise only) |
+| monitoring-usage.md | Modified | +2/-0 | `TRACEPARENT` propagation to Bash subprocesses documented |
+| settings.md | Modified | +1/-0 | New `network.allowMachLookup` sandbox setting added |
+| desktop.md | Modified | +1/-1 | `acceptEdits` description updated |
+| env-vars.md | Modified | +1/-1 | `MAX_MCP_OUTPUT_TOKENS` description updated with per-tool annotation behavior |
+| headless.md | Modified | +1/-1 | `acceptEdits` description updated |
+| how-claude-code-works.md | Modified | +1/-1 | `acceptEdits` description updated |
+| sub-agents.md | Modified | +1/-1 | `acceptEdits` description updated |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-04-09*
