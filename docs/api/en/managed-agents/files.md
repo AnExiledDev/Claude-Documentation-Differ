@@ -137,7 +137,7 @@ session_id=$(jq -er '.id' <<<"${session}")
 ````bash
 SESSION_ID=$(ant beta:sessions create \
   --agent "$AGENT_ID" \
-  --environment "$ENVIRONMENT_ID" \
+  --environment-id "$ENVIRONMENT_ID" \
   --transform id --format yaml <<EOF
 resources:
   - type: file
@@ -279,6 +279,19 @@ Mount multiple files by adding entries to the `resources` array:
     { "type": "file", "file_id": "file_ghi789", "mount_path": "/workspace/src/main.py" }
   ]
 }
+```
+
+```yaml CLI
+resources:
+  - type: file
+    file_id: file_abc123
+    mount_path: /workspace/data.csv
+  - type: file
+    file_id: file_def456
+    mount_path: /workspace/config.json
+  - type: file
+    file_id: file_ghi789
+    mount_path: /workspace/src/main.py
 ```
 
 ```python Python
@@ -573,14 +586,24 @@ Use the [Files API](/docs/en/build-with-claude/files) to list files scoped to a 
 curl -fsSL "https://api.anthropic.com/v1/files?scope_id=sesn_abc123" \
   -H "x-api-key: $ANTHROPIC_API_KEY" \
   -H "anthropic-version: 2023-06-01" \
-  -H "anthropic-beta: managed-agents-2026-04-01,files-api-2025-04-14"
+  -H "anthropic-beta: managed-agents-2026-04-01"
 
 # Download a file
 curl -fsSL "https://api.anthropic.com/v1/files/$FILE_ID/content" \
   -H "x-api-key: $ANTHROPIC_API_KEY" \
   -H "anthropic-version: 2023-06-01" \
-  -H "anthropic-beta: managed-agents-2026-04-01,files-api-2025-04-14" \
+  -H "anthropic-beta: managed-agents-2026-04-01" \
   -o output.txt
+```
+
+```bash CLI
+# List files associated with a session
+ant beta:files list --scope-id sesn_abc123 \
+  --beta files-api-2025-04-14 \
+  --beta managed-agents-2026-04-01
+
+# Download a file
+ant beta:files download --file-id "$FILE_ID" --output output.txt
 ```
 
 ```python Python
@@ -601,7 +624,7 @@ content.write_to_file("output.txt")
 // List files associated with a session
 const files = await client.beta.files.list({
   scope_id: "sesn_abc123",
-  betas: ["managed-agents-2026-04-01"],
+  betas: ["managed-agents-2026-04-01"]
 });
 for (const f of files.data) {
   console.log(f.id, f.filename);
