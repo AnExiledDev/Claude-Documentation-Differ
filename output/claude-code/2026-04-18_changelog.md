@@ -2,116 +2,94 @@
 
 ## Summary
 
-Four pages were modified with no additions or removals. The most significant changes are: the release of version 2.1.113 (April 17, 2026) with a large batch of features, security fixes, and bug fixes; a reversal of npm deprecation in setup docs, now treating npm as a fully supported install path (with the native binary delivered via per-platform optional dependencies); and a new troubleshooting section covering the "native binary not found after npm install" scenario.
+11 pages were modified in this update (76 additions, 52 deletions). The changes center on three themes: expanded keyboard input capabilities (text selection extension in fullscreen mode, new multiline editing shortcuts), a new `network.deniedDomains` sandbox setting for fine-grained network blocking, and a bug fix in version 2.1.114. Several smaller clarifications touch permissions, remote control, scheduled loops, and the ultrareview confirmation dialog.
 
 ## Significant Changes
 
-### Installation: npm No Longer Deprecated
+### Sandbox & Permissions
 
-- **npm install path rehabilitated**: The previous "Deprecated npm installation" section — which urged migration to the native installer and framed npm as a compatibility-only fallback — has been replaced with a first-class "Install with npm" section.
-  > "The npm package installs the same native binary as the standalone installer. npm pulls the binary in through a per-platform optional dependency such as `@anthropic-ai/claude-code-darwin-arm64`, and a postinstall step links it into place. The installed `claude` binary does not itself invoke Node."
-  - *Implication*: Developers using npm-based workflows or corporate registries can now install Claude Code via npm without being steered away. The binary is architecturally the same; npm is simply a delivery mechanism.
-  - *Source*: [Setup](https://code.claude.com/docs/en/setup.md)
+- **New `network.deniedDomains` setting**: A new sandbox configuration key blocks specific domains even when a broader `allowedDomains` wildcard would otherwise permit them. Takes precedence over `allowedDomains` and merges from all settings sources regardless of `allowManagedDomainsOnly`.
+  > `network.deniedDomains` — Array of domains to block for outbound network traffic. Supports the same wildcard syntax as `allowedDomains`. Takes precedence over `allowedDomains` when both match. Merged from all settings sources regardless of `allowManagedDomainsOnly`.
+  - *Implication*: Administrators can now allowlist `*.example.com` while carving out exceptions like `uploads.example.com` without restructuring their entire domain allowlist.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md), [Sandboxing](https://code.claude.com/docs/en/sandboxing.md), [Permissions](https://code.claude.com/docs/en/permissions.md)
 
-- **Supported platforms documented**: The npm installation section now explicitly lists the eight supported platform packages:
-  > "`darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `linux-x64-musl`, `linux-arm64-musl`, `win32-x64`, and `win32-arm64`. Your package manager must allow optional dependencies."
-  - *Implication*: Operators can now check this list to validate whether their platform is supported before attempting npm installation.
-  - *Source*: [Setup](https://code.claude.com/docs/en/setup.md)
+- **Exec wrapper limitations documented**: `watch`, `setsid`, `ionice`, and `flock` are now explicitly documented as always-prompting — prefix rules like `Bash(watch *)` do not auto-approve them. The same restriction applies to `find -exec` and `find -delete`.
+  > Exec wrappers such as `watch`, `setsid`, `ionice`, and `flock` always prompt and cannot be auto-approved by a prefix rule like `Bash(watch *)`. The same applies to `find` with `-exec` or `-delete`: a `Bash(find *)` rule does not cover these forms. To approve a specific invocation, write an exact-match rule for the full command string.
+  - *Implication*: Rules designed to broadly approve a command via prefix may silently fail for these wrappers. Developers relying on `Bash(find *)` to cover `-exec` variants should add exact-match rules.
+  - *Source*: [Permissions](https://code.claude.com/docs/en/permissions.md)
 
-### New Troubleshooting: Native Binary Not Found After npm Install
+- **Fixed wildcard example in permissions docs**: The example `Bash(git:*)` (which used a colon) was corrected to `Bash(git *)` (with a space), matching the documented syntax for multi-argument wildcard matching.
+  - *Source*: [Permissions](https://code.claude.com/docs/en/permissions.md)
 
-- **New section added for npm install failures**: A dedicated troubleshooting entry now covers the `Could not find native binary package "@anthropic-ai/claude-code-<platform>"` error with three root causes:
-  1. Optional dependencies suppressed (`--omit=optional`, `--no-optional`, `--ignore-optional`, or `optional=false` in `.npmrc`)
-  2. Unsupported platform
-  3. Corporate npm mirror not mirroring the eight `@anthropic-ai/claude-code-*` packages
-  > "The native binary is delivered only as an optional dependency, so there is no JavaScript fallback if it is skipped."
-  - *Implication*: Enterprise environments with locked-down registries or npm configs that suppress optional deps will see this error; the fix is to ensure mirror completeness and remove the suppress flag.
-  - *Source*: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting.md)
+### Keyboard Input & Text Editing
 
-- **`--ignore-scripts` behavior clarified**:
-  > "Installing with `--ignore-scripts` does not trigger this error. The postinstall step that links the binary into place is skipped, so Claude Code falls back to a wrapper that locates and spawns the platform binary on each launch. This works but starts more slowly; reinstall with scripts enabled for direct execution."
-  - *Implication*: CI environments that use `--ignore-scripts` for security can still use Claude Code, but should expect a startup latency penalty.
-  - *Source*: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting.md)
+- **New selection extension keybindings in fullscreen mode**: Six new keybinding actions — `selection:extendLeft`, `selection:extendRight`, `selection:extendUp`, `selection:extendDown`, `selection:extendLineStart`, `selection:extendLineEnd` — are now documented with default bindings (`Shift+Arrow`, `Shift+Home`, `Shift+End`). The viewport scrolls automatically when the selection reaches the top or bottom edge.
+  > With a selection active, hold `Shift` and press the arrow keys to extend it from the keyboard. `Shift+↑` and `Shift+↓` scroll the viewport when the selection reaches the top or bottom edge. `Shift+Home` and `Shift+End` extend to the start or end of the current line.
+  - *Implication*: Users in fullscreen mode can now select text using keyboard-only workflows; all six actions are rebindable via `~/.claude/keybindings.json`.
+  - *Source*: [Fullscreen](https://code.claude.com/docs/en/fullscreen.md), [Keybindings](https://code.claude.com/docs/en/keybindings.md)
 
-### Version 2.1.113 Release (April 17, 2026)
+- **New multiline input editing shortcuts**: `Ctrl+A` (move to line start) and `Ctrl+E` (move to line end) are now documented for multiline prompt input, along with `Ctrl+W` (delete previous word, with `Ctrl+Backspace` alias on Windows).
+  > `Ctrl+U` — Delete from cursor to line start. Stores deleted text for pasting. Repeat to clear across lines in multiline input. On macOS, terminal emulators including iTerm2 and Terminal.app map `Cmd+Backspace` to this shortcut.
+  - *Implication*: `Ctrl+U` behavior is clarified — it deletes from cursor to line start (not the entire buffer), and repeating it clears across lines. `Ctrl+Y` now also pastes content deleted by `Ctrl+W`.
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-#### Architecture
+- **`Ctrl+P`/`Ctrl+N` as history navigation alternatives**: Up/Down arrow keys now share their entry with `Ctrl+P`/`Ctrl+N`. The behavior in multiline input is also clarified: arrows and these shortcuts first move the cursor within the prompt; history navigation only activates once the cursor is already at the top or bottom edge.
+  > In multiline input, first moves the cursor within the prompt. Once the cursor is already on the top or bottom edge, pressing again navigates command history.
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-- **CLI now uses native binary via optional npm dependency**: The CLI no longer bundles or executes JavaScript at runtime.
-  > "Changed the CLI to spawn a native Claude Code binary (via a per-platform optional dependency) instead of bundled JavaScript"
-  - *Implication*: This is the architectural change that enables npm to be a first-class install method again — both npm and the standalone installer now produce the same native binary.
+### Scheduled Tasks
+
+- **New "Stop a loop" section**: Documents that pressing `Esc` while a `/loop` is waiting for its next iteration cancels the pending wakeup. Explicitly distinguishes this from tasks scheduled via natural language (those are unaffected by `Esc` and must be deleted through the task manager).
+  > To stop a `/loop` while it is waiting for the next iteration, press `Esc`. This clears the pending wakeup so the loop does not fire again. Tasks you scheduled by asking Claude directly are not affected by `Esc` and stay in place until you delete them.
+  - *Source*: [Scheduled Tasks](https://code.claude.com/docs/en/scheduled-tasks.md)
+
+### Commands
+
+- **`/fewer-permission-prompts` replaces `/less-permission-prompts`**: The skill command for scanning transcripts and adding allowlist rules to `.claude/settings.json` has been renamed. The old `/less-permission-prompts` entry is removed from the commands table.
+  - *Implication*: Users with documentation bookmarks or muscle memory for `/less-permission-prompts` should update to `/fewer-permission-prompts`.
+  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
+
+- **`/compact` description expanded**: The command description now explains that it summarizes (rather than just "compacts") the conversation and links to context-window documentation covering what survives compaction.
+  > Free up context by summarizing the conversation so far. Optionally pass focus instructions for the summary. See how compaction handles rules, skills, and memory files.
+  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
+
+### Remote Control
+
+- **`@` file path autocomplete in Remote Control sessions**: The feature list for Remote Control now notes that typing `@` autocompletes file paths from the local project, even when connected from a browser or mobile device.
+  > your filesystem, MCP servers, tools, and project configuration all stay available, and typing `@` autocompletes file paths from your local project
+  - *Source*: [Remote Control](https://code.claude.com/docs/en/remote-control.md)
+
+- **`/extra-usage` added to remote-capable commands**: `/extra-usage` is now listed among the commands that work from mobile and web (alongside `/compact`, `/clear`, `/context`, `/cost`, `/exit`, `/recap`, and `/reload-plugins`).
+  - *Source*: [Remote Control](https://code.claude.com/docs/en/remote-control.md)
+
+### Bug Fixes
+
+- **v2.1.114 — Permission dialog crash fix**: Version 2.1.114 (April 18, 2026) fixes a crash in the permission dialog that occurred when an agent teams teammate requested tool permission.
   - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
 
-#### New Features
+## Notable Details
 
-- **`sandbox.network.deniedDomains` setting**: New configuration option to block specific domains even when a broader `allowedDomains` wildcard would otherwise permit them.
-  - *Implication*: Provides fine-grained network sandboxing control for environments that allow broad domains but need specific exceptions blocked.
+- **Ultrareview confirmation dialog now shows scope detail**: The dialog now includes the file and line count when reviewing a branch, giving developers a clearer cost/scope signal before confirming.
+  > Claude Code shows a confirmation dialog with the review scope (including the file and line count when reviewing a branch), your remaining free runs, and the estimated cost.
+  - *Source*: [Ultrareview](https://code.claude.com/docs/en/ultrareview.md)
 
-- **`/extra-usage` from Remote Control**: The command now works from mobile/web Remote Control clients.
-
-- **Remote Control `@`-file autocomplete**: Remote Control clients can now query `@`-file autocomplete suggestions.
-
-- **`/ultrareview` improvements**: Faster launch with parallelized checks, diffstat in the launch dialog, and an animated launching state.
-
-- **Subagent stall timeout**: Subagents that stall mid-stream now fail with a clear error after 10 minutes instead of hanging silently.
-
-#### Security Fixes
-
-- **macOS dangerous path expansion**: `/private/{etc,var,tmp,home}` paths are now treated as dangerous removal targets under `Bash(rm:*)` allow rules.
-  > "Security: on macOS, `/private/{etc,var,tmp,home}` paths are now treated as dangerous removal targets under `Bash(rm:*)` allow rules"
-  - *Implication*: Closes a gap where `/private/tmp` (the macOS symlink target for `/tmp`) could be removed without triggering a danger check.
-
-- **Bash deny rules match exec wrappers**: Deny rules now match commands wrapped in `env`/`sudo`/`watch`/`ionice`/`setsid` and similar exec wrappers.
-  - *Implication*: Previously, wrapping a denied command in `sudo` or `env` could bypass deny rules.
-
-- **`Bash(find:*)` no longer auto-approves `find -exec`/`-delete`**: Allow rules for `find` no longer implicitly authorize destructive `find` invocations.
-  - *Implication*: A wildcard allow rule for `find` could previously be used to execute or delete arbitrary files; this closes that vector.
-
-- **Multi-line bash command spoofing closed**: Multi-line commands whose first line is a comment now show the full command in the transcript.
-  > "Bash tool: multi-line commands whose first line is a comment now show the full command in the transcript, closing a UI-spoofing vector"
-
-- **`cd <current-directory> && git …` no longer prompts**: A no-op `cd` prepended before a `git` command no longer triggers a permission prompt.
-
-#### Input / UX Improvements
-
-- **Fullscreen scroll on selection extension**: `Shift+↑/↓` now scrolls the viewport when extending a selection past the visible edge.
-- **`Ctrl+A`/`Ctrl+E` readline behavior**: Now moves to the start/end of the current logical line in multiline input.
-- **Windows `Ctrl+Backspace`**: Now deletes the previous word.
-- **Long URLs stay clickable when wrapped**: In terminals with OSC 8 hyperlink support, long URLs in responses and bash output remain clickable when they wrap across lines.
-- **`/loop` improvements**: Pressing `Esc` cancels pending wakeups; wakeups now display as "Claude resuming /loop wakeup".
-
-#### Bug Fixes (selected)
-
-- Fixed MCP concurrent-call timeout handling where one tool call's response could disarm another call's watchdog.
-- Fixed `Cmd-Backspace`/`Ctrl+U` to delete from cursor to start of line.
-- Fixed markdown tables breaking when a cell contains an inline code span with a pipe character.
-- Fixed session recap auto-firing while composing unsent text.
-- Fixed `Bash dangerouslyDisableSandbox` running commands without a permission prompt.
-- Fixed `CLAUDE_CODE_EXTRA_BODY` `output_config.effort` causing 400 errors on subagent calls to models that don't support effort and on Vertex AI.
-- Fixed `thinking.type.enabled is not supported` 400 error when using Opus 4.7 via a Bedrock Application Inference Profile ARN.
-- Fixed `plugin install` succeeding when a dependency version conflicts with an already-installed plugin — now reports `range-conflict`.
-- Fixed Remote Control sessions not streaming subagent transcripts and not being archived on exit.
-- Fixed SDK image content blocks that fail to process crashing the session — now degrades to a text placeholder.
-- Fixed `ToolSearch` ranking so pasted MCP tool names surface the actual tool instead of description-matching siblings.
-- Fixed compacting a resumed long-context session failing with "Extra usage is required for long context requests".
-- Fixed prompt cursor disappearing when `NO_COLOR` is set.
-
-### Hooks: `once` Field Scope Clarification
-
-- **`once` field behavior narrowed in docs**: The description was updated to explicitly state that `once` is only honored for hooks declared in skill frontmatter, and is ignored in settings files and agent frontmatter.
-  > Old: "If `true`, runs only once per session then is removed. Skills only, not agents."
-  > New: "If `true`, runs once per session then is removed. Only honored for hooks declared in [skill frontmatter](#hooks-in-skills-and-agents); ignored in settings files and agent frontmatter"
-  - *Implication*: Developers who placed `once: true` in `settings.json` hooks or agent frontmatter were likely relying on undocumented behavior; the doc now confirms this is a no-op in those contexts.
-  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
+- **`network.deniedDomains` merges across all sources**: Unlike `allowedDomains` (which can be locked to managed settings via `allowManagedDomainsOnly`), `deniedDomains` is always merged from user, project, and managed settings. This means individual developers can add their own deny entries even in managed deployments.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +41/-0 | Added version 2.1.113 entry (April 17, 2026) with architecture change, new features, security fixes, and ~20 bug fixes |
-| setup.md | Modified | +10/-24 | Replaced "Deprecated npm installation" + migration guide with a first-class "Install with npm" section explaining native binary delivery via optional deps |
-| troubleshooting.md | Modified | +10/-0 | New "Native binary not found after npm install" section with three root causes and `--ignore-scripts` behavior note |
-| hooks.md | Modified | +1/-1 | Clarified `once` field scope: only honored in skill frontmatter, ignored in settings files and agent frontmatter |
+| settings.md | Modified | +24/-22 | Added `network.deniedDomains` setting and updated example config |
+| keybindings.md | Modified | +20/-14 | Added 6 selection-extension keybinding actions for fullscreen mode |
+| interactive-mode.md | Modified | +12/-9 | New `Ctrl+A`, `Ctrl+E`, `Ctrl+W` shortcuts; clarified multiline cursor/history navigation |
+| scheduled-tasks.md | Modified | +4/-0 | New "Stop a loop" section documenting `Esc` to cancel pending loop |
+| permissions.md | Modified | +4/-2 | Documented exec wrapper limitations; fixed `Bash(git *)` example; added `deniedDomains` mention |
+| changelog.md | Modified | +4/-0 | Added v2.1.114 entry (permission dialog crash fix) |
+| fullscreen.md | Modified | +2/-0 | Documented Shift+arrow keyboard selection extension |
+| commands.md | Modified | +2/-2 | Renamed `/less-permission-prompts` → `/fewer-permission-prompts`; expanded `/compact` description |
+| remote-control.md | Modified | +2/-2 | Added `@` path autocomplete note; added `/extra-usage` to remote-capable commands |
+| sandboxing.md | Modified | +1/-0 | Added `deniedDomains` bullet to configuration overview |
+| ultrareview.md | Modified | +1/-1 | Confirmation dialog now shows file and line count for branch reviews |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-04-18*
