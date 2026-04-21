@@ -2,167 +2,110 @@
 
 ## Summary
 
-Version 2.1.116 was released on April 20, 2026 with performance improvements, bug fixes, and UX polish. Alongside the release, the terminal configuration guide was significantly restructured from a feature list into a symptom-based troubleshooting format, and hooks documentation was clarified to explain how the `if` field matches Bash subcommands rather than whole commands.
+Ten pages were modified with a net +82/-10 lines. The most substantial changes are a large expansion of the `.claude` directory reference page (new navigation, decision, and troubleshooting sections), a new `sshConfigs` managed setting for distributing SSH connections across teams, and minor documentation additions covering non-code folder use and VS Code extended thinking interaction.
 
 ## Significant Changes
 
-### Version Release: 2.1.116 (April 20, 2026)
+### Configuration
 
-- **`/resume` performance on large sessions**: Sessions of 40MB+ load up to 67% faster; dead-fork entries are handled more efficiently.
-  > `/resume` on large sessions is significantly faster (up to 67% on 40MB+ sessions) and handles sessions with many dead-fork entries more efficiently
-  - *Implication*: Long-running or frequently resumed sessions no longer incur the previous load penalty.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
+- **New `sshConfigs` setting for team SSH distribution**: Administrators can now pre-configure SSH remote connections in a managed settings file. These connections appear in every user's Desktop environment dropdown as read-only entries that cannot be edited or deleted through the app.
+  > "Administrators can distribute SSH connections to team members by adding `sshConfigs` to a managed settings file. Connections defined this way appear in each user's environment dropdown automatically and are shown as managed, so users can select them but cannot edit or delete them in the app."
 
-- **MCP startup optimization**: `resources/templates/list` is now deferred until the first `@`-mention, reducing startup time when multiple stdio MCP servers are configured.
-  - *Implication*: Faster launch for projects with many MCP integrations.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **Fullscreen scroll sensitivity in editor terminals**: `/terminal-setup` now configures the editor's scroll sensitivity for VS Code, Cursor, and Windsurf.
-  > Smoother fullscreen scrolling in VS Code, Cursor, and Windsurf terminals — `/terminal-setup` now configures the editor's scroll sensitivity
-  - *Implication*: Running `/terminal-setup` picks up this new configuration automatically; no separate step needed.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **Thinking spinner progress display**: The spinner now shows inline progress text ("still thinking", "thinking more", "almost done thinking") replacing the separate hint row.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **`/config` search matches option values**: Searching "vim" in `/config` now surfaces the Editor mode setting.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **`/doctor` accessible during response**: Can now be opened while Claude is responding, without waiting for the turn to finish.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **Plugin dependency auto-install**: `/reload-plugins` and background plugin auto-update now auto-install missing plugin dependencies from previously added marketplaces.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **GitHub rate limit hint in Bash tool**: When `gh` commands hit GitHub's API rate limit, agents now receive a hint to back off rather than retry blindly.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **Usage tab improvements**: The Settings Usage tab now shows 5-hour and weekly usage immediately and no longer fails when the usage endpoint is rate-limited.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **Agent frontmatter hooks**: Hooks declared in agent frontmatter now fire when the agent runs as a main-thread agent via `--agent`.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **Security fix — sandbox auto-allow**: Sandbox auto-allow no longer bypasses the dangerous-path safety check for `rm`/`rmdir` targeting `/`, `$HOME`, or other critical system directories.
-  > Security: sandbox auto-allow no longer bypasses the dangerous-path safety check for `rm`/`rmdir` targeting `/`, `$HOME`, or other critical system directories
-  - *Implication*: This closes a potential data-loss vector for automated workflows that rely on sandbox auto-allow.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
-- **Bug fixes**: Devanagari and Indic script rendering alignment; Ctrl+- undo in Kitty protocol terminals (iTerm2, Ghostty, kitty, WezTerm, Windows Terminal); Cmd+Left/Right line navigation in Kitty protocol terminals (Warp fullscreen, kitty, Ghostty, WezTerm); Ctrl+Z hang when launched via wrapper (npx, bun run); scrollback duplication in inline mode on resize; modal search overflow at short terminal heights; VS Code integrated terminal blank cells during scrolling; intermittent API 400 error from cache control TTL ordering; `/branch` rejecting transcripts >50MB; `/resume` silently showing empty conversations on large session load errors; `/plugin` Installed tab duplicate display; `/update` and `/tui` not working after entering a worktree mid-session.
-  - *Source*: [changelog.md](https://code.claude.com/docs/en/changelog.md)
-
----
-
-### Terminal Configuration Guide — Major Restructure
-
-- **Page reorganized as symptom-based troubleshooting guide**: The terminal configuration page was retitled from "Optimize your terminal setup" to "Configure your terminal for Claude Code" and now opens with a symptom index.
-  > Claude Code works in any terminal without configuration. This page is for when something specific is not behaving the way you expect. Find your symptom below.
-  - *Implication*: Readers can jump directly to their specific problem rather than reading a full feature list. The old section-based structure (Themes, Line breaks, Notification setup, etc.) is gone.
-  - *Source*: [terminal-config.md](https://code.claude.com/docs/en/terminal-config.md)
-
-- **Shift+Enter terminal support expanded**: Warp and Apple Terminal are now listed as supporting Shift+Enter natively (no setup required), joining Ghostty, Kitty, iTerm2, and WezTerm. VS Code, Cursor, Windsurf, Alacritty, and Zed still require `/terminal-setup`.
-  > | Ghostty, Kitty, iTerm2, WezTerm, Warp, Apple Terminal | Works without setup |
-  > | VS Code, Cursor, Windsurf, Alacritty, Zed | Run `/terminal-setup` once |
-  - *Implication*: Warp users no longer need to run `/terminal-setup` for Shift+Enter (though the command still configures other keybindings).
-  - *Source*: [terminal-config.md](https://code.claude.com/docs/en/terminal-config.md)
-
-- **tmux setup consolidated**: The tmux section now presents all three required lines together with explanation.
+  Example config entry:
+  ```json
+  {
+    "sshConfigs": [
+      {
+        "id": "shared-dev-vm",
+        "name": "Shared Dev VM",
+        "sshHost": "user@dev.example.com",
+        "sshPort": 22,
+        "sshIdentityFile": "~/.ssh/id_ed25519",
+        "startDirectory": "~/projects"
+      }
+    ]
+  }
   ```
-  set -g allow-passthrough on
-  set -s extended-keys on
-  set -as terminal-features 'xterm*:extkeys'
-  ```
-  Previously `allow-passthrough` (for notifications) and `extended-keys` (for Shift+Enter) were documented in separate sections. Developers running Claude Code in tmux should confirm all three lines are present.
-  - *Source*: [terminal-config.md](https://code.claude.com/docs/en/terminal-config.md)
+  Required fields: `id`, `name`, `sshHost`. Optional: `sshPort`, `sshIdentityFile`, `startDirectory`. Users can also add `sshConfigs` to their own `~/.claude/settings.json` for personal connections added through the UI dialog. When set in managed settings, connections are read-only for users.
+  - *Implication*: Teams can now centrally manage remote development environments without requiring each developer to manually configure connections in the Desktop app.
+  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md), [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **Fullscreen rendering setup documented**: The `CLAUDE_CODE_NO_FLICKER` env var is now documented inline in the terminal config page (bash, PowerShell, and settings.json examples), with a clearer symptom description.
-  > If the display flickers or the scroll position jumps while Claude is working, switch to fullscreen rendering mode
-  - *Source*: [terminal-config.md](https://code.claude.com/docs/en/terminal-config.md)
+### `.claude` Directory Reference — Major Expansion
 
-- **Vim mode section simplified**: The detailed key list was removed from terminal-config.md and replaced with a pointer to the [Vim editor mode reference](/en/interactive-mode#vim-editor-mode). A note was added that Vim motions are not remappable via the keybindings file.
-  - *Source*: [terminal-config.md](https://code.claude.com/docs/en/terminal-config.md)
+- **Windows path clarification**: The page now explicitly states that `~/.claude` resolves to `%USERPROFILE%\.claude` on Windows.
+  > "On Windows, `~/.claude` resolves to `%USERPROFILE%\.claude`."
+  - *Implication*: Removes ambiguity for Windows users setting `CLAUDE_CONFIG_DIR` or locating global config files.
+  - *Source*: [Claude Directory](https://code.claude.com/docs/en/claude-directory.md)
 
----
+- **New "Choose the right file" decision table**: A new `## Choose the right file` section maps common customization goals to the correct configuration file, scope, and reference page:
 
-### Hooks — `if` Field Semantics Clarified
+  | You want to | Edit | Scope |
+  |---|---|---|
+  | Give Claude project context and conventions | `CLAUDE.md` | project or global |
+  | Allow or block specific tool calls | `settings.json` `permissions` or `hooks` | project or global |
+  | Run a script before or after tool calls | `settings.json` `hooks` | project or global |
+  | Set environment variables for the session | `settings.json` `env` | project or global |
+  | Keep personal overrides out of git | `settings.local.json` | project only |
+  | Add a prompt or capability you invoke with `/name` | `skills/<name>/SKILL.md` | project or global |
+  | Define a specialized subagent with its own tools | `agents/*.md` | project or global |
+  | Connect external tools over MCP | `.mcp.json` | project only |
+  | Change how Claude formats responses | `output-styles/*.md` | project or global |
 
-- **`if` matches Bash subcommands, not whole commands**: The documentation now specifies that `if: "Bash(git *)"` matches against individual subcommands parsed from the Bash input, not just whether the command string starts with `git`. For compound commands like `npm test && git push`, the hook fires because `git push` matches as a subcommand.
-  > For compound commands like `npm test && git push`, Claude Code evaluates each subcommand and fires the hook because `git push` matches.
-  - *Implication*: Hooks using Bash `if` patterns are broader than previously understood — a `Bash(git *)` filter will also fire on chained or piped commands that include a `git` subcommand.
-  - *Source*: [hooks-guide.md](https://code.claude.com/docs/en/hooks-guide.md)
+  - *Implication*: Directly addresses the common new-user confusion about which file to edit for which purpose, especially the `settings.json` vs. `CLAUDE.md` split.
+  - *Source*: [Claude Directory](https://code.claude.com/docs/en/claude-directory.md)
 
-- **`if` always fires on unparseable commands**: When a Bash command is too complex to parse into subcommands, hooks with an `if` field fire unconditionally rather than being skipped.
-  > The hook only spawns if the tool call matches the pattern, or if a Bash command is too complex to parse.
-  - *Implication*: Hooks intended as narrow filters may run on complex shell constructs. Design hooks to be safe when they receive unexpected input.
-  - *Source*: [hooks.md](https://code.claude.com/docs/en/hooks.md)
+- **New "Troubleshoot configuration" section**: A new `## Troubleshoot configuration` section provides a 13-row diagnostic table covering the most common misconfiguration symptoms, their causes, and fixes. Topics covered: hook matcher case-sensitivity and format, the `~/.claude.json` vs `~/.claude/settings.json` distinction, `settings.local.json` precedence, skill folder structure, subdirectory `CLAUDE.md` load timing, subagent memory inheritance, `SessionEnd` hooks, MCP config file placement and approval, relative vs. absolute paths in MCP server config, MCP env var propagation, and Bash `rm` permission rule literal-matching.
 
-- **`PermissionDenied` removed from `if`-supported events**: The `if` field is now documented as only valid on `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, and `PermissionRequest`. `PermissionDenied` was previously listed and has been removed.
-  - *Implication*: Any hook using `if` on a `PermissionDenied` event was already being silently dropped; the documentation now matches this behavior.
-  - *Source*: [hooks.md](https://code.claude.com/docs/en/hooks.md)
+  Selected entries:
+  > "Hook never fires → `matcher` value is lowercase, for example `"bash"` → Matching is case-sensitive. Tool names are capitalized: `Bash`, `Edit`, `Write`, `Read`."
+  > "Permissions, hooks, or env set globally are ignored → Configuration was added to `~/.claude.json` → `~/.claude.json` holds app state and UI toggles. `permissions`, `hooks`, and `env` belong in `~/.claude/settings.json`. These are two different files."
+  > "Hooks are in a standalone `.claude/hooks.json` file → There is no standalone hooks file. Define hooks under the `"hooks"` key in `settings.json`."
 
-- **`if` field syntax note added**: A new paragraph clarifies that the `if` field holds exactly one permission rule with no `&&`, `||`, or list syntax. Multiple conditions require separate hook handlers.
-  > The `if` field holds exactly one permission rule. There is no `&&`, `||`, or list syntax for combining rules; to apply multiple conditions, define a separate hook handler for each.
-  - *Source*: [hooks.md](https://code.claude.com/docs/en/hooks.md)
+  - *Implication*: The `~/.claude.json` vs `~/.claude/settings.json` confusion is one of the most reported Claude Code support issues; its documentation here should reduce those tickets. The case-sensitive matcher tip is also a frequently missed requirement.
+  - *Source*: [Claude Directory](https://code.claude.com/docs/en/claude-directory.md)
 
-- **`SessionStart` hook added to direnv example**: The direnv environment variable guide now pairs a `SessionStart` hook with `CwdChanged` so variables are loaded both when a session begins and when Claude changes directory. The command also changed from append (`>>`) to overwrite (`>`).
-  > Pairing a `SessionStart` hook with a `CwdChanged` hook fixes this. `SessionStart` loads the variables for the directory you launch in, and `CwdChanged` reloads them each time Claude changes directory.
-  - *Implication*: Existing direnv setups using only `CwdChanged` will miss the initial load if Claude's working directory at session start contains an `.envrc`. Add the `SessionStart` hook and switch `>>` to `>`.
-  - *Source*: [hooks-guide.md](https://code.claude.com/docs/en/hooks-guide.md)
+### Features
 
----
+- **New "Work in notes and non-code folders" workflow**: A new `## Work in notes and non-code folders` section documents using Claude Code outside software repositories.
+  > "Claude Code works in any directory. Run it inside a notes vault, a documentation folder, or any collection of markdown files to search, edit, and reorganize content the same way you would code."
+  > "Claude reads files fresh on each tool call, so it sees edits you make in another application the next time it reads that file."
+  - *Implication*: Clarifies that `.claude/` and `CLAUDE.md` coexist with other tools' config directories without conflict, making Claude Code viable for personal knowledge management and non-engineering workflows.
+  - *Source*: [Common Workflows](https://code.claude.com/docs/en/common-workflows.md)
 
-### Interactive Mode — Minor Updates
+### Integrations
 
-- **Vim mode gains `u` (undo)**: The Vim editor mode key table now includes `u` for undo in NORMAL mode.
-  - *Source*: [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md)
+- **VS Code: Extended thinking block keyboard shortcut documented**: The prompt-box feature description for extended thinking was expanded to describe how reasoning output appears in the conversation.
+  > "Claude's reasoning appears in the conversation as collapsed blocks: click a block to read it, or press `Ctrl+O` to expand or collapse every thinking block in the session."
+  - *Implication*: `Ctrl+O` as a bulk toggle for all thinking blocks in the session is newly documented — useful for reviewing lengthy reasoning traces.
+  - *Source*: [VS Code](https://code.claude.com/docs/en/vs-code.md)
 
-- **Warp and Apple Terminal added to native Shift+Enter list**: The multiline input table now reflects that Warp and Apple Terminal support Shift+Enter without configuration.
-  > Shift+Enter works without configuration in iTerm2, WezTerm, Ghostty, Kitty, Warp, and Apple Terminal.
-  - *Source*: [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md)
+### Enterprise
 
-- **"Terminal.app" renamed to "Apple Terminal"**: The product name throughout interactive-mode.md was updated to match Apple's current branding.
-  - *Source*: [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md)
-
-- **iTerm2 Option key instructions made more precise**: The navigation path now includes the "General" sub-tab: Settings → Profiles → Keys → **General** → set Left/Right Option key to "Esc+".
-  - *Source*: [interactive-mode.md](https://code.claude.com/docs/en/interactive-mode.md)
-
----
-
-### Commands Reference — Minor Updates
-
-- **`/terminal-setup` terminal list updated**: Description now lists VS Code, Cursor, Windsurf, Alacritty, and Zed as terminals requiring setup (Warp removed from the list).
-  - *Source*: [commands.md](https://code.claude.com/docs/en/commands.md)
-
-- **`/theme` description updated**: Changed "follows your terminal's dark or light mode" to "matches your terminal's light or dark background" — a wording shift suggesting the detection method is background luminance rather than an OS-level dark mode signal.
-  - *Source*: [commands.md](https://code.claude.com/docs/en/commands.md)
-
----
-
-### Environment Variables — Clarification
-
-- **`CLAUDE_ENV_FILE` description made more precise**: The description now states the file's contents are run "in the same shell process" so exports become visible to the Bash command, replacing the vaguer "sources before each Bash command."
-  > Path to a shell script whose contents Claude Code runs before each Bash command in the same shell process, so exports in the file are visible to the command.
-  - *Implication*: Confirms that environment variable exports in the file propagate correctly to the tool invocation — not just to a subshell.
-  - *Source*: [env-vars.md](https://code.claude.com/docs/en/env-vars.md)
+- **ZDR request: direct contact sales link added**: The Zero Data Retention enablement instructions previously pointed only to an account team contact. A direct link to the Anthropic sales contact form is now listed as an alternative.
+  > "To request ZDR for Claude Code on Claude for Enterprise, [contact sales](https://www.anthropic.com/contact-sales) or your Anthropic account team."
+  - *Implication*: Organizations without an existing Anthropic account team relationship now have a self-service path to initiate ZDR.
+  - *Source*: [Zero Data Retention](https://code.claude.com/docs/en/zero-data-retention.md)
 
 ## Notable Details
 
-- The `/terminal-setup` command reference was updated to add **Cursor** and **Windsurf** alongside VS Code — these editor-embedded terminals now have first-class mention, consistent with the 2.1.116 note about scroll sensitivity improvements in those same editors.
-- The direnv `>>` → `>` change (append vs. overwrite) is semantically significant: appending could cause env vars from previous directories to accumulate across `CwdChanged` events, while overwriting ensures only the current directory's vars are active.
-- The `PermissionDenied` removal from `if`-supported hook events was applied consistently across both `hooks.md` (field reference table) and `hooks-guide.md` (prose explanation), indicating a deliberate correction rather than a doc drift fix.
-- Apple Terminal (Terminal.app) receiving first-class mention for native Shift+Enter support and the `/terminal-setup` first-run prompt story suggests improved onboarding coverage for macOS users who have not installed a third-party terminal emulator.
+- **URL anchor encoding fixes** (`best-practices.md`, `commands.md`, `sub-agents.md`, `statusline.md`): Internal links to the `/btw` and `/statusline` command anchors were updated to use percent-encoded slugs (`#side-questions-with-%2Fbtw`, `#use-the-%2Fstatusline-command`). This is a correctness fix for documentation renderers that encode slash characters in anchor IDs. No content changed.
+- **Plugin path trailing slash removed** (`claude-directory.md`): `~/.claude/plugins/` was corrected to `~/.claude/plugins` in the file reference table. Minor, but relevant for shell scripts that do path matching or stat checks on this directory.
+- **`## Explore the directory` section created**: The previous introductory paragraph ("This page is an interactive explorer: click files in the tree…") was split out into its own heading section. The interactive `<ClaudeExplorer />` component is unchanged; only the heading structure was reorganized to support the new sections on the same page.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| terminal-config.md | Modified | +106/-65 | Full page restructure: symptom-based guide replacing feature-list format; tmux setup consolidated; Warp/Apple Terminal added to native Shift+Enter list |
-| changelog.md | Modified | +27/-0 | Version 2.1.116 entry added (April 20, 2026) |
-| hooks-guide.md | Modified | +18/-6 | `if` field subcommand semantics; `SessionStart` added to direnv example; `>>` → `>` for env file writes |
-| hooks.md | Modified | +12/-10 | `if` field table updated; `PermissionDenied` removed; new paragraph on `if` syntax constraints |
-| interactive-mode.md | Modified | +11/-10 | Vim mode `u` (undo) added; Warp/Apple Terminal native Shift+Enter; terminal name and nav path fixes |
-| commands.md | Modified | +2/-2 | `/terminal-setup` terminal list updated; `/theme` description wording refined |
-| env-vars.md | Modified | +1/-1 | `CLAUDE_ENV_FILE` description clarifies same-shell-process execution |
+| claude-directory.md | Modified | +42/-3 | Windows path note added; "Explore the directory" section created; "Choose the right file" decision table added; "Troubleshoot configuration" diagnostic table added; plugin path trailing slash removed |
+| desktop.md | Modified | +24/-0 | New `sshConfigs` team SSH pre-configuration section with JSON example; `sshConfigs` added to managed settings reference table |
+| settings.md | Modified | +1/-0 | New `sshConfigs` setting entry in the available settings reference table |
+| common-workflows.md | Modified | +8/-0 | New "Work in notes and non-code folders" workflow section |
+| vs-code.md | Modified | +1/-1 | Extended thinking collapsed blocks and `Ctrl+O` bulk-toggle shortcut documented |
+| zero-data-retention.md | Modified | +1/-1 | Direct contact sales link added alongside account team for ZDR requests |
+| statusline.md | Modified | +2/-2 | URL anchor encoding fix for `/statusline` command links |
+| sub-agents.md | Modified | +1/-1 | URL anchor encoding fix for `/btw` command link |
+| best-practices.md | Modified | +1/-1 | URL anchor encoding fix for `/btw` command link |
+| commands.md | Modified | +1/-1 | URL anchor encoding fix for `/btw` command link |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-04-21*
