@@ -15,7 +15,7 @@ For API feature documentation with code examples, see the [API reference](/docs/
 <Tabs>
 <Tab title="Gradle">
 ```kotlin
-implementation("com.anthropic:anthropic-java:2.22.0")
+implementation("com.anthropic:anthropic-java:2.27.0")
 ```
 </Tab>
 <Tab title="Maven">
@@ -23,7 +23,7 @@ implementation("com.anthropic:anthropic-java:2.22.0")
 <dependency>
     <groupId>com.anthropic</groupId>
     <artifactId>anthropic-java</artifactId>
-    <version>2.22.0</version>
+    <version>2.27.0</version>
 </dependency>
 ```
 </Tab>
@@ -478,7 +478,6 @@ The SDK defines methods that accept files through the `MultipartField` class:
 
 ```java nocheck
 import com.anthropic.core.MultipartField;
-import com.anthropic.models.beta.AnthropicBeta;
 import com.anthropic.models.beta.files.FileMetadata;
 import com.anthropic.models.beta.files.FileUploadParams;
 
@@ -489,7 +488,6 @@ FileUploadParams params = FileUploadParams.builder()
       .contentType("application/pdf")
       .build()
   )
-  .addBeta(AnthropicBeta.FILES_API_2025_04_14)
   .build();
 
 FileMetadata fileMetadata = client.beta().files().upload(params);
@@ -499,7 +497,6 @@ Or from an `InputStream`:
 
 ```java nocheck
 import com.anthropic.core.MultipartField;
-import com.anthropic.models.beta.AnthropicBeta;
 import com.anthropic.models.beta.files.FileMetadata;
 import com.anthropic.models.beta.files.FileUploadParams;
 
@@ -511,7 +508,6 @@ FileUploadParams params = FileUploadParams.builder()
       .contentType("application/pdf")
       .build()
   )
-  .addBeta(AnthropicBeta.FILES_API_2025_04_14)
   .build();
 
 FileMetadata fileMetadata = client.beta().files().upload(params);
@@ -521,7 +517,6 @@ Or from in-memory bytes:
 
 ```java nocheck
 import com.anthropic.core.MultipartField;
-import com.anthropic.models.beta.AnthropicBeta;
 import com.anthropic.models.beta.files.FileMetadata;
 import com.anthropic.models.beta.files.FileUploadParams;
 
@@ -533,7 +528,6 @@ FileUploadParams params = FileUploadParams.builder()
       .contentType("text/plain")
       .build()
   )
-  .addBeta(AnthropicBeta.FILES_API_2025_04_14)
   .build();
 
 FileMetadata fileMetadata = client.beta().files().upload(params);
@@ -1086,7 +1080,7 @@ To use a completely custom HTTP client:
 <Note>
 For detailed platform setup guides with code examples, see:
 - [Amazon Bedrock](/docs/en/build-with-claude/claude-in-amazon-bedrock)
-- [Amazon Bedrock (legacy)](/docs/en/build-with-claude/claude-on-amazon-bedrock)
+- [Amazon Bedrock (legacy)](/docs/en/build-with-claude/claude-on-amazon-bedrock-legacy)
 - [Google Vertex AI](/docs/en/build-with-claude/claude-on-vertex-ai)
 - [Microsoft Foundry](/docs/en/build-with-claude/claude-in-microsoft-foundry)
 </Note>

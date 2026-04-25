@@ -21,19 +21,13 @@ For endpoint-specific parameters and response schemas, see the [API reference](/
 brew install anthropics/tap/ant
 ```
 
-On macOS, unquarantine the binary:
-
-```bash
-xattr -d com.apple.quarantine "$(brew --prefix)/bin/ant"
-```
-
 </Tab>
 <Tab title="curl (Linux/WSL)">
 
 For Linux environments, download the release binary directly.
 
 ```bash
-VERSION=1.0.0
+VERSION=1.3.2
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 curl -fsSL "https://github.com/anthropics/anthropic-cli/releases/download/v${VERSION}/ant_${VERSION}_${OS}_${ARCH}.tar.gz" \

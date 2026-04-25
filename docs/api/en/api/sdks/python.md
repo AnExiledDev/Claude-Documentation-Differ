@@ -335,13 +335,11 @@ client = Anthropic()
 # Upload using a file path
 client.beta.files.upload(
     file=Path("/path/to/file"),
-    betas=["files-api-2025-04-14"],
 )
 
 # Upload using bytes
 client.beta.files.upload(
     file=("file.txt", b"my bytes", "text/plain"),
-    betas=["files-api-2025-04-14"],
 )
 ```
 
@@ -770,7 +768,7 @@ response = client.beta.messages.create(
 <Note>
 For detailed platform setup guides with code examples, see:
 - [Amazon Bedrock](/docs/en/build-with-claude/claude-in-amazon-bedrock)
-- [Amazon Bedrock (legacy)](/docs/en/build-with-claude/claude-on-amazon-bedrock)
+- [Amazon Bedrock (legacy)](/docs/en/build-with-claude/claude-on-amazon-bedrock-legacy)
 - [Google Vertex AI](/docs/en/build-with-claude/claude-on-vertex-ai)
 - [Microsoft Foundry](/docs/en/build-with-claude/claude-in-microsoft-foundry)
 </Note>

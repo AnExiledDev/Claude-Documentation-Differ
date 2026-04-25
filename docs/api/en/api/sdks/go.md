@@ -21,7 +21,7 @@ import (
 Or to pin the version:
 
 ```bash
-go get -u 'github.com/anthropics/anthropic-sdk-go@v1.27.1'
+go get -u 'github.com/anthropics/anthropic-sdk-go@v1.38.0'
 ```
 
 ## Requirements
@@ -700,14 +700,12 @@ helper, which wraps any `io.Reader` with the appropriate file name and content t
 // A file from the file system
 file, err := os.Open("/path/to/file.json")
 anthropic.BetaFileUploadParams{
-	File:  anthropic.File(file, "custom-name.json", "application/json"),
-	Betas: []anthropic.AnthropicBeta{anthropic.AnthropicBetaFilesAPI2025_04_14},
+	File: anthropic.File(file, "custom-name.json", "application/json"),
 }
 
 // A file from a string
 anthropic.BetaFileUploadParams{
-	File:  anthropic.File(strings.NewReader("my file contents"), "custom-name.json", "application/json"),
-	Betas: []anthropic.AnthropicBeta{anthropic.AnthropicBetaFilesAPI2025_04_14},
+	File: anthropic.File(strings.NewReader("my file contents"), "custom-name.json", "application/json"),
 }
 ```
 
@@ -837,7 +835,7 @@ middleware has been applied.
 <Note>
 For detailed platform setup guides with code examples, see:
 - [Amazon Bedrock](/docs/en/build-with-claude/claude-in-amazon-bedrock)
-- [Amazon Bedrock (legacy)](/docs/en/build-with-claude/claude-on-amazon-bedrock)
+- [Amazon Bedrock (legacy)](/docs/en/build-with-claude/claude-on-amazon-bedrock-legacy)
 - [Google Vertex AI](/docs/en/build-with-claude/claude-on-vertex-ai)
 </Note>
 
