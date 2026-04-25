@@ -2,97 +2,53 @@
 
 ## Summary
 
-The only documentation change detected is the addition of the **v2.1.120** release entry to the changelog page. This release spans 23 items including a significant Windows dependency removal, a new `ultrareview` CI subcommand, skill enhancements, two VSCode-specific fixes, and a critical crash fix for the Bash `find` tool on macOS/Linux.
+One page was modified with 25 lines deleted and no additions. The entire **v2.1.120** release entry was removed from the changelog page. Both snapshots are from the same day (00:29 UTC → 06:33 UTC), indicating the release notes were published and then retracted within hours. The entry's content covered a substantial set of features and fixes across Windows, CI tooling, plugins, VS Code, and several bug fixes.
 
-## Significant Changes
+## Notable Details
 
-### New Features
+The retracted `2.1.120` entry contained the following items, noted here for reference. These have not been confirmed as released — they were visible briefly in the documentation and subsequently removed:
 
-- **`claude ultrareview [target]` subcommand**: A new non-interactive subcommand enables running `/ultrareview` from CI pipelines or scripts. It prints findings to stdout, supports `--json` for machine-readable output, and exits `0` on completion or `1` on failure.
-  > `Added \`claude ultrareview [target]\` subcommand to run \`/ultrareview\` non-interactively from CI or scripts — prints findings to stdout (\`--json\` for raw output) and exits 0 on completion or 1 on failure`
-  - *Implication*: Enables automated code review gating in CI without requiring an interactive session.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Features (retracted)
 
-- **`${CLAUDE_EFFORT}` in skill content**: Skills can now read the current effort level via this template variable.
-  > `Skills can now reference the current effort level with \`${CLAUDE_EFFORT}\` in their content`
-  - *Implication*: Skills can conditionally adapt behavior (e.g., verbosity, depth) based on the active effort setting without external configuration.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Windows: Git Bash no longer required** — Claude Code would fall back to PowerShell as the shell tool when Git for Windows is absent, removing a significant Windows install prerequisite.
+- **`claude ultrareview [target]` subcommand** — A non-interactive subcommand for running `/ultrareview` from CI or scripts, printing findings to stdout with `--json` for machine-readable output. Exits `0` on completion, `1` on failure.
+- **`${CLAUDE_EFFORT}` in skill content** — Skills could read the current effort level via this template variable, enabling effort-adaptive behavior.
+- **`AI_AGENT` environment variable for subprocesses** — Would be set when spawning subprocesses, allowing `gh` and similar tools to attribute network traffic to Claude Code.
+- **`claude plugin validate` expanded acceptance** — Would accept `$schema`, `version`, and `description` at the top level of `marketplace.json`; `$schema` in `plugin.json`.
 
-- **`AI_AGENT` environment variable for subprocesses**: Claude Code now sets this env var when spawning subprocesses, allowing tools like `gh` to attribute network traffic to Claude Code.
-  > `Set \`AI_AGENT\` environment variable for subprocesses so \`gh\` can attribute traffic to Claude Code`
-  - *Implication*: Improves observability and attribution for GitHub CLI usage driven by Claude Code.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### VS Code (retracted)
 
-### Windows
+- **`/usage` opens native Account & Usage dialog** — Instead of returning plain-text session cost.
+- **Voice dictation respects `language` setting** — Reads `language` from `~/.claude/settings.json`.
 
-- **Git for Windows no longer required**: When Git Bash is absent, Claude Code now falls back to PowerShell as the shell tool instead of failing.
-  > `Windows: Git for Windows (Git Bash) is no longer required — when absent, Claude Code uses PowerShell as the shell tool`
-  - *Implication*: Removes a significant installation prerequisite on Windows, broadening out-of-the-box compatibility.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Bug Fixes (retracted)
 
-### Plugin / Marketplace
+- **Critical: `find` exhausting file descriptors** — `find` in the Bash tool could exhaust open file descriptors on large directory trees, causing host-wide crashes on macOS/Linux native builds.
+- **Telemetry suppression gap for API/enterprise users** — `DISABLE_TELEMETRY` / `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` were not suppressing usage metrics for API and enterprise users.
+- **Esc closing MCP server connection** (regression in 2.1.105) — Pressing Esc during a stdio MCP tool call closed the entire server connection.
+- **False-positive "Dangerous rm operation" prompts** — Triggered incorrectly in auto mode for multi-line bash commands containing both a pipe and a redirect.
+- **`/rewind` and interactive overlays unresponsive after `--resume`** — Keyboard input stopped working in interactive overlays when launching with `claude --resume`.
+- **Terminal scrollback duplication** in non-fullscreen mode (resize, dialog dismiss, long sessions).
+- **Long selection menus clipping** below the terminal in fullscreen mode.
+- **Write tool output collapsing** instead of expanding on "+N lines" click in fullscreen.
+- **Slash command picker jumping** while typing; highlight now matches only contiguous substrings in blue.
+- **`/plugin` marketplace failing to load** when one entry used an unrecognized source format — now shows the bad entry but prompts to update when installation is attempted.
 
-- **`claude plugin validate` accepts additional top-level fields**: The validator now accepts `$schema`, `version`, and `description` at the top level of `marketplace.json`, and `$schema` in `plugin.json`.
-  > `\`claude plugin validate\` now accepts \`$schema\`, \`version\`, and \`description\` at the top level of \`marketplace.json\` and \`$schema\` in \`plugin.json\``
-  - *Implication*: Plugin authors can now include schema declarations and metadata without validation errors.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### UX Improvements (retracted)
 
-### VS Code Integration
+- Spinner tips for installing the desktop app or creating skills/agents hidden when already configured.
+- "Use PgUp/PgDn to scroll" hint shown when the terminal sends arrow keys instead of scroll events.
+- Faster session start when many `claude.ai` connectors are configured but not authorized.
+- Auto mode denial message now links to the configuration docs.
+- Auto-compact in auto mode displays `auto` (lowercase, no token count) instead of a misleading token value.
 
-- **`/usage` opens native Account & Usage dialog**: In the VS Code extension, `/usage` now surfaces the native Account & Usage UI rather than returning plain-text session cost.
-  > `\[VSCode] \`/usage\` now opens the native Account & Usage dialog instead of returning plain-text session cost`
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **Voice dictation respects `language` setting**: VS Code voice dictation now reads the `language` field from `~/.claude/settings.json`.
-  > `\[VSCode] Voice dictation now respects the \`language\` setting in \`~/.claude/settings.json\``
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-### Bug Fixes
-
-- **Critical: `find` exhausting file descriptors on macOS/Linux**: The Bash tool's use of `find` could exhaust open file descriptors on large directory trees, causing host-wide crashes on macOS and Linux native builds.
-  > `Fixed \`find\` in the Bash tool exhausting open file descriptors on large directory trees, causing host-wide crashes (macOS/Linux native builds)`
-  - *Implication*: High-severity stability fix; users on large codebases should update immediately.
-
-- **Telemetry suppression not working for API/enterprise users**: `DISABLE_TELEMETRY` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` were not suppressing usage metrics for API and enterprise users.
-  > `Fixed \`DISABLE_TELEMETRY\` / \`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC\` not suppressing usage metrics telemetry for API and enterprise users`
-  - *Implication*: Enterprise deployments relying on these flags for compliance had a gap; this restores expected behavior.
-
-- **Esc closing MCP server connection (regression in 2.1.105)**: Pressing Esc during a stdio MCP tool call was closing the entire server connection.
-  > `Fixed pressing Esc during a stdio MCP tool call closing the entire server connection (regression in 2.1.105)`
-
-- **False-positive "Dangerous rm operation" prompts**: Multi-line bash commands in auto mode containing both a pipe and a redirect triggered incorrect dangerous-operation warnings.
-  > `Fixed false-positive "Dangerous rm operation" permission prompts in auto mode for multi-line bash commands containing both a pipe and a redirect`
-
-- **`/rewind` and interactive overlays unresponsive after `--resume`**: Keyboard input stopped working in interactive overlays when launching with `claude --resume`.
-  > `Fixed \`/rewind\` and other interactive overlays not responding to keyboard input after launching with \`claude --resume\``
-
-- **Terminal scrollback duplication in non-fullscreen mode**: Visible during resize, dialog dismiss, and long sessions.
-
-- **Long selection menus clipping in fullscreen mode**: The focused option now stays on screen while scrolling.
-
-- **Write tool output collapsing on "+N lines" click in fullscreen**.
-
-- **Slash command picker jumping while typing**: Highlight logic improved to only match contiguous substrings (shown in blue).
-
-- **`/plugin` marketplace load failure on unrecognized source format**: Previously, one bad entry could prevent the entire marketplace from loading. Now, the bad entry is shown but triggers an "update required" prompt when installation is attempted.
-
-### UX Improvements
-
-- **Spinner tips suppressed when features are already set up**: Tips recommending desktop app installation or skill/agent creation are hidden if those are already present.
-
-- **"Use PgUp/PgDn to scroll" hint**: Shown when the terminal sends arrow key events instead of scroll events, guiding users in terminals with non-standard input handling.
-
-- **Faster session start with many unauthorized claude.ai connectors**: Session initialization is faster when multiple connectors are configured but not authorized.
-
-- **Auto mode denial message links to configuration docs**: The message shown when a request is denied in auto mode now includes a direct link to the relevant configuration documentation.
-
-- **Auto-compact shows "auto" instead of misleading token count**: In auto mode, the auto-compact indicator now displays `auto` (lowercase, no token count) instead of a value that didn't reflect actual context usage.
+> **Note**: Because this entry was removed from the documentation between the two snapshots compared here, none of the above changes are confirmed released. Monitor the [Claude Code Changelog](https://code.claude.com/docs/en/changelog.md) for a future entry (likely `2.1.120` or later) that re-publishes these release notes.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +25 / -0 | Added v2.1.120 release entry (April 25, 2026) with 23 items |
+| changelog.md | Modified | +0 / -25 | Removed the `2.1.120` release entry (April 25, 2026) in its entirety |
 
 ---
-*Generated from Claude Code CLI documentation changes detected on 2026-04-25*
+*Generated from Claude Code CLI documentation changes detected on 2026-04-25. Comparing `3c599892` → `HEAD`. Source: [Claude Code Changelog](https://code.claude.com/docs/en/changelog.md)*
