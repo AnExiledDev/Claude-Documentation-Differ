@@ -4,7 +4,7 @@
 
 Version 2.1.126 shipped on May 1, 2026 with 25 modified documentation pages covering a significant batch of new features, bug fixes, and behavior changes. The most structurally notable changes are: a new `claude project purge` command, expanded `bypassPermissions` mode that now truly bypasses all protected paths, automatic model discovery from LLM gateway `/v1/models` endpoints, and PowerShell-first shell behavior on Windows when the PowerShell tool is enabled.
 
-A second documentation update later in the day made two minor editorial corrections to the v2.1.126 changelog entry (see "Notable Details" below).
+A second documentation update later in the day made two minor editorial corrections to the v2.1.126 changelog entry. A third update clarified the scope of `CLAUDE_CODE_SHELL_PREFIX` to explicitly enumerate which shell commands it covers (see "Notable Details" below).
 
 ---
 
@@ -127,6 +127,12 @@ A second documentation update later in the day made two minor editorial correcti
 
 - **Setup/uninstall now mentions conflicting installations**: "If `claude` still runs afterward, you likely have a second installation or a leftover shell alias from an older installer." Links to the troubleshooting section. — *Source*: [Setup](https://code.claude.com/docs/en/setup.md)
 
+- **`CLAUDE_CODE_SHELL_PREFIX` scope clarified (third update, May 1)**: The description was rewritten to enumerate exactly which commands the prefix applies to, replacing the vague "all bash commands" phrasing.
+  - Before: "Command prefix to wrap all bash commands (for example, for logging or auditing)."
+  - After: "Command prefix that wraps shell commands Claude Code spawns: Bash tool calls, hook commands, and stdio MCP server startup commands."
+  - *Implication*: Developers using this variable for auditing or sandboxing now have explicit confirmation it covers hook execution and stdio MCP server startup — not just interactive Bash tool calls. Relevant for security-sensitive deployments requiring full command coverage.
+  - *Source*: [Env Vars](https://code.claude.com/docs/en/env-vars.md)
+
 - **Two changelog bullets quietly corrected (second update, May 1)**: The v2.1.126 release entry in `changelog.md` was revised:
   - **Removed entirely**: `Fixed blank remote-session transcript when certain messaging tools are unavailable` — this bullet was deleted from the published notes, suggesting the fix was not yet complete or was inaccurate.
   - **Shortened**: The `/remote-control` retry fix was trimmed. The original text read:
@@ -158,7 +164,7 @@ A second documentation update later in the day made two minor editorial correcti
 | llm-gateway.md | Modified | +8/−2 | Documented automatic `/v1/models` gateway discovery |
 | permission-modes.md | Modified | +6/−4 | Updated `bypassPermissions` description; added PowerShell `acceptEdits` support |
 | troubleshoot-install.md | Modified | +6/−6 | Expanded OAuth section to cover SSH and containers |
-| env-vars.md | Modified | +3/−1 | Added `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST`, `DISABLE_GROWTHBOOK`; simplified `CLAUDE_STREAM_IDLE_TIMEOUT_MS` |
+| env-vars.md | Modified | +4/−2 | Added `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST`, `DISABLE_GROWTHBOOK`; simplified `CLAUDE_STREAM_IDLE_TIMEOUT_MS`; clarified `CLAUDE_CODE_SHELL_PREFIX` scope |
 | headless.md | Modified | +11/−11 | Added `oauth_org_not_allowed` to `api_retry` error field |
 | interactive-mode.md | Modified | +4/−3 | Fixed `Ctrl+L` description; added `Ctrl+S` history scope cycling step |
 | terminal-config.md | Modified | +4/−2 | Updated notification docs to reference `preferredNotifChannel` |
