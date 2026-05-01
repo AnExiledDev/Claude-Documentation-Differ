@@ -4,6 +4,8 @@
 
 Version 2.1.126 shipped on May 1, 2026 with 25 modified documentation pages covering a significant batch of new features, bug fixes, and behavior changes. The most structurally notable changes are: a new `claude project purge` command, expanded `bypassPermissions` mode that now truly bypasses all protected paths, automatic model discovery from LLM gateway `/v1/models` endpoints, and PowerShell-first shell behavior on Windows when the PowerShell tool is enabled.
 
+A second documentation update later in the day made two minor editorial corrections to the v2.1.126 changelog entry (see "Notable Details" below).
+
 ---
 
 ## Significant Changes
@@ -125,6 +127,14 @@ Version 2.1.126 shipped on May 1, 2026 with 25 modified documentation pages cove
 
 - **Setup/uninstall now mentions conflicting installations**: "If `claude` still runs afterward, you likely have a second installation or a leftover shell alias from an older installer." Links to the troubleshooting section. — *Source*: [Setup](https://code.claude.com/docs/en/setup.md)
 
+- **Two changelog bullets quietly corrected (second update, May 1)**: The v2.1.126 release entry in `changelog.md` was revised:
+  - **Removed entirely**: `Fixed blank remote-session transcript when certain messaging tools are unavailable` — this bullet was deleted from the published notes, suggesting the fix was not yet complete or was inaccurate.
+  - **Shortened**: The `/remote-control` retry fix was trimmed. The original text read:
+    > `Fixed /remote-control retries appearing stuck on "connecting…" — each retry now shows its result, and unenrolled trusted-device failures are caught up-front`
+
+    The clause `and unenrolled trusted-device failures are caught up-front` was removed, indicating that behavior is either shipping separately or was premature to document.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
 - **Security fix (v2.1.126)**: "Fixed `allowManagedDomainsOnly` / `allowManagedReadPathsOnly` being ignored when a higher-priority managed-settings source lacked a `sandbox` block." (Changelog entry only.)
 
 - **Large image paste no longer breaks sessions**: Images >2000px are now downscaled on paste; oversized images in history are automatically removed and the request retried. (Changelog entry only.)
@@ -137,7 +147,7 @@ Version 2.1.126 shipped on May 1, 2026 with 25 modified documentation pages cove
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +36/−0 | Added v2.1.126 release notes |
+| changelog.md | Modified | +36/−0 (initial); +1/−2 (2nd update) | Added v2.1.126 release notes; two bullets later corrected |
 | claude-directory.md | Modified | +34/−1 | New `claude project purge` documentation with examples |
 | permissions.md | Modified | +24/−2 | New PowerShell permission rules section; updated `bypassPermissions` warning |
 | cli-reference.md | Modified | +22/−21 | Added `claude project purge` entry to command table |
