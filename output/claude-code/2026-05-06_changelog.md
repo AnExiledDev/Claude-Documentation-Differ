@@ -2,11 +2,25 @@
 
 ## Summary
 
-One documentation page was updated: the official changelog gained the **v2.1.129** release entry (30 lines added, none removed). This release ships three new flags/env vars, reverts gateway model discovery to opt-in, restores the pre-2.1.124 Ctrl+R search scope default, and fixes 17 bugs spanning permissions, OAuth, prompt caching, MCP, and UI rendering.
+The official changelog page received two updates today. A patch release entry for **v2.1.131** was added with two targeted bug fixes: a Windows-only VS Code extension activation failure and a Mantle endpoint authentication regression. Earlier in the day, the **v2.1.129** release entry was added, shipping three new flags/env vars, reverting gateway model discovery to opt-in, restoring the pre-2.1.124 Ctrl+R search scope default, and fixing 17 bugs.
 
 ---
 
 ## Significant Changes
+
+### v2.1.131 Bug Fixes (May 6, 2026)
+
+- **VS Code extension activation failure on Windows**: The extension failed to activate due to a hardcoded build path in the bundled SDK's `createRequire` polyfill.
+  > "Fixed VS Code extension failing to activate on Windows due to a hardcoded build path in the bundled SDK (`createRequire` polyfill bug)"
+  - *Implication*: Windows users who experienced silent VS Code extension failures should update to 2.1.131.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+- **Mantle endpoint authentication fix**: Requests to Mantle endpoints were missing the `x-api-key` header, causing authentication failures.
+  > "Fixed Mantle endpoint authentication failing with missing `x-api-key` header"
+  - *Implication*: Developers using Mantle-backed endpoints who saw auth errors despite valid credentials should update to 2.1.131.
+  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+
+---
 
 ### New CLI Flags and Environment Variables
 
@@ -98,7 +112,7 @@ Notable fixes in v2.1.129 (17 total):
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| `docs/claude-code/en/changelog.md` | Modified | +30 / -0 | Added v2.1.129 release entry (May 6, 2026): 3 new flags/env vars, 5 behavior changes, 17 bug fixes |
+| `docs/claude-code/en/changelog.md` | Modified | +35 / -0 | Added v2.1.131 (2 bug fixes) and v2.1.129 (3 new flags/env vars, 5 behavior changes, 17 bug fixes) release entries |
 
 ---
 
