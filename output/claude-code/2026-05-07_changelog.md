@@ -2,85 +2,115 @@
 
 ## Summary
 
-Six documentation pages were updated in this batch, covering three new environment variables, a breaking semantic change to status line context-window token fields (as of v2.1.132), JetBrains IDE scroll improvements, and an expansion of Windows Terminal's native Shift+Enter support. No pages were added or removed.
+Six documentation pages were updated, with no pages added or removed. The dominant theme is improved cross-referencing between CLI flags, environment variables, and settings — many entries now explicitly document which mechanism overrides another. Two functional corrections also landed: a Bedrock inference profile ID prefix fix and a web session transcript URL construction fix.
 
 ## Significant Changes
 
+### CLI Flags
+
+- **`--add-dir` — Persistence pointer added**: The flag description now directs users to `permissions.additionalDirectories` in settings for persisting additional directories across sessions.
+  > "To persist these directories across sessions, set `permissions.additionalDirectories` in settings"
+  - *Implication*: Users who routinely add the same directories can move them to settings instead of re-passing the flag every invocation.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+
+- **`--effort` — Settings override named explicitly**: The description changed from "Session-scoped and does not persist to settings" to naming the specific `effortLevel` setting it overrides.
+  > "Overrides the `effortLevel` setting for this session and does not persist"
+  - *Implication*: Makes the flag/setting relationship unambiguous — `--effort` shadows `effortLevel` in settings for the current session only.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+
+- **`--model` — Override chain documented**: The flag now states that it overrides both the `model` setting and the `ANTHROPIC_MODEL` environment variable.
+  > "Overrides the `model` setting and `ANTHROPIC_MODEL`"
+  - *Implication*: Clarifies precedence: `--model` flag > `ANTHROPIC_MODEL` env var > `model` setting.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+
+- **`--no-session-persistence` — Env var equivalent noted**: The description now cross-references `CLAUDE_CODE_SKIP_PROMPT_HISTORY`, which achieves the same effect in any mode, not just print mode.
+  > "The `CLAUDE_CODE_SKIP_PROMPT_HISTORY` environment variable does the same in any mode"
+  - *Implication*: Users running interactive sessions who also need to suppress prompt history now have a non-flag option.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+
+- **`--teammate-mode` and `--verbose` — Settings override documented**: Both flags now state they override the corresponding `teammateMode` and `viewMode` settings for the current session only.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+
 ### Environment Variables
 
-- **New: `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS`**: Controls the stall timeout for background subagents. If no streaming progress event arrives within the window, the subagent is aborted and the task marked failed, surfacing any partial result to the parent.
-  > Stall timeout in milliseconds for background subagents. Default `600000` (10 minutes). The timer resets on each streaming progress event; if no progress arrives within the window, the subagent is aborted and the task is marked failed, surfacing any partial result to the parent
-  - *Implication*: Teams running long background subagent chains can tune this value if 10 minutes is too short or too aggressive for their workloads.
+- **`CLAUDE_CODE_AUTO_CONNECT_IDE` — Settings precedence clarified**: The description now states it takes precedence over the `autoConnectIde` global config setting.
+  > "Takes precedence over the `autoConnectIde` global config setting"
   - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **New: `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN`**: Hard-disables fullscreen (alternate-screen) rendering and falls back to the classic main-screen renderer, regardless of any saved `tui` setting.
-  > Set to `1` to disable [fullscreen rendering](/en/fullscreen) and use the classic main-screen renderer. The conversation stays in your terminal's native scrollback so `Cmd+f` and tmux copy mode work as usual. Takes precedence over `CLAUDE_CODE_NO_FLICKER` and the [`tui`](/en/settings#available-settings) setting. You can also switch with `/tui default`
-  - *Implication*: Users who rely on `Cmd+f` search or tmux copy mode can force the classic renderer system-wide via an env var rather than having to remember `/tui default` each session.
+- **`CLAUDE_CODE_DISABLE_AUTO_MEMORY` — `=0` override scope expanded**: The "force on" behavior previously said "during the gradual rollout." It now states setting to `0` forces auto memory on even when `--bare` mode or `autoMemoryEnabled: false` would otherwise disable it.
+  > "Set to `0` to force auto memory on even when `--bare` mode or `autoMemoryEnabled: false` would otherwise disable it"
+  - *Implication*: The gradual-rollout language is gone, indicating auto memory is fully available. The `=0` override now serves a broader, explicitly documented purpose.
   - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **New: `CLAUDE_CODE_SESSION_ID`**: Exposes the current Claude Code session ID inside Bash and PowerShell tool subprocesses.
-  > Set automatically in Bash and PowerShell tool subprocesses to the current session ID. Matches the `session_id` field passed to [hooks](/en/hooks). Updated on `/clear`. Use to correlate scripts and external tools with the Claude Code session that launched them
-  - *Implication*: Scripts and external tooling invoked by Claude Code can now self-identify which session launched them, complementing the existing hooks `session_id` field.
+- **`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` — Rate-based alternative surfaced**: The description now points to `feedbackSurveyRate` as an alternative to outright disabling surveys.
+  > "To set a sample rate instead of disabling outright, use the `feedbackSurveyRate` setting"
   - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **Updated: `CLAUDE_CODE_SCROLL_SPEED` now ignored in JetBrains terminal**: The scroll-speed multiplier has no effect inside the JetBrains IDE terminal, where Claude Code uses its own scroll handling.
-  > Ignored in the JetBrains IDE terminal, where Claude Code uses its own scroll handling
-  - *Implication*: JetBrains users should not attempt to tune this variable; scroll behavior is managed automatically.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+### Settings
 
-### Status Line — Breaking Semantic Change in v2.1.132
+- **`alwaysThinkingEnabled` — Escape hatch noted**: Added a pointer to `CLAUDE_CODE_DISABLE_THINKING` (set via `env`) as the way to force extended thinking off regardless of this setting.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **`total_input_tokens` / `total_output_tokens` now reflect live context window, not cumulative session totals**: As of v2.1.132, these fields report the tokens *currently in the context window* from the most recent API response. Before v2.1.132 they were running session sums that could exceed the context window size.
-  > Token counts currently in the context window, from the most recent API response. Input includes cache reads and writes. Before v2.1.132 these were cumulative session totals
-  - The `context_window` object description was rewritten to match:
-  > **Combined totals** (`total_input_tokens`, `total_output_tokens`): tokens currently in the context window. `total_input_tokens` is the sum of `input_tokens`, `cache_creation_input_tokens`, and `cache_read_input_tokens`; `total_output_tokens` is the output tokens from the most recent response. Both are `0` before the first API response.
-  - *Implication*: Any status-line script or tool (e.g., [ccstatusline](https://github.com/sirmalloc/ccstatusline)) that treats `total_input_tokens` / `total_output_tokens` as cumulative session counters will produce incorrect results after upgrading past v2.1.132. Update scripts to treat these fields as point-in-time context snapshots. Use `current_usage` for per-component breakdown (cache hits vs. fresh input).
-  - *Source*: [Status Line](https://code.claude.com/docs/en/statusline.md)
+- **`apiKeyHelper` — Refresh interval cross-referenced**: Added a link to `CLAUDE_CODE_API_KEY_HELPER_TTL_MS` for configuring the credential refresh interval.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-### JetBrains IDE Integration
+- **`effortLevel`, `model`, `teammateMode`, `viewMode` — Per-session override patterns noted**: Each setting now documents the flag and/or env var that overrides it for a single session, making the settings → flag → env var precedence chain navigable from any entry point.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **New section: "Scroll in the JetBrains IDE terminal"**: Documents Claude Code's custom scroll handling for JetBrains and identifies known scroll-wheel bugs in version 2025.2.
-  > In the JetBrains IDE terminal, Claude Code applies its own scroll handling and ignores `CLAUDE_CODE_SCROLL_SPEED`. The terminal sends scroll events at a much higher rate than other emulators, so a multiplier tuned elsewhere overshoots here.
-  >
-  > In 2025.2, the terminal also has scroll-wheel bugs that produce spurious arrow keys and wrong-direction events. Claude Code detects these at runtime and mitigates them automatically… For the best scroll experience, upgrade to 2025.3 or later. Claude Code shows a hint the first time you scroll if it detects the bug.
-  - *Implication*: JetBrains users on 2025.2 will see automatic mitigation for spurious scroll events; upgrading to 2025.3+ is recommended for the cleanest experience.
-  - *Source*: [Fullscreen Rendering](https://code.claude.com/docs/en/fullscreen.md)
+- **`otelHeadersHelper` — Refresh interval cross-referenced**: Added a link to `CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS` for configuring the OpenTelemetry header refresh cadence.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-### Terminal Support
+- **`autoConnectIde` — Env var override noted**: The global config entry for `autoConnectIde` now states that `CLAUDE_CODE_AUTO_CONNECT_IDE` overrides it when set.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **Windows Terminal now supports native Shift+Enter**: Windows Terminal was moved from the "Not available" category to the "Works without setup" group for Shift+Enter newline insertion.
+- **HTTP hook URL allowlist — Hostname case-insensitivity documented**: The `hookAllowedHttpHosts` description now explicitly states hostname matching is case-insensitive and ignores trailing FQDN dots.
+  > "Hostname matching is case-insensitive and ignores a trailing FQDN dot, matching DNS semantics."
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-  Before:
-  > Windows Terminal, gnome-terminal, JetBrains IDEs such as PyCharm and Android Studio — Not available; use Ctrl+J or `\` then Enter
+### MCP URL Pattern Matching
 
-  After:
-  > Ghostty, Kitty, iTerm2, WezTerm, Warp, Apple Terminal, Windows Terminal — Works without setup
+- **URL allowlist — Hostname case-insensitivity and FQDN dot handling clarified**: A new paragraph was added explaining that hostname matching follows DNS semantics — case-insensitive and treating a trailing dot as equivalent to no trailing dot. Paths remain case-sensitive.
+  > "Hostname matching is case-insensitive and ignores a trailing FQDN dot, matching DNS semantics. A pattern like `*://Mcp.Example.com/*` matches `https://mcp.example.com/api`, and `https://mcp.example.com.` is treated the same as `https://mcp.example.com`. Paths remain case-sensitive."
+  - *Implication*: MCP URL allowlists don't require duplicate entries for case variants or FQDN-dotted forms of the same host. This matches the same clarification added to HTTP hook URL restrictions in settings.md.
+  - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
 
-  - *Implication*: Windows Terminal users no longer need `Ctrl+J` or `\`+Enter workarounds for multi-line input.
-  - *Source*: [Terminal Configuration](https://code.claude.com/docs/en/terminal-config.md), [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
+### Integrations
 
-### Extended Thinking — macOS Keyboard Shortcut
+- **Web session transcript URL construction corrected**: `CLAUDE_CODE_REMOTE_SESSION_ID` uses a `cse_` prefix, but the transcript URL path requires `session_`. The documentation now explains this mismatch and provides the correct shell substitution.
+  > "The variable's value uses a `cse_` prefix, while the transcript URL path takes the same ID with a `session_` prefix. Substitute the prefix when building the link."
+  ```bash
+  echo "https://claude.ai/code/${CLAUDE_CODE_REMOTE_SESSION_ID/#cse_/session_}"
+  ```
+  - *Implication*: The previously documented command (`echo "https://claude.ai/code/${CLAUDE_CODE_REMOTE_SESSION_ID}"`) would produce broken transcript links. PR templates or scripts using the old form should be updated.
+  - *Source*: [Claude Code on the Web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
 
-- **`Option+T` (toggle extended thinking) no longer requires Option-as-Meta configuration on macOS**: As of v2.1.132, the shortcut works natively on macOS. The requirement was also removed from the model configuration reference table.
-  > As of v2.1.132 this shortcut works on macOS without configuring Option as Meta
-  - *Implication*: macOS users on v2.1.132+ can use `Option+T` to toggle extended thinking without modifying iTerm2 or Apple Terminal settings. `Alt+T` was also removed from the list of shortcuts that require Option-as-Meta setup in the macOS keyboard note.
-  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md), [Model Configuration](https://code.claude.com/docs/en/model-config.md)
+- **Bedrock inference profile ID prefix corrected**: The example `ANTHROPIC_MODEL` value changed from `global.anthropic.claude-sonnet-4-6` to `us.anthropic.claude-sonnet-4-6`.
+  ```bash
+  # Before
+  export ANTHROPIC_MODEL='global.anthropic.claude-sonnet-4-6'
+  # After
+  export ANTHROPIC_MODEL='us.anthropic.claude-sonnet-4-6'
+  ```
+  - *Implication*: The `global.` prefix is not a valid Bedrock inference profile ID prefix; regional prefixes like `us.` are correct. Bedrock users copying this example should update their configurations.
+  - *Source*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md)
 
 ## Notable Details
 
-- The `context_window` troubleshooting section was simplified: the warning that cumulative totals might exceed the context window size was removed, consistent with the semantic change above.
-- The fullscreen page's closing paragraph was reworded: it now references unsetting `CLAUDE_CODE_NO_FLICKER` (not just `CLAUDE_CODE_NO_FLICKER`) and explicitly mentions `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1` as a way to force the classic renderer independent of the saved `tui` setting.
+- The CLI reference table was reformatted with wider column widths. All content changes are semantic, not layout-only.
+- The `CLAUDE_CODE_DISABLE_AUTO_MEMORY=0` description dropped the phrase "during the gradual rollout," suggesting auto memory is now fully available and the override is stable long-term behavior.
+- Cross-referencing between settings, flags, and env vars was improved in at least 10 entries across `cli-reference.md` and `settings.md`. This appears to be a systematic documentation pass to make each entry self-contained for precedence lookup.
+- The same hostname matching clarification (case-insensitive, FQDN-dot-insensitive) was added to both `mcp.md` (MCP URL allowlists) and `settings.md` (HTTP hook URL restrictions) in the same update, indicating a shared implementation.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| env-vars.md | Modified | +4 / -1 | Added `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS`, `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN`, `CLAUDE_CODE_SESSION_ID`; noted JetBrains scroll-speed exclusion |
-| fullscreen.md | Modified | +7 / -1 | New section on JetBrains IDE terminal scroll; updated closing paragraph with `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN` guidance |
-| statusline.md | Modified | +7 / -8 | Breaking: `total_input_tokens`/`total_output_tokens` semantics changed from cumulative to live context window as of v2.1.132 |
-| terminal-config.md | Modified | +5 / -5 | Windows Terminal promoted to native Shift+Enter support |
-| interactive-mode.md | Modified | +4 / -4 | Windows Terminal added to native Shift+Enter list; `Alt+T` no longer requires Option-as-Meta on macOS (v2.1.132+) |
-| model-config.md | Modified | +1 / -1 | Removed Option-as-Meta requirement note for `Option+T` extended thinking toggle |
+| cli-reference.md | Modified | +65/-65 | Table reformatting; description updates for `--add-dir`, `--effort`, `--model`, `--no-session-persistence`, `--teammate-mode`, `--verbose` |
+| settings.md | Modified | +16/-16 | Cross-references added for `alwaysThinkingEnabled`, `apiKeyHelper`, `autoMemoryEnabled`, `effortLevel`, `feedbackSurveyRate`, `model`, `otelHeadersHelper`, `teammateMode`, `tui`, `viewMode`, `autoConnectIde`; HTTP hook hostname matching note |
+| env-vars.md | Modified | +3/-3 | Clarifications for `CLAUDE_CODE_AUTO_CONNECT_IDE`, `CLAUDE_CODE_DISABLE_AUTO_MEMORY`, `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` |
+| mcp.md | Modified | +2/-0 | New paragraph on case-insensitive hostname matching and FQDN dot handling in MCP URL allowlists |
+| claude-code-on-the-web.md | Modified | +2/-2 | Corrected transcript URL construction to handle `cse_` → `session_` prefix substitution |
+| amazon-bedrock.md | Modified | +1/-1 | Fixed inference profile ID example from `global.` to `us.` prefix |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-05-07*
