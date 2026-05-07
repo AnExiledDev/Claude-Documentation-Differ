@@ -2,115 +2,101 @@
 
 ## Summary
 
-Six documentation pages were updated, with no pages added or removed. The dominant theme is improved cross-referencing between CLI flags, environment variables, and settings — many entries now explicitly document which mechanism overrides another. Two functional corrections also landed: a Bedrock inference profile ID prefix fix and a web session transcript URL construction fix.
+Seven documentation pages were updated with no pages added or removed (+44/-13 lines total). The largest change introduces a new `gcpAuthRefresh` setting for automatic GCP credential refresh in the Google Vertex AI guide. Two new settings (`claudeMdExcludes` and `syntaxHighlightingDisabled`) are also documented, along with a new `force-for-plugin` output style frontmatter field for plugin authors.
 
 ## Significant Changes
 
-### CLI Flags
+### Google Vertex AI
 
-- **`--add-dir` — Persistence pointer added**: The flag description now directs users to `permissions.additionalDirectories` in settings for persisting additional directories across sessions.
-  > "To persist these directories across sessions, set `permissions.additionalDirectories` in settings"
-  - *Implication*: Users who routinely add the same directories can move them to settings instead of re-passing the flag every invocation.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **New `gcpAuthRefresh` setting for automatic GCP credential refresh**: When Claude Code detects expired or unloadable GCP credentials, it now runs a configurable command to obtain fresh credentials before retrying the request.
+  > Claude Code supports automatic credential refresh for GCP through the `gcpAuthRefresh` setting. When Claude Code detects that your GCP credentials are expired or cannot be loaded, it runs the configured command to obtain new credentials before retrying the request.
 
-- **`--effort` — Settings override named explicitly**: The description changed from "Session-scoped and does not persist to settings" to naming the specific `effortLevel` setting it overrides.
-  > "Overrides the `effortLevel` setting for this session and does not persist"
-  - *Implication*: Makes the flag/setting relationship unambiguous — `--effort` shadows `effortLevel` in settings for the current session only.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+  Example configuration in settings:
+  ```json
+  {
+    "gcpAuthRefresh": "gcloud auth application-default login",
+    "env": {
+      "ANTHROPIC_VERTEX_PROJECT_ID": "your-project-id"
+    }
+  }
+  ```
+  > The command's output is displayed to the user, but interactive input isn't supported. This works well for browser-based authentication flows where the CLI shows a URL and you complete authentication in the browser. The refresh command times out after three minutes if authentication does not complete. If you set `gcpAuthRefresh` in project settings such as `.claude/settings.json`, the command runs only after you accept the workspace trust prompt.
+  - *Implication*: Removes the need to manually re-authenticate mid-session when GCP credentials expire. Works with `gcloud`'s browser-based flow. Three-minute timeout and workspace trust restriction are important operational details.
+  - *Source*: [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai.md)
 
-- **`--model` — Override chain documented**: The flag now states that it overrides both the `model` setting and the `ANTHROPIC_MODEL` environment variable.
-  > "Overrides the `model` setting and `ANTHROPIC_MODEL`"
-  - *Implication*: Clarifies precedence: `--model` flag > `ANTHROPIC_MODEL` env var > `model` setting.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **Clarified `ANTHROPIC_VERTEX_PROJECT_ID` precedence**: The project ID resolution order is now explicitly documented — `GCLOUD_PROJECT`, `GOOGLE_CLOUD_PROJECT`, and the credential file referenced by `GOOGLE_APPLICATION_CREDENTIALS` all take precedence over `ANTHROPIC_VERTEX_PROJECT_ID`. If none are set, the project ID falls back to the `gcloud` configuration or the attached service account.
+  > Claude Code uses `ANTHROPIC_VERTEX_PROJECT_ID` as the project ID for Vertex AI requests. The `GCLOUD_PROJECT` and `GOOGLE_CLOUD_PROJECT` environment variables and the credential file referenced by `GOOGLE_APPLICATION_CREDENTIALS` take precedence over it. If none of these are set, the project ID is resolved from your `gcloud` configuration or the attached service account.
+  - *Implication*: Teams already using standard GCP environment variables don't need `ANTHROPIC_VERTEX_PROJECT_ID`; it now has the lowest priority in the resolution chain.
+  - *Source*: [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai.md), [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **`--no-session-persistence` — Env var equivalent noted**: The description now cross-references `CLAUDE_CODE_SKIP_PROMPT_HISTORY`, which achieves the same effect in any mode, not just print mode.
-  > "The `CLAUDE_CODE_SKIP_PROMPT_HISTORY` environment variable does the same in any mode"
-  - *Implication*: Users running interactive sessions who also need to suppress prompt history now have a non-flag option.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
-
-- **`--teammate-mode` and `--verbose` — Settings override documented**: Both flags now state they override the corresponding `teammateMode` and `viewMode` settings for the current session only.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
-
-### Environment Variables
-
-- **`CLAUDE_CODE_AUTO_CONNECT_IDE` — Settings precedence clarified**: The description now states it takes precedence over the `autoConnectIde` global config setting.
-  > "Takes precedence over the `autoConnectIde` global config setting"
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
-
-- **`CLAUDE_CODE_DISABLE_AUTO_MEMORY` — `=0` override scope expanded**: The "force on" behavior previously said "during the gradual rollout." It now states setting to `0` forces auto memory on even when `--bare` mode or `autoMemoryEnabled: false` would otherwise disable it.
-  > "Set to `0` to force auto memory on even when `--bare` mode or `autoMemoryEnabled: false` would otherwise disable it"
-  - *Implication*: The gradual-rollout language is gone, indicating auto memory is fully available. The `=0` override now serves a broader, explicitly documented purpose.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
-
-- **`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` — Rate-based alternative surfaced**: The description now points to `feedbackSurveyRate` as an alternative to outright disabling surveys.
-  > "To set a sample rate instead of disabling outright, use the `feedbackSurveyRate` setting"
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+- **New "Could not load the default credentials" troubleshooting entry**: The troubleshooting section now includes specific guidance for this common GCP authentication error, pointing to `gcloud auth application-default login`, `GOOGLE_APPLICATION_CREDENTIALS`, and the credential configuration section.
+  - *Source*: [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai.md)
 
 ### Settings
 
-- **`alwaysThinkingEnabled` — Escape hatch noted**: Added a pointer to `CLAUDE_CODE_DISABLE_THINKING` (set via `env`) as the way to force extended thinking off regardless of this setting.
+- **New `claudeMdExcludes` setting**: Allows specifying glob patterns or absolute paths of `CLAUDE.md` files to skip during memory loading. Patterns match against absolute file paths. Applies only to user, project, and local memory — managed policy files cannot be excluded.
+  > Glob patterns or absolute paths of `CLAUDE.md` files to skip when loading memory. Patterns match against absolute file paths. Only applies to user, project, and local memory; managed policy files cannot be excluded.
+  - *Implication*: Solves a practical problem for monorepos and projects with vendor directories that contain their own `CLAUDE.md` files. The default example (`["**/vendor/**/CLAUDE.md"]`) signals the intended use case.
   - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **`apiKeyHelper` — Refresh interval cross-referenced**: Added a link to `CLAUDE_CODE_API_KEY_HELPER_TTL_MS` for configuring the credential refresh interval.
+- **New `syntaxHighlightingDisabled` setting**: Disables syntax highlighting globally across diffs, code blocks, and file previews. This is broader than the existing `CLAUDE_CODE_SYNTAX_HIGHLIGHT=false` env var, which only affects diff output.
+  > To also disable highlighting in code blocks and file previews, use the [`syntaxHighlightingDisabled`](/en/settings) setting.
+  - *Implication*: Developers who previously used `CLAUDE_CODE_SYNTAX_HIGHLIGHT=false` for complete highlighting suppression now have a persistent setting-level alternative. The env var retains its narrower scope (diffs only).
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md), [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+
+- **New `gcpAuthRefresh` setting entry**: Formally documented in the settings reference alongside a link to the Vertex AI advanced credential configuration section.
+  > Custom script that refreshes GCP Application Default Credentials when they expire or cannot be loaded.
   - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **`effortLevel`, `model`, `teammateMode`, `viewMode` — Per-session override patterns noted**: Each setting now documents the flag and/or env var that overrides it for a single session, making the settings → flag → env var precedence chain navigable from any entry point.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+### Output Styles
 
-- **`otelHeadersHelper` — Refresh interval cross-referenced**: Added a link to `CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS` for configuring the OpenTelemetry header refresh cadence.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **New `force-for-plugin` frontmatter field**: Plugin-shipped output styles can now declare themselves as automatic — applied whenever the plugin is enabled, without requiring users to manually select the style. Overrides the user's `outputStyle` setting.
+  > `force-for-plugin`: Plugin output styles only: apply this style automatically whenever the plugin is enabled, without requiring users to select it. Overrides the user's `outputStyle` setting. If multiple enabled plugins set this, the first one loaded wins.
+  - *Implication*: Plugin authors can now enforce a specific output style as part of their plugin experience. When multiple plugins declare `force-for-plugin`, load order determines which wins — plugin authors and users should be aware of this conflict behavior.
+  - *Source*: [Output Styles](https://code.claude.com/docs/en/output-styles.md)
 
-- **`autoConnectIde` — Env var override noted**: The global config entry for `autoConnectIde` now states that `CLAUDE_CODE_AUTO_CONNECT_IDE` overrides it when set.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **Output style file locations expanded to three levels**: The documentation now lists a third location — managed policy (`.claude/output-styles` inside the managed settings directory) — alongside user (`~/.claude/output-styles`) and project (`.claude/output-styles`).
+  - *Implication*: Enterprise administrators can now deploy organization-wide output styles via the managed settings directory.
+  - *Source*: [Output Styles](https://code.claude.com/docs/en/output-styles.md)
 
-- **HTTP hook URL allowlist — Hostname case-insensitivity documented**: The `hookAllowedHttpHosts` description now explicitly states hostname matching is case-insensitive and ignores trailing FQDN dots.
-  > "Hostname matching is case-insensitive and ignores a trailing FQDN dot, matching DNS semantics."
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+### Memory
 
-### MCP URL Pattern Matching
+- **Hooks guidance added to CLAUDE.md troubleshooting**: The memory debugging section now explicitly redirects users from `CLAUDE.md` to hooks for lifecycle-bound instructions (e.g., before every commit, after each file edit).
+  > If the instruction is something that must run at a specific point, such as before every commit or after each file edit, write it as a [hook](/en/hooks-guide) instead. Hooks execute as shell commands at fixed lifecycle events and apply regardless of what Claude decides to do.
+  - *Implication*: Addresses a common misuse pattern — `CLAUDE.md` instructions are best-effort suggestions to Claude; hooks guarantee deterministic execution at lifecycle events.
+  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
 
-- **URL allowlist — Hostname case-insensitivity and FQDN dot handling clarified**: A new paragraph was added explaining that hostname matching follows DNS semantics — case-insensitive and treating a trailing dot as equivalent to no trailing dot. Paths remain case-sensitive.
-  > "Hostname matching is case-insensitive and ignores a trailing FQDN dot, matching DNS semantics. A pattern like `*://Mcp.Example.com/*` matches `https://mcp.example.com/api`, and `https://mcp.example.com.` is treated the same as `https://mcp.example.com`. Paths remain case-sensitive."
-  - *Implication*: MCP URL allowlists don't require duplicate entries for case variants or FQDN-dotted forms of the same host. This matches the same clarification added to HTTP hook URL restrictions in settings.md.
+### MCP
+
+- **Enterprise MCP deployment cross-reference added**: The MCP installation scopes introduction now notes that administrators can deploy servers at the enterprise level via managed configuration.
+  > Administrators can also deploy servers at the enterprise level via [managed configuration](#managed-mcp-configuration).
+  - *Implication*: Small discoverability improvement for enterprise admins reading the scopes section who may not have found the managed configuration subsection.
   - *Source*: [MCP](https://code.claude.com/docs/en/mcp.md)
 
-### Integrations
+### Plugin Discovery
 
-- **Web session transcript URL construction corrected**: `CLAUDE_CODE_REMOTE_SESSION_ID` uses a `cse_` prefix, but the transcript URL path requires `session_`. The documentation now explains this mismatch and provides the correct shell substitution.
-  > "The variable's value uses a `cse_` prefix, while the transcript URL path takes the same ID with a `session_` prefix. Substitute the prefix when building the link."
-  ```bash
-  echo "https://claude.ai/code/${CLAUDE_CODE_REMOTE_SESSION_ID/#cse_/session_}"
-  ```
-  - *Implication*: The previously documented command (`echo "https://claude.ai/code/${CLAUDE_CODE_REMOTE_SESSION_ID}"`) would produce broken transcript links. PR templates or scripts using the old form should be updated.
-  - *Source*: [Claude Code on the Web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
-
-- **Bedrock inference profile ID prefix corrected**: The example `ANTHROPIC_MODEL` value changed from `global.anthropic.claude-sonnet-4-6` to `us.anthropic.claude-sonnet-4-6`.
-  ```bash
-  # Before
-  export ANTHROPIC_MODEL='global.anthropic.claude-sonnet-4-6'
-  # After
-  export ANTHROPIC_MODEL='us.anthropic.claude-sonnet-4-6'
-  ```
-  - *Implication*: The `global.` prefix is not a valid Bedrock inference profile ID prefix; regional prefixes like `us.` are correct. Bedrock users copying this example should update their configurations.
-  - *Source*: [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock.md)
+- **`.git` suffix required for non-GitHub git URLs**: The documentation now explicitly states that when adding a plugin from a non-GitHub Git host using a full URL, the `.git` suffix must be included so Claude Code clones the repository rather than treating the URL as a direct link to a hosted `marketplace.json` file.
+  > Add any git repository by providing the full URL. This works with any Git host, including GitLab, Bitbucket, and self-hosted servers. Include the `.git` suffix so Claude Code clones the repository rather than treating the URL as a direct link to a hosted `marketplace.json` file.
+  - *Implication*: Without `.git`, Claude Code interprets the URL as pointing to a `marketplace.json` file directly. This was likely a silent failure mode for GitLab/Bitbucket/self-hosted plugin installs before this fix.
+  - *Source*: [Discover Plugins](https://code.claude.com/docs/en/discover-plugins.md)
 
 ## Notable Details
 
-- The CLI reference table was reformatted with wider column widths. All content changes are semantic, not layout-only.
-- The `CLAUDE_CODE_DISABLE_AUTO_MEMORY=0` description dropped the phrase "during the gradual rollout," suggesting auto memory is now fully available and the override is stable long-term behavior.
-- Cross-referencing between settings, flags, and env vars was improved in at least 10 entries across `cli-reference.md` and `settings.md`. This appears to be a systematic documentation pass to make each entry self-contained for precedence lookup.
-- The same hostname matching clarification (case-insensitive, FQDN-dot-insensitive) was added to both `mcp.md` (MCP URL allowlists) and `settings.md` (HTTP hook URL restrictions) in the same update, indicating a shared implementation.
+- The `gcpAuthRefresh` setting and the clarified `ANTHROPIC_VERTEX_PROJECT_ID` precedence are directly linked — both reflect the same underlying GCP credential resolution refactor, where `ANTHROPIC_VERTEX_PROJECT_ID` is now the lowest-priority project ID source rather than the only one.
+- `syntaxHighlightingDisabled` (setting) and `CLAUDE_CODE_SYNTAX_HIGHLIGHT=false` (env var) now have explicitly different scopes: the env var covers diff output only; the setting covers diffs, code blocks, and file previews. Both remain supported.
+- The `force-for-plugin` field defaults to `false`, meaning existing plugin output styles are unaffected unless plugin authors explicitly opt in.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| cli-reference.md | Modified | +65/-65 | Table reformatting; description updates for `--add-dir`, `--effort`, `--model`, `--no-session-persistence`, `--teammate-mode`, `--verbose` |
-| settings.md | Modified | +16/-16 | Cross-references added for `alwaysThinkingEnabled`, `apiKeyHelper`, `autoMemoryEnabled`, `effortLevel`, `feedbackSurveyRate`, `model`, `otelHeadersHelper`, `teammateMode`, `tui`, `viewMode`, `autoConnectIde`; HTTP hook hostname matching note |
-| env-vars.md | Modified | +3/-3 | Clarifications for `CLAUDE_CODE_AUTO_CONNECT_IDE`, `CLAUDE_CODE_DISABLE_AUTO_MEMORY`, `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` |
-| mcp.md | Modified | +2/-0 | New paragraph on case-insensitive hostname matching and FQDN dot handling in MCP URL allowlists |
-| claude-code-on-the-web.md | Modified | +2/-2 | Corrected transcript URL construction to handle `cse_` → `session_` prefix substitution |
-| amazon-bedrock.md | Modified | +1/-1 | Fixed inference profile ID example from `global.` to `us.` prefix |
+| google-vertex-ai.md | Modified | +22/-1 | New `gcpAuthRefresh` credential refresh section; clarified project ID precedence; new troubleshooting entry for default credential errors |
+| output-styles.md | Modified | +13/-8 | New `force-for-plugin` frontmatter field; managed policy added as third output style file location |
+| settings.md | Modified | +3/-0 | Documented `claudeMdExcludes`, `gcpAuthRefresh`, and `syntaxHighlightingDisabled` settings |
+| memory.md | Modified | +2/-0 | Added hooks cross-reference in CLAUDE.md troubleshooting guidance |
+| env-vars.md | Modified | +2/-2 | Clarified `ANTHROPIC_VERTEX_PROJECT_ID` precedence; added `syntaxHighlightingDisabled` cross-reference to `CLAUDE_CODE_SYNTAX_HIGHLIGHT` |
+| mcp.md | Modified | +1/-1 | Added enterprise managed configuration cross-reference in scopes section |
+| discover-plugins.md | Modified | +1/-1 | Clarified `.git` suffix requirement for non-GitHub git host plugin URLs |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-05-07*
