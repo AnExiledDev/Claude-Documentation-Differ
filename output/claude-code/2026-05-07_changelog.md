@@ -2,119 +2,85 @@
 
 ## Summary
 
-Two documentation pages were updated: the official changelog gained 31 lines documenting the `2.1.132` release (May 6, 2026), and the settings reference received a one-line clarification linking `autoUpdatesChannel` to the `DISABLE_AUTOUPDATER` environment variable. No pages were added or removed.
+Six documentation pages were updated in this batch, covering three new environment variables, a breaking semantic change to status line context-window token fields (as of v2.1.132), JetBrains IDE scroll improvements, and an expansion of Windows Terminal's native Shift+Enter support. No pages were added or removed.
 
 ## Significant Changes
 
-### New Release: 2.1.132 (May 6, 2026)
+### Environment Variables
 
-#### New Environment Variables
+- **New: `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS`**: Controls the stall timeout for background subagents. If no streaming progress event arrives within the window, the subagent is aborted and the task marked failed, surfacing any partial result to the parent.
+  > Stall timeout in milliseconds for background subagents. Default `600000` (10 minutes). The timer resets on each streaming progress event; if no progress arrives within the window, the subagent is aborted and the task is marked failed, surfacing any partial result to the parent
+  - *Implication*: Teams running long background subagent chains can tune this value if 10 minutes is too short or too aggressive for their workloads.
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **`CLAUDE_CODE_SESSION_ID` in Bash subprocesses**: The session ID is now injected into the Bash tool's subprocess environment, matching the value passed to hooks.
-  > "Added `CLAUDE_CODE_SESSION_ID` environment variable to the Bash tool subprocess environment, matching the `session_id` passed to hooks"
-  - *Implication*: Scripts running inside Claude Code's Bash tool can now self-identify their session without separate plumbing. Useful for logging and hook coordination.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New: `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN`**: Hard-disables fullscreen (alternate-screen) rendering and falls back to the classic main-screen renderer, regardless of any saved `tui` setting.
+  > Set to `1` to disable [fullscreen rendering](/en/fullscreen) and use the classic main-screen renderer. The conversation stays in your terminal's native scrollback so `Cmd+f` and tmux copy mode work as usual. Takes precedence over `CLAUDE_CODE_NO_FLICKER` and the [`tui`](/en/settings#available-settings) setting. You can also switch with `/tui default`
+  - *Implication*: Users who rely on `Cmd+f` search or tmux copy mode can force the classic renderer system-wide via an env var rather than having to remember `/tui default` each session.
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **`CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1`**: New opt-out for the fullscreen alternate-screen renderer, keeping the conversation in the terminal's native scrollback buffer instead.
-  > "Added `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1` env var to opt out of the fullscreen alternate-screen renderer and keep the conversation in the terminal's native scrollback"
-  - *Implication*: Users who prefer standard terminal scrollback (e.g., for copy-paste workflows or logging) can now disable the alternate screen without losing other features.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New: `CLAUDE_CODE_SESSION_ID`**: Exposes the current Claude Code session ID inside Bash and PowerShell tool subprocesses.
+  > Set automatically in Bash and PowerShell tool subprocesses to the current session ID. Matches the `session_id` field passed to [hooks](/en/hooks). Updated on `/clear`. Use to correlate scripts and external tools with the Claude Code session that launched them
+  - *Implication*: Scripts and external tooling invoked by Claude Code can now self-identify which session launched them, complementing the existing hooks `session_id` field.
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-#### Terminal & Input Fixes
+- **Updated: `CLAUDE_CODE_SCROLL_SPEED` now ignored in JetBrains terminal**: The scroll-speed multiplier has no effect inside the JetBrains IDE terminal, where Claude Code uses its own scroll handling.
+  > Ignored in the JetBrains IDE terminal, where Claude Code uses its own scroll handling
+  - *Implication*: JetBrains users should not attempt to tune this variable; scroll behavior is managed automatically.
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **Graceful SIGINT handling**: External `SIGINT` signals (IDE stop button, `kill -INT`) now trigger proper graceful shutdown — terminal modes are restored and the `--resume` hint is printed instead of an abrupt exit.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Status Line — Breaking Semantic Change in v2.1.132
 
-- **`--resume` emoji crash fix**: `--resume` no longer fails with `no low surrogate in string` when a tool error truncation split a multi-byte emoji; pre-corrupted sessions are sanitized on load.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **`total_input_tokens` / `total_output_tokens` now reflect live context window, not cumulative session totals**: As of v2.1.132, these fields report the tokens *currently in the context window* from the most recent API response. Before v2.1.132 they were running session sums that could exceed the context window size.
+  > Token counts currently in the context window, from the most recent API response. Input includes cache reads and writes. Before v2.1.132 these were cumulative session totals
+  - The `context_window` object description was rewritten to match:
+  > **Combined totals** (`total_input_tokens`, `total_output_tokens`): tokens currently in the context window. `total_input_tokens` is the sum of `input_tokens`, `cache_creation_input_tokens`, and `cache_read_input_tokens`; `total_output_tokens` is the output tokens from the most recent response. Both are `0` before the first API response.
+  - *Implication*: Any status-line script or tool (e.g., [ccstatusline](https://github.com/sirmalloc/ccstatusline)) that treats `total_input_tokens` / `total_output_tokens` as cumulative session counters will produce incorrect results after upgrading past v2.1.132. Update scripts to treat these fields as point-in-time context snapshots. Use `current_usage` for per-component breakdown (cache hits vs. fresh input).
+  - *Source*: [Status Line](https://code.claude.com/docs/en/statusline.md)
 
-- **`--permission-mode` + plan mode resume**: The `--permission-mode` flag is no longer ignored when resuming a plan-mode session via `-p --continue`/`--resume`, and plan mode is now correctly re-applied after `ExitPlanMode` within the same session.
-  - *Implication*: Developers relying on permission constraints during automated plan-mode resumptions should now see consistent behavior.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### JetBrains IDE Integration
 
-- **Fullscreen blank screen after sleep/suspend**: Fixed a blank screen appearing after laptop sleep/wake or `Ctrl+Z`/`fg` until the next keystroke or stream output.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New section: "Scroll in the JetBrains IDE terminal"**: Documents Claude Code's custom scroll handling for JetBrains and identifies known scroll-wheel bugs in version 2025.2.
+  > In the JetBrains IDE terminal, Claude Code applies its own scroll handling and ignores `CLAUDE_CODE_SCROLL_SPEED`. The terminal sends scroll events at a much higher rate than other emulators, so a multiplier tuned elsewhere overshoots here.
+  >
+  > In 2025.2, the terminal also has scroll-wheel bugs that produce spurious arrow keys and wrong-direction events. Claude Code detects these at runtime and mitigates them automatically… For the best scroll experience, upgrade to 2025.3 or later. Claude Code shows a hint the first time you scroll if it detects the bug.
+  - *Implication*: JetBrains users on 2025.2 will see automatic mitigation for spurious scroll events; upgrading to 2025.3+ is recommended for the cleanest experience.
+  - *Source*: [Fullscreen Rendering](https://code.claude.com/docs/en/fullscreen.md)
 
-- **Unicode/grapheme cursor fixes**: Fixed cursor landing mid-grapheme on `Ctrl+E/A/K/U`/arrow keys when Indic conjuncts or ZWJ emoji wrap across lines. Also fixed vim operators corrupting NFD decomposed accented characters.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Terminal Support
 
-- **Paste reliability fixes**:
-  - Pasting text starting with `/` no longer silently swallows input or triggers an unknown-command reply.
-  - Pasting no longer dumps stray escape sequences when focus events or mouse-tracking reports interleave with bracketed paste.
-  - Added a `"Pasting…"` footer hint while a Ctrl+V image paste is being read from the clipboard.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **Windows Terminal now supports native Shift+Enter**: Windows Terminal was moved from the "Not available" category to the "Works without setup" group for Shift+Enter newline insertion.
 
-#### IDE Integration Fixes
+  Before:
+  > Windows Terminal, gnome-terminal, JetBrains IDEs such as PyCharm and Android Studio — Not available; use Ctrl+J or `\` then Enter
 
-- **VS Code / Cursor mouse wheel speed**: Fixed mouse wheel scrolling being too fast in Cursor and VS Code 1.92–1.104 due to an upstream `xterm.js` bug.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+  After:
+  > Ghostty, Kitty, iTerm2, WezTerm, Warp, Apple Terminal, Windows Terminal — Works without setup
 
-- **JetBrains 2025.2 scroll-wheel**: Fixed scroll-wheel handling in JetBrains IDE 2025.2 terminals (spurious arrow keys, wrong-direction events, runaway acceleration).
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+  - *Implication*: Windows Terminal users no longer need `Ctrl+J` or `\`+Enter workarounds for multi-line input.
+  - *Source*: [Terminal Configuration](https://code.claude.com/docs/en/terminal-config.md), [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md)
 
-- **Windows Terminal `/terminal-setup` error**: Fixed a contradictory error displayed in Windows Terminal — Shift+Enter is natively supported there and should not have been flagged.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Extended Thinking — macOS Keyboard Shortcut
 
-- **Windows background session keyboard input**: Fixed dead keyboard input on Windows after re-opening a background session from `claude agents`.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-#### MCP Server Fixes
-
-- **Unbounded memory growth with stdio MCP servers**: Fixed 10GB+ RSS memory growth when a stdio MCP server writes non-protocol data to stdout.
-  - *Implication*: Long-running sessions with verbose or misconfigured MCP servers should no longer exhaust system memory.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **MCP tool fetch failure visibility**: MCP servers that connect but fail `tools/list` previously showed 0 tools silently; they now retry once and display "connected · tools fetch failed" in `/mcp`.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **MCP auth status accuracy**: Unauthorized `claude.ai` MCP connectors now show "needs auth" instead of "failed", and headless `-p` mode no longer retries non-transient 4xx connection failures.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-#### Slash Command & UI Fixes
-
-- **`/usage` clipboard hang on Linux/X11**: Fixed `Ctrl+S` in `/usage` hanging when copying the stats screenshot to the clipboard.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **`/effort` env var ignored**: Fixed `/effort` picker not reflecting the `CLAUDE_CODE_EFFORT_LEVEL` environment variable override.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **`/status` wrong default model**: Fixed `/status` showing the wrong default model for some users.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **Slash command autocomplete size**: Fixed the autocomplete popup being capped at ~3–5 visible commands instead of scaling with terminal height.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **Statusline `context_window` token counts**: Fixed the `context_window` metric reflecting cumulative session totals rather than current context usage.
-  - *Implication*: Status line integrations and hooks reading `context_window` will now get accurate per-request values.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-- **Alt+T (thinking toggle) on macOS**: Fixed Alt+T not working on macOS terminals without "Option as Meta" enabled (iTerm2, Terminal.app defaults).
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-#### Other Fixes
-
-- **Bedrock/Vertex prompt caching**: Fixed 400 errors on Bedrock and Vertex when `ENABLE_PROMPT_CACHING_1H` is set.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
-
-### Configuration
-
-- **`autoUpdatesChannel` links to `DISABLE_AUTOUPDATER`**: The settings reference for `autoUpdatesChannel` now explicitly mentions how to disable auto-updates entirely.
-  > "To disable auto-updates entirely, set [`DISABLE_AUTOUPDATER`](/en/setup#disable-auto-updates) in `env`"
-  - *Implication*: This cross-link surfaces the full disable option, which was previously only discoverable via the setup page. Administrators managing deployments where auto-updates should be suppressed now have a clear path from the settings table.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **`Option+T` (toggle extended thinking) no longer requires Option-as-Meta configuration on macOS**: As of v2.1.132, the shortcut works natively on macOS. The requirement was also removed from the model configuration reference table.
+  > As of v2.1.132 this shortcut works on macOS without configuring Option as Meta
+  - *Implication*: macOS users on v2.1.132+ can use `Option+T` to toggle extended thinking without modifying iTerm2 or Apple Terminal settings. `Alt+T` was also removed from the list of shortcuts that require Option-as-Meta setup in the macOS keyboard note.
+  - *Source*: [Interactive Mode](https://code.claude.com/docs/en/interactive-mode.md), [Model Configuration](https://code.claude.com/docs/en/model-config.md)
 
 ## Notable Details
 
-- The `2.1.131` release (also dated May 6, 2026) was already present in the previous snapshot; `2.1.132` is the newly documented release. Two releases shipped on the same calendar date.
-- The fullscreen renderer banner update (`/tui fullscreen`) now advertises lower memory usage, mouse support, and auto-copy on select — signaling active investment in the TUI renderer as the preferred interface.
-- The MCP "needs auth" fix (vs. "failed") is a subtle but meaningful UX distinction: it allows tooling and users to distinguish transient errors from authentication requirements and act accordingly.
+- The `context_window` troubleshooting section was simplified: the warning that cumulative totals might exceed the context window size was removed, consistent with the semantic change above.
+- The fullscreen page's closing paragraph was reworded: it now references unsetting `CLAUDE_CODE_NO_FLICKER` (not just `CLAUDE_CODE_NO_FLICKER`) and explicitly mentions `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1` as a way to force the classic renderer independent of the saved `tui` setting.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| changelog.md | Modified | +31 / -0 | Added `2.1.132` release entry with 3 new features and 24 bug fixes |
-| settings.md | Modified | +1 / -1 | Added `DISABLE_AUTOUPDATER` cross-link to `autoUpdatesChannel` description |
+| env-vars.md | Modified | +4 / -1 | Added `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS`, `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN`, `CLAUDE_CODE_SESSION_ID`; noted JetBrains scroll-speed exclusion |
+| fullscreen.md | Modified | +7 / -1 | New section on JetBrains IDE terminal scroll; updated closing paragraph with `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN` guidance |
+| statusline.md | Modified | +7 / -8 | Breaking: `total_input_tokens`/`total_output_tokens` semantics changed from cumulative to live context window as of v2.1.132 |
+| terminal-config.md | Modified | +5 / -5 | Windows Terminal promoted to native Shift+Enter support |
+| interactive-mode.md | Modified | +4 / -4 | Windows Terminal added to native Shift+Enter list; `Alt+T` no longer requires Option-as-Meta on macOS (v2.1.132+) |
+| model-config.md | Modified | +1 / -1 | Removed Option-as-Meta requirement note for `Option+T` extended thinking toggle |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-05-07*
