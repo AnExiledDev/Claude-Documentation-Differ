@@ -35,6 +35,7 @@ from lib.differ import (
     DiffReport,
     API_CATEGORIES,
 )
+from lib.tokens import estimate_workspace_tokens, select_model
 from lib.triage import classify_changes
 from sources import get_source, get_all_sources, Source
 
@@ -131,6 +132,7 @@ def _prepare_changelog_workspace(
     report: DiffReport,
     full_diff: str,
     workspace_dir: Path,
+    max_page_lines: int = _MAX_PAGE_LINES,
 ) -> None:
     """Prepare workspace files for Claude changelog generation.
 
@@ -172,7 +174,7 @@ def _prepare_changelog_workspace(
                     rel = rel[len(docs_prefix_str) :]
                 safe_name = rel.replace("/", "_")
                 out = new_pages_dir / safe_name
-                out.write_text(_truncate_content(content))
+                out.write_text(_truncate_content(content, max_page_lines))
 
     # Write current content of modified pages
     modified_pages_dir = workspace_dir / "modified_pages"
@@ -192,7 +194,7 @@ def _prepare_changelog_workspace(
                     rel = rel[len(docs_prefix_str) :]
                 safe_name = rel.replace("/", "_")
                 out = modified_pages_dir / safe_name
-                out.write_text(_truncate_content(content))
+                out.write_text(_truncate_content(content, max_page_lines))
 
     # Write triage classification
     try:
@@ -203,6 +205,32 @@ def _prepare_changelog_workspace(
         print(f"  WARNING: Triage classification failed: {e}", file=sys.stderr)
 
 
+def _log_cli_usage(stdout: str) -> None:
+    """Parse and log Claude CLI usage from JSON output (best-effort)."""
+    if not stdout:
+        return
+    try:
+        data = json.loads(stdout)
+    except (json.JSONDecodeError, TypeError):
+        return
+
+    cost = data.get("cost_usd") or data.get("cost")
+    usage = data.get("usage", {})
+    input_tokens = usage.get("input_tokens")
+    output_tokens = usage.get("output_tokens")
+
+    parts = []
+    if input_tokens is not None:
+        parts.append(f"{input_tokens:,} input")
+    if output_tokens is not None:
+        parts.append(f"{output_tokens:,} output")
+    if cost is not None:
+        parts.append(f"${cost:.4f}")
+
+    if parts:
+        print(f"  CLI usage: {', '.join(parts)}")
+
+
 def _generate_changelog(
     source: Source,
     report: DiffReport,
@@ -210,6 +238,7 @@ def _generate_changelog(
     output_path: Path,
     model: str = "sonnet",
     budget: float | None = None,
+    max_page_lines: int = _MAX_PAGE_LINES,
     force: bool = False,
 ) -> bool:
     """Generate a changelog using Claude Code CLI.
@@ -242,7 +271,7 @@ def _generate_changelog(
     if workspace.exists():
         shutil.rmtree(workspace)
 
-    _prepare_changelog_workspace(source, report, full_diff, workspace)
+    _prepare_changelog_workspace(source, report, full_diff, workspace, max_page_lines)
 
     # Find system prompt (source-specific)
     system_prompt = _SCRIPT_DIR / source.prompt_file
@@ -265,6 +294,8 @@ def _generate_changelog(
         str(system_prompt),
         "--model",
         model,
+        "--output-format",
+        "json",
         "--dangerously-skip-permissions",
         "--allowedTools",
         "Read",
@@ -296,6 +327,9 @@ def _generate_changelog(
         if result.returncode != 0:
             print(f"  STDERR: {result.stderr[:2000]}", file=sys.stderr)
 
+        # Log usage from JSON output
+        _log_cli_usage(result.stdout)
+
         # Verify output
         if output_path.exists():
             size = output_path.stat().st_size
@@ -319,17 +353,20 @@ def _generate_category_changelogs(
     old_ref: str,
     new_ref: str,
     date_dir: Path,
-    model: str = "sonnet",
-    budget: float | None = None,
+    explicit_model: str = "auto",
+    explicit_budget: float | None = None,
     force: bool = False,
 ) -> bool:
     """Generate split changelogs by category for large diffs.
 
     Creates a master changelog that references category-specific changelogs.
-    Each category gets its own Claude invocation with a focused diff.
+    Each category gets its own Claude invocation with an independent
+    model selection based on per-category token estimation.
 
     Args:
         date_dir: Date subdirectory (e.g., output/api/2026-04-16/)
+        explicit_model: User-specified model ("auto" for dynamic selection)
+        explicit_budget: User-specified budget override
 
     Returns True if any changelogs were generated.
     """
@@ -394,13 +431,21 @@ def _generate_category_changelogs(
             path_filter=f"docs/{source.key}/en/{cat_key}/",
         )
 
+        # Per-category token estimation and model selection
+        estimated = estimate_workspace_tokens(
+            _SCRIPT_DIR, sub_report, cat_diff,
+        )
+        selection = select_model(estimated, explicit_model, explicit_budget)
+        print(f"  -> Model: {selection.model} ({selection.reason})")
+
         success = _generate_changelog(
             source=source,
             report=sub_report,
             full_diff=cat_diff,
             output_path=cat_path,
-            model=model,
-            budget=budget,
+            model=selection.model,
+            budget=selection.budget,
+            max_page_lines=selection.max_page_lines,
             force=force,
         )
 
@@ -535,19 +580,27 @@ def _process_source(
                 old_ref=old_ref,
                 new_ref=new_ref,
                 date_dir=date_dir,
-                model=args.model,
-                budget=args.budget,
+                explicit_model=args.model,
+                explicit_budget=args.budget,
                 force=args.force,
             )
         else:
+            # Token estimation and model selection
+            estimated = estimate_workspace_tokens(
+                _SCRIPT_DIR, report, full_diff,
+            )
+            selection = select_model(estimated, args.model, args.budget)
+            print(f"  Model selection: {selection.reason}")
+
             changelog_path = date_dir / f"partial_{hour_str}h_changelog.md"
             _generate_changelog(
                 source=source,
                 report=report,
                 full_diff=full_diff,
                 output_path=changelog_path,
-                model=args.model,
-                budget=args.budget,
+                model=selection.model,
+                budget=selection.budget,
+                max_page_lines=selection.max_page_lines,
                 force=args.force,
             )
 
@@ -609,14 +662,14 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        default="sonnet",
-        help="Model for changelog generation (default: sonnet)",
+        default="auto",
+        help="Model for changelog generation (default: auto — dynamic selection based on token estimate)",
     )
     parser.add_argument(
         "--budget",
         type=float,
         default=None,
-        help="Max budget for changelog generation (default: no limit)",
+        help="Max budget override in USD (default: auto — $2.00 for sonnet, $8.00 for sonnet[1m])",
     )
     parser.add_argument(
         "--force",
