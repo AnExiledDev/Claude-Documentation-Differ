@@ -2,107 +2,77 @@
 
 ## Summary
 
-Ten documentation pages were modified with 141 additions and 1,267 deletions. The bulk of the deletions are cosmetic: large inline React/JSX `InstallConfigurator` components were removed from `overview.md` and `quickstart.md`, leaving readable documentation content intact. The substantive changes add new controlled settings, new environment variables, expand Bedrock/Vertex streaming support, and clarify skills behavior in subagents.
+Six pages were modified in this update (29 additions, 9 deletions). The most notable changes are a restructured commands page with workflow-oriented guidance, significantly expanded telemetry documentation clarifying how permission decisions are attributed across interactive and non-interactive sessions, and a new admin control for disabling routines organization-wide.
 
 ## Significant Changes
 
-### Configuration
+### Commands & Navigation
 
-- **New `parentSettingsBehavior` setting**: Controls how managed settings from embedding hosts (Agent SDK, IDE extensions) interact with admin-deployed managed tiers. Requires Claude Code v2.1.133+.
-  > `"first-wins"`: the parent-supplied settings are dropped and only the admin tier applies. `"merge"`: the parent-supplied settings apply under the admin tier, filtered so they can tighten policy but not loosen it. Has no effect when no admin tier is deployed. Default: `"first-wins"`.
-  - *Implication*: Organizations using both MDM-deployed managed settings and the Agent SDK or IDE extensions can now choose whether host-supplied settings are silently dropped or applied as a subordinate layer.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+- **Commands page restructured with workflow-oriented sections**: The `/commands` page now opens with a new "Commands across a typical workflow" section that organizes commands by phase — first session, during a task, before shipping, between sessions, and when something is wrong — before listing the full command table. The old inline availability note has been promoted to a `<Note>` callout.
 
-- **New `worktree.baseRef` setting**: Determines which ref new worktrees branch from when using `--worktree`, `EnterWorktree`, or subagent isolation.
-  > `"fresh"` (default) branches from `origin/<default-branch>` for a clean tree matching the remote. `"head"` branches from your current local `HEAD`, so unpushed commits and feature-branch state are present in the worktree.
-  - *Implication*: Teams that rely on worktrees for testing in-progress work can now persist local commits into worktrees without first pushing them.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+  > **First session in a repo.** Run `/init` to generate a starter `CLAUDE.md`, then `/memory` to refine it. Use `/mcp` and `/agents` to set up any servers or subagents the project needs, and `/permissions` to set the approval rules you want.
+  >
+  > **Before you ship.** `/diff` shows what changed, `/simplify` reviews recent files and applies quality and efficiency fixes, and `/review` or `/security-review` give a deeper read-only pass.
+  >
+  > **When something is wrong.** `/rewind` rolls code and conversation back to a checkpoint. `/doctor` and `/debug` diagnose install and runtime issues, and `/feedback` reports a bug with session context attached.
 
-- **New sandbox binary path settings (`bwrapPath`, `socatPath`)**: Managed-settings-only keys (Linux/WSL2) that override automatic PATH detection for bubblewrap and socat binaries used by the sandbox.
-  > Overrides automatic detection via `PATH`. Only honored from managed settings, not from user or project settings. Useful when `bwrap` is installed at a non-standard location in managed environments.
-  - *Implication*: Admins can pin sandbox binaries to controlled paths, preventing unexpected version changes.
-  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
+  - *Implication*: This section serves as a practical onboarding guide for new users and surfaces lesser-known commands like `/btw`, `/teleport`, and `/remote-control` in context.
+  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
 
-### Desktop / Enterprise
+- **`/schedule` description clarified to mention cloud execution context**: The command description now states routines "execute on Anthropic-managed cloud infrastructure."
 
-- **New `sshHostAllowlist` managed setting**: Restricts Desktop SSH sessions to an approved set of hostnames. An empty array disables SSH entirely.
-  > Administrators can limit Desktop's SSH sessions to an approved set of hosts by adding `sshHostAllowlist` to a managed settings file. Patterns are case-insensitive. `*` matches any host, and `*.example.com` matches `example.com` and any subdomain.
-  ```json
-  {
-    "sshHostAllowlist": ["*.devboxes.example.com", "bastion.example.com"]
-  }
-  ```
-  > `sshHostAllowlist` is read from managed settings only; values in user or project settings are ignored. Only the Claude Desktop app honors this setting; the Claude Code CLI and IDE extensions do not read it, and it does not restrict `ssh` commands run through the Bash tool.
-  - *Implication*: Enterprise admins can enforce SSH connection controls for Desktop without affecting CLI or IDE extension sessions. This setting governs Desktop connections only, not network egress — pair it with network or zero-trust controls for a hard boundary.
-  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
+  > Create, update, list, or run [routines](/en/routines), which execute on Anthropic-managed cloud infrastructure. Claude walks you through the setup conversationally.
 
-### Environment Variables
+  - *Implication*: Makes explicit that routines are not run locally, which matters for security and network access considerations.
+  - *Source*: [Commands](https://code.claude.com/docs/en/commands.md)
 
-- **New `CLAUDE_EFFORT` env var**: Set automatically in Bash tool subprocesses and hook commands to the current effort level for the turn.
-  > Set automatically in Bash tool subprocesses and hook commands to the active effort level for the turn: `low`, `medium`, `high`, `xhigh`, or `max`. Matches the `effort.level` field passed to hooks. Only set when the current model supports the effort parameter.
-  - *Implication*: Hook scripts and Bash tool commands can now branch on the current effort tier without parsing hook JSON.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+### Monitoring & Telemetry
 
-- **New `MCP_CONNECT_TIMEOUT_MS` env var**: Configures how long the first query waits for MCP servers to connect before snapshotting the tool list. Default: 5000 ms.
-  > Servers still pending at the deadline keep connecting in the background but won't appear until the next query. Distinct from `MCP_TIMEOUT`, which bounds an individual server's connect attempt. Most relevant to non-interactive sessions that issue a single query and need slow-connecting servers to be visible.
-  - *Implication*: Non-interactive pipelines (`-p`) can tune MCP startup latency without disabling the connection wait entirely via `MCP_CONNECTION_NONBLOCKING`.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+- **Permission decision `source` field documentation substantially expanded**: The OpenTelemetry `tool_permission_decision` event's `source` values now have precise, session-context-aware definitions distinguishing interactive CLI behavior from Agent SDK and non-interactive `-p` session behavior.
 
-- **`CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING` scope expanded to Bedrock and Vertex**: Previously documented as having no effect on Bedrock, Vertex, Foundry, or gateway connections. Bedrock and Vertex now receive per-model support.
-  > On Bedrock and Vertex, enabled per model where the deployed container supports it. Set to `1` to force on when routing through a proxy via `ANTHROPIC_BASE_URL`, `ANTHROPIC_VERTEX_BASE_URL`, or `ANTHROPIC_BEDROCK_BASE_URL`. Off by default on Foundry and gateway connections.
-  - *Implication*: Bedrock and Vertex users may see streaming tool inputs enabled for supported models without opting in; set to `0` to opt out if needed.
-  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
+  Key changes:
+  - `"config"` now explicitly includes "allow rules in the user's personal settings" and "a session-scoped grant from an earlier prompt in the same interactive CLI session" as contributing sources, with the caveat: *"The event does not indicate which of these sources matched."*
+  - `"user_permanent"`: In the interactive CLI, only the initial "Yes, and don't ask again for..." choice emits this value; **subsequent calls matching the saved rule emit `"config"` instead**. In Agent SDK or non-interactive `-p` sessions, both the initial choice and later rule matches emit `"user_permanent"`.
+  - `"user_temporary"`: Same split behavior — interactive CLI emits this only for the choice itself, later matches emit `"config"`; Agent SDK / `-p` sessions emit `"user_temporary"` for both the choice and later matches.
 
-### Hooks
+  > In the interactive CLI this is emitted only for that choice itself; later calls that match the saved rule emit `"config"` instead. In Agent SDK or non-interactive `-p` sessions, both the initial choice and later rule matches emit `"user_permanent"`.
 
-- **New `effort` field in hook event payloads**: Hook events that fire within a tool-use context now receive an `effort` object alongside existing common fields.
-  > Object with a `level` field holding the active effort level for the turn: `"low"`, `"medium"`, `"high"`, `"xhigh"`, or `"max"`. If the requested effort exceeds what the current model supports, this is the downgraded level the model actually used. Present for events such as `PreToolUse`, `PostToolUse`, `Stop`, and `SubagentStop` when the current model supports the effort parameter. The level is also available to hook commands and the Bash tool as the `$CLAUDE_EFFORT` environment variable.
-  - *Implication*: Hooks can implement effort-conditional logic (e.g., skip expensive post-processing on low-effort turns).
-  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
+  - *Implication*: Teams building observability pipelines around permission telemetry need to adjust their logic — the `"config"` source is now a catch-all that includes session-scoped grants and personal allow rules, not just static configuration. Counting `"user_permanent"` events to track rule creation will be accurate in interactive CLI but will overcount in Agent SDK sessions.
+  - *Source*: [Monitoring Usage](https://code.claude.com/docs/en/monitoring-usage.md)
 
-### CLI Flags
+### Configuration & Administration
 
-- **`--worktree` / `-w` gains GitHub PR-targeting**: Passing `#<number>` or a full GitHub PR URL now fetches and branches the worktree from that PR.
-  > Pass `#<number>` or a GitHub pull request URL to fetch that PR from `origin` and branch the worktree from it.
-  - *Implication*: Reviewers can spin up an isolated worktree for a specific PR with a single flag argument.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- **Team and Enterprise admins can now disable routines organization-wide**: A new paragraph documents a Routines admin toggle.
 
-- **`--plugin-url` accepts space-separated URLs in a single quoted argument**: Previously the flag documented only the repeat-flag pattern.
-  > Repeat the flag for multiple plugins, or pass space-separated URLs in a single quoted value.
-  - *Implication*: Shell scripts that build plugin URL lists can pass them as a single string instead of constructing multiple flag instances.
-  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+  > Team and Enterprise admins can disable routines for all members with the Routines toggle at [claude.ai/admin-settings/claude-code](https://claude.ai/admin-settings/claude-code). When disabled, existing routines stop running and members cannot create new ones.
 
-### Subagents & Skills
+  - *Implication*: Admins at organizations with compliance or cost concerns around automated scheduled agents now have a kill switch. Existing routines halt immediately when the toggle is flipped.
+  - *Source*: [Routines](https://code.claude.com/docs/en/routines.md)
 
-- **Skills behavior in subagents clarified**: The `skills` field controls preloading only, not which skills a subagent can invoke. Unlisted skills remain accessible via the Skill tool.
-  > The full content of each listed skill is injected into the subagent's context at startup. This field controls which skills are preloaded, not which skills the subagent can access: without it, the subagent can still discover and invoke project, user, and plugin skills through the Skill tool during execution. To prevent a subagent from invoking skills entirely, omit `Skill` from the `tools` list or add it to `disallowedTools`.
-  - *Implication*: The previous documentation implied subagents were fully isolated from unlisted skills. That was incorrect; only preloading is restricted by the `skills` field.
-  - *Source*: [Sub-agents](https://code.claude.com/docs/en/sub-agents.md)
+### Integrations
 
-- **`tools` field documentation updated**: Clarifies that listing `Skill` in the tools array does not preload skills; use the dedicated `skills` field instead.
-  > To preload Skills into context, use the `skills` field rather than listing `Skill` here.
-  - *Source*: [Sub-agents](https://code.claude.com/docs/en/sub-agents.md)
+- **VS Code `claudeProcessWrapper` setting description clarified**: The setting now explains how the bundled binary path is passed and when to use it.
+
+  > Executable used to launch the Claude process. The bundled binary path is passed as an argument when present. Set this to a separately installed `claude` binary if the extension build doesn't include one for your platform.
+
+  - *Implication*: Users on platforms where the extension doesn't bundle a binary (e.g., uncommon Linux architectures) now have clear guidance on how to point the extension at a manually installed `claude` binary.
+  - *Source*: [VS Code](https://code.claude.com/docs/en/vs-code.md)
 
 ## Notable Details
 
-- `overview.md` and `quickstart.md` each lost ~550+ lines of embedded React/JSX (`InstallConfigurator`, `Experiment` A/B test wrapper). The readable documentation prose and headings are unchanged; these were UI components inlined into MDX source that are now presumably loaded from a shared module.
-- The worktree settings section intro was trimmed from "Use these settings to reduce disk usage and startup time in large monorepos" to just "Configure how `--worktree` creates and manages git worktrees." The new `worktree.baseRef` setting has nothing to do with disk or startup performance, making the old framing inaccurate.
-- `plugins.md` was updated with explicit multi-URL examples for `--plugin-url`, mirroring the CLI reference change.
+- **`agent-teams.md`**: The limitation "One team per session" was reworded to "One team at a time" and "starting a new one" changed to "creating a new one." This is a minor clarification — "per session" was slightly misleading since the constraint is about concurrency, not session lifetime.
+- **`terminal-config.md`**: The description of tmux's `allow-passthrough` behavior was generalized from "reach iTerm2, Ghostty, or Kitty" to "reach the outer terminal." This removes the implication that only those three terminals support passthrough, making the docs accurate for any compatible terminal emulator.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| settings.md | Modified | +92/-88 | New `parentSettingsBehavior`, `worktree.baseRef`, `bwrapPath`, `socatPath` settings; table reformatting |
-| desktop.md | Modified | +23/-6 | New `sshHostAllowlist` section and managed settings table entry |
-| overview.md | Modified | +0/-634 | Removed inline React `InstallConfigurator` and `Experiment` A/B test components |
-| quickstart.md | Modified | +0/-524 | Removed inline React `InstallConfigurator` component |
-| env-vars.md | Modified | +3/-1 | New `CLAUDE_EFFORT` and `MCP_CONNECT_TIMEOUT_MS` vars; updated `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING` scope |
-| hooks.md | Modified | +8/-7 | New `effort` field added to common hook event fields table |
-| plugins.md | Modified | +9/-1 | Added multi-URL examples for `--plugin-url` |
-| sub-agents.md | Modified | +3/-3 | Clarified `skills` preloading vs Skill tool invocation distinction |
-| cli-reference.md | Modified | +2/-2 | Updated `--worktree` (PR targeting) and `--plugin-url` (space-separated URLs) |
-| features-overview.md | Modified | +1/-1 | Clarified subagent skill discovery behavior |
+| commands.md | Modified | +21 / -3 | Added "Commands across a typical workflow" and "All commands" sections; clarified `/schedule` description |
+| monitoring-usage.md | Modified | +3 / -3 | Expanded `source` field definitions for `tool_permission_decision` telemetry events |
+| routines.md | Modified | +2 / -0 | Added admin toggle documentation for disabling routines org-wide |
+| vs-code.md | Modified | +1 / -1 | Clarified `claudeProcessWrapper` setting behavior and use case |
+| agent-teams.md | Modified | +1 / -1 | Minor wording: "One team per session" → "One team at a time" |
+| terminal-config.md | Modified | +1 / -1 | Generalized terminal names in tmux passthrough description |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-05-08*
