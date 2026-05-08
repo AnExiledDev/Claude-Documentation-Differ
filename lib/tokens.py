@@ -24,8 +24,8 @@ THRESHOLD_TRUNCATE = int(os.environ.get("DIFFER_THRESHOLD_TRUNCATE", "100000"))
 THRESHOLD_LARGE_MODEL = int(os.environ.get("DIFFER_THRESHOLD_LARGE", "180000"))
 
 # Budget caps per model tier (USD)
-BUDGET_SONNET = 2.00
-BUDGET_SONNET_1M = 8.00
+BUDGET_SONNET = 6.00
+BUDGET_SONNET_1M = 24.00
 
 # Truncation limits (lines per page in workspace)
 TRUNCATE_NORMAL = 500
@@ -101,9 +101,9 @@ def select_model(
     """Select model, budget, and truncation level based on estimated tokens.
 
     Tiers:
-    - < 100k tokens: sonnet, 500 lines/page, $2.00
-    - 100k-180k tokens: sonnet, 200 lines/page (aggressive truncation), $2.00
-    - > 180k tokens: sonnet[1m], 500 lines/page, $8.00
+    - < 100k tokens: sonnet, 500 lines/page, $6.00
+    - 100k-180k tokens: sonnet, 200 lines/page (aggressive truncation), $6.00
+    - > 180k tokens: sonnet[1m], 500 lines/page, $24.00
 
     When explicit_model is set (and not "auto"), it takes precedence.
     When explicit_budget is set, it overrides the tier default.

@@ -669,7 +669,7 @@ def main() -> None:
         "--budget",
         type=float,
         default=None,
-        help="Max budget override in USD (default: auto — $2.00 for sonnet, $8.00 for sonnet[1m])",
+        help="Max budget override in USD (default: auto — $6.00 for sonnet, $24.00 for sonnet[1m])",
     )
     parser.add_argument(
         "--force",
