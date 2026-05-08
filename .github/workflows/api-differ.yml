@@ -97,7 +97,7 @@ jobs:
         if: steps.check_changes.outputs.changes == 'true'
         run: |
           git add output/api/ || true
-          git commit -m "Add changelog for $(date -u +%Y-%m-%d)" || true
+          git commit -m "Add API changelog for $(date -u +%Y-%m-%d)" || true
           for i in 1 2 3; do
             git pull --rebase origin main && git push && break
             echo "Push attempt $i failed, retrying in 5s..."
@@ -125,7 +125,11 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**${{ steps.check_changes.outputs.count }}** pages changed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            CHANGELOG=$(ls output/api/*_changelog.md 2>/dev/null | head -1)
+            TODAY=$(date -u +%Y-%m-%d)
+            CHANGELOG=$(ls output/api/$TODAY/changelog.md 2>/dev/null)
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(ls output/api/$TODAY/*_changelog.md 2>/dev/null | head -1)
+            fi
             if [ -n "$CHANGELOG" ]; then
               echo "### Latest Changelog" >> $GITHUB_STEP_SUMMARY
               head -100 "$CHANGELOG" >> $GITHUB_STEP_SUMMARY

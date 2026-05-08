@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -55,6 +56,41 @@ def _get_source_paths(source: Source) -> tuple[Path, Path]:
     docs_dir = _DOCS_DIR / source.docs_dir
     output_dir = _OUTPUT_DIR / source.output_dir
     return docs_dir, output_dir
+
+
+def _generate_index(output_dir: Path, source_name: str) -> None:
+    """Auto-generate index.md listing all date subdirectories (newest first)."""
+    date_dirs = sorted(
+        [
+            d
+            for d in output_dir.iterdir()
+            if d.is_dir() and re.match(r"\d{4}-\d{2}-\d{2}$", d.name)
+        ],
+        key=lambda d: d.name,
+        reverse=True,
+    )
+
+    if not date_dirs:
+        return
+
+    lines = [
+        f"# {source_name} Changelog Index",
+        "",
+    ]
+
+    for date_dir in date_dirs:
+        md_files = sorted(f for f in date_dir.iterdir() if f.suffix == ".md")
+        if not md_files:
+            continue
+
+        lines.append(f"## {date_dir.name}")
+        lines.append("")
+        for f in md_files:
+            lines.append(f"- [{f.name}]({date_dir.name}/{f.name})")
+        lines.append("")
+
+    index_path = output_dir / "index.md"
+    index_path.write_text("\n".join(lines))
 
 
 def _has_commits(repo_dir: Path) -> bool:
@@ -273,8 +309,7 @@ def _generate_category_changelogs(
     report: DiffReport,
     old_ref: str,
     new_ref: str,
-    output_dir: Path,
-    date_str: str,
+    date_dir: Path,
     model: str = "sonnet",
     budget: float | None = None,
     force: bool = False,
@@ -284,8 +319,13 @@ def _generate_category_changelogs(
     Creates a master changelog that references category-specific changelogs.
     Each category gets its own Claude invocation with a focused diff.
 
+    Args:
+        date_dir: Date subdirectory (e.g., output/api/2026-04-16/)
+
     Returns True if any changelogs were generated.
     """
+    date_str = date_dir.name
+
     docs_prefix = f"docs/{source.key}/"
     sub_reports = categorize_changes(report, docs_prefix)
 
@@ -332,8 +372,8 @@ def _generate_category_changelogs(
             continue
 
         cat_name = API_CATEGORIES.get(cat_key, cat_key.replace("-", " ").title())
-        cat_filename = f"{date_str}_{cat_key}_changelog.md"
-        cat_path = output_dir / cat_filename
+        cat_filename = f"{cat_key}_changelog.md"
+        cat_path = date_dir / cat_filename
 
         print(f"\n  Category: {cat_name} ({sub_report.total_changes} changes)")
 
@@ -361,7 +401,7 @@ def _generate_category_changelogs(
 
     # Generate master changelog that references category changelogs
     if category_files:
-        master_path = output_dir / f"{date_str}_changelog.md"
+        master_path = date_dir / "changelog.md"
         master_lines = [
             f"# {source.name} Documentation Changes — {date_str}",
             "",
@@ -447,21 +487,23 @@ def _process_source(
         print("\nNo changes detected.")
         return False
 
-    # Ensure output directory exists
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Generate output filename
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    base_name = args.output or f"{date_str}_diff"
+    # Create date subdirectory for output
+    now = datetime.now(timezone.utc)
+    date_str = now.strftime("%Y-%m-%d")
+    hour_str = now.strftime("%H")
+    date_dir = output_dir / date_str
+    date_dir.mkdir(parents=True, exist_ok=True)
 
     # Write reports
+    base_name = args.output or "diff"
+
     if args.format in ("json", "both"):
-        json_path = output_dir / f"{base_name}.json"
+        json_path = date_dir / f"{base_name}.json"
         json_path.write_text(json.dumps(report.to_dict(), indent=2))
         print(f"\n  Written: {json_path}")
 
     if args.format in ("markdown", "both"):
-        md_path = output_dir / f"{base_name}.md"
+        md_path = date_dir / f"{base_name}.md"
         md_path.write_text(report.to_markdown())
         print(f"  Written: {md_path}")
 
@@ -483,14 +525,13 @@ def _process_source(
                 report=report,
                 old_ref=old_ref,
                 new_ref=new_ref,
-                output_dir=output_dir,
-                date_str=date_str,
+                date_dir=date_dir,
                 model=args.model,
                 budget=args.budget,
                 force=args.force,
             )
         else:
-            changelog_path = output_dir / f"{date_str}_changelog.md"
+            changelog_path = date_dir / f"partial_{hour_str}h_changelog.md"
             _generate_changelog(
                 source=source,
                 report=report,
@@ -500,6 +541,9 @@ def _process_source(
                 budget=args.budget,
                 force=args.force,
             )
+
+        # Regenerate source index
+        _generate_index(output_dir, source.name)
 
     return True
 
@@ -578,7 +622,10 @@ def main() -> None:
 
     if args.since_last_changelog:
         # Find the last changelog commit and diff from there
-        last_cl = get_last_changelog_commit(_SCRIPT_DIR, "changelog")
+        source_label = None
+        if args.source != "all":
+            source_label = get_source(args.source).commit_label
+        last_cl = get_last_changelog_commit(_SCRIPT_DIR, source_label)
         if last_cl:
             old_ref = last_cl
             print(f"Using last changelog commit as base: {old_ref[:8]}")

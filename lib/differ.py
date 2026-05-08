@@ -148,14 +148,30 @@ class DiffReport:
         return "\n".join(lines)
 
 
-def _run_git(args: list[str], cwd: Path) -> str:
-    """Run a git command and return stdout."""
+def _run_git(args: list[str], cwd: Path, check: bool = True) -> str:
+    """Run a git command and return stdout.
+
+    Args:
+        args: Git subcommand and arguments
+        cwd: Working directory for the command
+        check: If True (default), raise on non-zero exit code
+
+    Raises:
+        subprocess.CalledProcessError: If check=True and git returns non-zero
+    """
     result = subprocess.run(
         ["git"] + args,
         cwd=str(cwd),
         capture_output=True,
         text=True,
     )
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            ["git"] + args,
+            result.stdout,
+            result.stderr,
+        )
     return result.stdout
 
 
@@ -331,38 +347,47 @@ def get_full_diff(
 
 def get_last_changelog_commit(
     repo_dir: Path,
-    source_name: str,
+    source_name: str | None = None,
     max_age_days: int = 7,
 ) -> str | None:
     """Find the commit that last added a changelog for this source.
 
-    Searches git log for commits with "Add changelog" or "Add <source> changelog"
-    in the message, within the max_age_days window.
+    Tries source-specific pattern first (e.g., "Add Claude Code changelog"),
+    then falls back to generic "Add.*changelog" for backward compatibility
+    with old commit message format.
 
     Args:
         repo_dir: Path to the git repository
-        source_name: Source name to search for (e.g., "Claude Code", "Claude API")
+        source_name: Source label to search for (e.g., "Claude Code", "API")
         max_age_days: Maximum age in days to search back
 
     Returns:
         Commit hash, or None if no changelog commit found within window
     """
-    result = subprocess.run(
-        [
-            "git",
-            "log",
-            f"--since={max_age_days} days ago",
-            "--format=%H",
-            "-1",
-            "--grep",
-            f"Add.*changelog",
-        ],
-        cwd=str(repo_dir),
-        capture_output=True,
-        text=True,
-    )
-    commit = result.stdout.strip()
-    return commit if commit else None
+    patterns = []
+    if source_name:
+        patterns.append(f"Add.*{source_name}.*changelog")
+    patterns.append("Add.*changelog")
+
+    for pattern in patterns:
+        result = subprocess.run(
+            [
+                "git",
+                "log",
+                f"--since={max_age_days} days ago",
+                "--format=%H",
+                "-1",
+                "--grep",
+                pattern,
+            ],
+            cwd=str(repo_dir),
+            capture_output=True,
+            text=True,
+        )
+        commit = result.stdout.strip()
+        if commit:
+            return commit
+    return None
 
 
 def get_file_content(repo_dir: Path, filepath: str) -> str | None:

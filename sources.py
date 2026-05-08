@@ -19,6 +19,7 @@ class Source:
     url_pattern: str
     prompt_file: str
     base_url: str
+    commit_label: str  # Short label used in commit messages (e.g., "Claude Code", "API")
 
     @property
     def docs_dir(self) -> str:
@@ -39,6 +40,7 @@ SOURCES: Dict[str, Source] = {
         url_pattern=r"https://code\.claude\.com/docs/en/[\w-]+\.md",
         prompt_file="lib/prompts/claude_code.md",
         base_url="https://code.claude.com/docs",
+        commit_label="Claude Code",
     ),
     "api": Source(
         key="api",
@@ -47,6 +49,7 @@ SOURCES: Dict[str, Source] = {
         url_pattern=r"https://platform\.claude\.com/docs/en/[\w/-]+\.md",
         prompt_file="lib/prompts/api.md",
         base_url="https://platform.claude.com/docs",
+        commit_label="API",
     ),
 }
 
