@@ -17,3 +17,10 @@ output/.changelog_workspace/
 # IDE
 .idea/
 .vscode/
+
+# Local tracking (temporary)
+DELETEME/
+
+# Secrets
+.env
+.env.*
