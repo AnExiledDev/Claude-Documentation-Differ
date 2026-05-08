@@ -2,132 +2,107 @@
 
 ## Summary
 
-Version 2.1.133 was released on May 7, 2026, adding the `worktree.baseRef` setting, effort-level hook variables, and sandbox binary path overrides alongside thirteen bug fixes. Documentation was substantially updated across debugging, error handling, routines, and cloud environment network access to reflect these changes and improve clarity.
+Ten documentation pages were modified with 141 additions and 1,267 deletions. The bulk of the deletions are cosmetic: large inline React/JSX `InstallConfigurator` components were removed from `overview.md` and `quickstart.md`, leaving readable documentation content intact. The substantive changes add new controlled settings, new environment variables, expand Bedrock/Vertex streaming support, and clarify skills behavior in subagents.
 
 ## Significant Changes
 
-### CLI Release: Version 2.1.133
+### Configuration
 
-- **`worktree.baseRef` setting**: New setting (`fresh` | `head`) controls whether `--worktree`, `EnterWorktree`, and agent-isolation worktrees branch from `origin/<default>` or local `HEAD`.
-  > Added `worktree.baseRef` setting (`fresh` | `head`) to choose whether `--worktree`, `EnterWorktree`, and agent-isolation worktrees branch from `origin/<default>` or local `HEAD`. **Note:** the default `fresh` changes `EnterWorktree`'s base back to `origin/<default>` (it has been local `HEAD` since 2.1.128) — set `worktree.baseRef: "head"` to keep unpushed commits in new worktrees
-  - *Implication*: Users who relied on `EnterWorktree` branching from local `HEAD` (behavior introduced in 2.1.128) must explicitly set `worktree.baseRef: "head"` to preserve it.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New `parentSettingsBehavior` setting**: Controls how managed settings from embedding hosts (Agent SDK, IDE extensions) interact with admin-deployed managed tiers. Requires Claude Code v2.1.133+.
+  > `"first-wins"`: the parent-supplied settings are dropped and only the admin tier applies. `"merge"`: the parent-supplied settings apply under the admin tier, filtered so they can tighten policy but not loosen it. Has no effect when no admin tier is deployed. Default: `"first-wins"`.
+  - *Implication*: Organizations using both MDM-deployed managed settings and the Agent SDK or IDE extensions can now choose whether host-supplied settings are silently dropped or applied as a subordinate layer.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **Hooks receive effort level**: Hooks now receive the active effort level via `effort.level` in JSON input and `$CLAUDE_EFFORT` environment variable; Bash tool commands can also read `$CLAUDE_EFFORT`.
-  - *Implication*: Hook scripts can now branch behavior based on effort mode without additional configuration.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New `worktree.baseRef` setting**: Determines which ref new worktrees branch from when using `--worktree`, `EnterWorktree`, or subagent isolation.
+  > `"fresh"` (default) branches from `origin/<default-branch>` for a clean tree matching the remote. `"head"` branches from your current local `HEAD`, so unpushed commits and feature-branch state are present in the worktree.
+  - *Implication*: Teams that rely on worktrees for testing in-progress work can now persist local commits into worktrees without first pushing them.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **`sandbox.bwrapPath` and `sandbox.socatPath`**: New managed settings on Linux/WSL for specifying custom bubblewrap and socat binary locations.
-  - *Implication*: Admins in environments where these binaries live outside standard paths can now configure them directly.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+- **New sandbox binary path settings (`bwrapPath`, `socatPath`)**: Managed-settings-only keys (Linux/WSL2) that override automatic PATH detection for bubblewrap and socat binaries used by the sandbox.
+  > Overrides automatic detection via `PATH`. Only honored from managed settings, not from user or project settings. Useful when `bwrap` is installed at a non-standard location in managed environments.
+  - *Implication*: Admins can pin sandbox binaries to controlled paths, preventing unexpected version changes.
+  - *Source*: [Settings](https://code.claude.com/docs/en/settings.md)
 
-- **`parentSettingsBehavior` admin key**: New admin-tier setting (`'first-wins' | 'merge'`) opts SDK `managedSettings` (parent tier) into the policy merge.
-  - *Source*: [Changelog](https://code.claude.com/docs/en/changelog.md)
+### Desktop / Enterprise
 
-- **Notable bug fixes in 2.1.133**:
-  - Parallel sessions dead-ending at 401 after a refresh-token race wiped shared credentials
-  - `Edit`/`Write` allow rules scoped to a drive root (`C:\`) or POSIX `/` always prompting instead of matching
-  - HTTP(S)_PROXY / NO_PROXY / mTLS not applied to the full MCP OAuth flow
-  - Read/Write/Edit denied on mapped network drives passed via `--add-dir` / SDK `additionalDirectories`
-  - Remote Control stop/interrupt from claude.ai not fully canceling the CLI session
-  - `/effort` in one session unexpectedly changing effort level of other concurrent sessions
-  - Subagents not discovering project, user, or plugin skills via the Skill tool
-  - `[VSCode]` `claudeCode.claudeProcessWrapper` failing with "Unsupported platform" when extension build doesn't bundle a Claude binary
-
-### Configuration & Debugging
-
-- **New `/debug [issue]` command**: Added to the debugging reference table.
-  > `/debug [issue]` — Enables debug logging for the session and prompts Claude to diagnose using the log output and settings paths
-  - *Implication*: Provides a direct in-session path to diagnosis without needing to restart with `--debug` flags.
-  - *Source*: [Debug your config](https://code.claude.com/docs/en/debug-your-config.md)
-
-- **Clean configuration test procedure**: New "Test against a clean configuration" section documents how to isolate configuration problems using a throwaway `CLAUDE_CONFIG_DIR`.
-  > Point `CLAUDE_CONFIG_DIR` at an empty directory to bypass everything under `~/.claude`, and launch from a directory that has no `.claude` folder, `.mcp.json`, or `CLAUDE.md` so project configuration is also skipped.
-  ```bash
-  cd /tmp && CLAUDE_CONFIG_DIR=/tmp/claude-clean claude
+- **New `sshHostAllowlist` managed setting**: Restricts Desktop SSH sessions to an approved set of hostnames. An empty array disables SSH entirely.
+  > Administrators can limit Desktop's SSH sessions to an approved set of hosts by adding `sshHostAllowlist` to a managed settings file. Patterns are case-insensitive. `*` matches any host, and `*.example.com` matches `example.com` and any subdomain.
+  ```json
+  {
+    "sshHostAllowlist": ["*.devboxes.example.com", "bastion.example.com"]
+  }
   ```
-  - *Implication*: Provides a reproducible isolation technique; the doc notes that managed settings still apply (system path), macOS Keychain credentials carry over, but Linux/Windows credentials will prompt for re-login.
-  - *Source*: [Debug your config](https://code.claude.com/docs/en/debug-your-config.md)
+  > `sshHostAllowlist` is read from managed settings only; values in user or project settings are ignored. Only the Claude Desktop app honors this setting; the Claude Code CLI and IDE extensions do not read it, and it does not restrict `ssh` commands run through the Bash tool.
+  - *Implication*: Enterprise admins can enforce SSH connection controls for Desktop without affecting CLI or IDE extension sessions. This setting governs Desktop connections only, not network egress — pair it with network or zero-trust controls for a hard boundary.
+  - *Source*: [Desktop](https://code.claude.com/docs/en/desktop.md)
 
-- **`/doctor` interactive fix flow**: Documentation now mentions pressing `f` after `/doctor` reports issues to send the diagnostic report to Claude for assisted fixes.
-  > When `/doctor` reports issues, press `f` to send the diagnostic report to Claude and have it walk through fixes with you.
-  - *Source*: [Debug your config](https://code.claude.com/docs/en/debug-your-config.md)
+### Environment Variables
 
-- **New MCP troubleshooting row**: Added a clarifying entry to the "Check common causes" table for a common misconfiguration.
-  > MCP servers added under `mcpServers` in `settings.json` never appear — `settings.json` does not read an `mcpServers` key — Define project servers in `.mcp.json` at the repository root, or run `claude mcp add --scope user` for user-scoped servers.
-  - *Implication*: This is a documented common mistake; `mcpServers` in `settings.json` is silently ignored.
-  - *Source*: [Debug your config](https://code.claude.com/docs/en/debug-your-config.md)
+- **New `CLAUDE_EFFORT` env var**: Set automatically in Bash tool subprocesses and hook commands to the current effort level for the turn.
+  > Set automatically in Bash tool subprocesses and hook commands to the active effort level for the turn: `low`, `medium`, `high`, `xhigh`, or `max`. Matches the `effort.level` field passed to hooks. Only set when the current model supports the effort parameter.
+  - *Implication*: Hook scripts and Bash tool commands can now branch on the current effort tier without parsing hook JSON.
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-### Cloud Environment & Network Access
+- **New `MCP_CONNECT_TIMEOUT_MS` env var**: Configures how long the first query waits for MCP servers to connect before snapshotting the tool list. Default: 5000 ms.
+  > Servers still pending at the deadline keep connecting in the background but won't appear until the next query. Distinct from `MCP_TIMEOUT`, which bounds an individual server's connect attempt. Most relevant to non-interactive sessions that issue a single query and need slow-connecting servers to be visible.
+  - *Implication*: Non-interactive pipelines (`-p`) can tune MCP startup latency without disabling the connection wait entirely via `MCP_CONNECTION_NONBLOCKING`.
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **New "Host not allowed in a cloud session" error**: New error section documenting the `403` + `x-deny-reason: host_not_allowed` response that occurs when outbound requests from a cloud session or routine are blocked by the environment's network policy.
-  > This is not a client-side network problem. Cloud sessions and routines run inside a sandboxed environment whose outbound traffic is filtered to the environment's allowlist.
-  - *Implication*: Users encountering TLS certificate mismatches in cloud sessions should check the network policy — the proxy is terminating the connection, not the destination server.
-  - *Source*: [Errors](https://code.claude.com/docs/en/errors.md)
+- **`CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING` scope expanded to Bedrock and Vertex**: Previously documented as having no effect on Bedrock, Vertex, Foundry, or gateway connections. Bedrock and Vertex now receive per-model support.
+  > On Bedrock and Vertex, enabled per model where the deployed container supports it. Set to `1` to force on when routing through a proxy via `ANTHROPIC_BASE_URL`, `ANTHROPIC_VERTEX_BASE_URL`, or `ANTHROPIC_BEDROCK_BASE_URL`. Off by default on Foundry and gateway connections.
+  - *Implication*: Bedrock and Vertex users may see streaming tool inputs enabled for supported models without opting in; set to `0` to opt out if needed.
+  - *Source*: [Environment Variables](https://code.claude.com/docs/en/env-vars.md)
 
-- **Routines "Environments and network access" section expanded**: Renamed from "Environments" and substantially expanded with step-by-step instructions for modifying network access on a routine's environment.
-  > The **Default** environment uses **Trusted** network access: the default allowlist of package registries, cloud provider APIs, container registries, and common development domains is reachable, but arbitrary domains are not. Outbound requests to other hosts fail with `403` and `x-deny-reason: host_not_allowed`.
-  - *Implication*: Routine authors with custom API dependencies now have an explicit guide for enabling their domains without opening full network access.
-  - *Source*: [Routines](https://code.claude.com/docs/en/routines.md)
+### Hooks
 
-- **Run status clarification note**: Added a callout warning that a green run status only means the session started without an infrastructure error, not that the task succeeded.
-  > A green status in the run list means the session started and exited without an infrastructure error. It does not mean the task in your prompt succeeded. Open the run to read the transcript and confirm what Claude actually did.
-  - *Source*: [Routines](https://code.claude.com/docs/en/routines.md)
+- **New `effort` field in hook event payloads**: Hook events that fire within a tool-use context now receive an `effort` object alongside existing common fields.
+  > Object with a `level` field holding the active effort level for the turn: `"low"`, `"medium"`, `"high"`, `"xhigh"`, or `"max"`. If the requested effort exceeds what the current model supports, this is the downgraded level the model actually used. Present for events such as `PreToolUse`, `PostToolUse`, `Stop`, and `SubagentStop` when the current model supports the effort parameter. The level is also available to hook commands and the Bash tool as the `$CLAUDE_EFFORT` environment variable.
+  - *Implication*: Hooks can implement effort-conditional logic (e.g., skip expensive post-processing on low-effort turns).
+  - *Source*: [Hooks](https://code.claude.com/docs/en/hooks.md)
 
-- **MCP connector traffic routing clarified**: Added note explaining that MCP connector traffic routes through Anthropic's servers, so connector hosts don't need to be added to the environment's allowed domain list.
-  > MCP connector traffic is routed through Anthropic's servers, so the connectors you enable on a session or routine work without adding their hosts to **Allowed domains**.
-  - *Source*: [Claude Code on the Web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+### CLI Flags
 
-- **"Edit an environment" instructions corrected**: The table row for editing an environment was rewritten to describe the actual UI path via the cloud icon.
-  > Select the cloud icon showing the current environment's name to open the selector, hover over an environment, and click the settings icon that appears on the right.
-  - *Source*: [Claude Code on the Web](https://code.claude.com/docs/en/claude-code-on-the-web.md)
+- **`--worktree` / `-w` gains GitHub PR-targeting**: Passing `#<number>` or a full GitHub PR URL now fetches and branches the worktree from that PR.
+  > Pass `#<number>` or a GitHub pull request URL to fetch that PR from `origin` and branch the worktree from it.
+  - *Implication*: Reviewers can spin up an isolated worktree for a specific PR with a single flag argument.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
 
-### Memory & AGENTS.md Compatibility
+- **`--plugin-url` accepts space-separated URLs in a single quoted argument**: Previously the flag documented only the repeat-flag pattern.
+  > Repeat the flag for multiple plugins, or pass space-separated URLs in a single quoted value.
+  - *Implication*: Shell scripts that build plugin URL lists can pass them as a single string instead of constructing multiple flag instances.
+  - *Source*: [CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
 
-- **Symlink approach for AGENTS.md**: New guidance that a symlink (`ln -s AGENTS.md CLAUDE.md`) works as an alternative to the `@AGENTS.md` import pattern, with a Windows caveat.
-  > On Windows, creating a symlink requires Administrator privileges or Developer Mode, so use the `@AGENTS.md` import instead.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+### Subagents & Skills
 
-- **`/init` reads existing tool configs**: Documented that running `/init` in a repo with `AGENTS.md`, `.cursorrules`, or `.windsurfrules` reads those files and incorporates relevant parts into the generated `CLAUDE.md`.
-  - *Source*: [Memory](https://code.claude.com/docs/en/memory.md)
+- **Skills behavior in subagents clarified**: The `skills` field controls preloading only, not which skills a subagent can invoke. Unlisted skills remain accessible via the Skill tool.
+  > The full content of each listed skill is injected into the subagent's context at startup. This field controls which skills are preloaded, not which skills the subagent can access: without it, the subagent can still discover and invoke project, user, and plugin skills through the Skill tool during execution. To prevent a subagent from invoking skills entirely, omit `Skill` from the `tools` list or add it to `disallowedTools`.
+  - *Implication*: The previous documentation implied subagents were fully isolated from unlisted skills. That was incorrect; only preloading is restricted by the `skills` field.
+  - *Source*: [Sub-agents](https://code.claude.com/docs/en/sub-agents.md)
 
-### Integrations & Authentication
-
-- **VS Code extension installs in forks**: Added documentation that the extension works in VS Code forks like Windsurf and Kiro via the Open VSX registry.
-  > The extension also installs in other VS Code forks like Windsurf or Kiro. Search for "Claude Code" in the editor's Extensions view, or install from the [Open VSX registry](https://open-vsx.org/extension/Anthropic/claude-code). If your editor can't install the extension, run `claude` in its integrated terminal instead.
-  - *Source*: [VS Code](https://code.claude.com/docs/en/vs-code.md)
-
-- **`ANTHROPIC_BASE_URL` clarification**: Added a note in model configuration that `ANTHROPIC_BASE_URL` changes where requests are sent, not which model answers them, with a pointer to LLM gateway documentation.
-  > `ANTHROPIC_BASE_URL` changes where requests are sent, not which model answers them. To route Claude through an LLM gateway, see LLM gateway configuration.
-  - *Implication*: Prevents confusion for users who set this variable expecting model-routing behavior.
-  - *Source*: [Model config](https://code.claude.com/docs/en/model-config.md)
-
-- **Credentials management clarification**: Added a bullet to the authentication page clarifying that `.credentials.json` is managed exclusively through `/login` and `/logout`, and that `ANTHROPIC_BASE_URL` is the correct mechanism for routing through a custom API endpoint.
-  - *Source*: [Authentication](https://code.claude.com/docs/en/authentication.md)
+- **`tools` field documentation updated**: Clarifies that listing `Skill` in the tools array does not preload skills; use the dedicated `skills` field instead.
+  > To preload Skills into context, use the `skills` field rather than listing `Skill` here.
+  - *Source*: [Sub-agents](https://code.claude.com/docs/en/sub-agents.md)
 
 ## Notable Details
 
-- The A/B test `Experiment` component (`docs-contact-sales-cta` GrowthBook flag) was removed from all four provider/integration pages (Amazon Bedrock, Google Vertex AI, Microsoft Foundry, third-party integrations). Each page now unconditionally renders `ContactSalesCard`. This accounts for the bulk of the line deletions (−111 per page, −444 total).
-- The network errors section description was broadened: "almost always originate in your local network" changed to "usually originate in your local network, proxy, or firewall, **or in the cloud environment's network policy**" — reflecting the new cloud session error category.
-- `worktree.baseRef` defaults to `fresh`, which is a **behavior regression** from 2.1.128–2.1.132 where `EnterWorktree` used local `HEAD`. Users with automation that depends on unpushed commits being available in new worktrees must explicitly opt in with `worktree.baseRef: "head"`.
+- `overview.md` and `quickstart.md` each lost ~550+ lines of embedded React/JSX (`InstallConfigurator`, `Experiment` A/B test wrapper). The readable documentation prose and headings are unchanged; these were UI components inlined into MDX source that are now presumably loaded from a shared module.
+- The worktree settings section intro was trimmed from "Use these settings to reduce disk usage and startup time in large monorepos" to just "Configure how `--worktree` creates and manages git worktrees." The new `worktree.baseRef` setting has nothing to do with disk or startup performance, making the old framing inaccurate.
+- `plugins.md` was updated with explicit multi-URL examples for `--plugin-url`, mirroring the CLI reference change.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| amazon-bedrock.md | Modified | +1 / -111 | Removed A/B test `Experiment` component; Contact Sales CTA now always shown |
-| google-vertex-ai.md | Modified | +1 / -111 | Removed A/B test `Experiment` component; Contact Sales CTA now always shown |
-| microsoft-foundry.md | Modified | +1 / -111 | Removed A/B test `Experiment` component; Contact Sales CTA now always shown |
-| third-party-integrations.md | Modified | +1 / -111 | Removed A/B test `Experiment` component; Contact Sales CTA now always shown |
-| routines.md | Modified | +36 / -4 | Expanded "Environments and network access" with step-by-step guide; added run status clarification note |
-| debug-your-config.md | Modified | +49 / -29 | Added `/debug` command, clean-config test procedure, `/doctor` `f`-key tip, new MCP troubleshooting row |
-| errors.md | Modified | +23 / -1 | New "Host not allowed in a cloud session" error section; updated network errors description |
-| claude-code-on-the-web.md | Modified | +7 / -1 | Fixed environment edit UI instructions; added MCP connector routing note |
-| memory.md | Modified | +10 / -0 | Added AGENTS.md symlink guidance and `/init` cross-tool config behavior |
-| changelog.md | Modified | +20 / -0 | Added v2.1.133 release notes |
-| model-config.md | Modified | +4 / -0 | Added `ANTHROPIC_BASE_URL` clarification note |
-| vs-code.md | Modified | +2 / -0 | Added VS Code fork installation guidance (Windsurf, Kiro, Open VSX) |
-| authentication.md | Modified | +1 / -0 | Added `.credentials.json` management and custom API endpoint guidance |
+| settings.md | Modified | +92/-88 | New `parentSettingsBehavior`, `worktree.baseRef`, `bwrapPath`, `socatPath` settings; table reformatting |
+| desktop.md | Modified | +23/-6 | New `sshHostAllowlist` section and managed settings table entry |
+| overview.md | Modified | +0/-634 | Removed inline React `InstallConfigurator` and `Experiment` A/B test components |
+| quickstart.md | Modified | +0/-524 | Removed inline React `InstallConfigurator` component |
+| env-vars.md | Modified | +3/-1 | New `CLAUDE_EFFORT` and `MCP_CONNECT_TIMEOUT_MS` vars; updated `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING` scope |
+| hooks.md | Modified | +8/-7 | New `effort` field added to common hook event fields table |
+| plugins.md | Modified | +9/-1 | Added multi-URL examples for `--plugin-url` |
+| sub-agents.md | Modified | +3/-3 | Clarified `skills` preloading vs Skill tool invocation distinction |
+| cli-reference.md | Modified | +2/-2 | Updated `--worktree` (PR targeting) and `--plugin-url` (space-separated URLs) |
+| features-overview.md | Modified | +1/-1 | Clarified subagent skill discovery behavior |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-05-08*
