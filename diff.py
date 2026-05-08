@@ -286,6 +286,9 @@ def _generate_changelog(
         f"Write output to: {output_path.resolve()}"
     )
 
+    # Headless (non-interactive) mode requires --dangerously-skip-permissions.
+    # The --allowedTools restriction limits Claude to Read and Write only,
+    # so the actual capability surface is narrow despite the flag name.
     cmd = [
         "claude",
         "-p",
@@ -568,8 +571,8 @@ def _process_source(
             _SCRIPT_DIR, old_ref, new_ref, path_filter=f"docs/{source.key}/"
         )
 
-        # Use category splitting for large diffs (API docs)
-        if source.key == "api" and report.total_changes > 10:
+        # Use category splitting for large diffs (any source with enough changes)
+        if report.total_changes > 10:
             print(
                 f"  Large diff detected ({report.total_changes} changes) —"
                 " splitting by category"
@@ -676,6 +679,12 @@ def main() -> None:
         action="store_true",
         help="Overwrite existing files",
     )
+    parser.add_argument(
+        "--max-search-days",
+        type=int,
+        default=30,
+        help="Max days to search back for last changelog commit (default: 30)",
+    )
     args = parser.parse_args()
 
     # Resolve refs
@@ -687,19 +696,21 @@ def main() -> None:
         source_label = None
         if args.source != "all":
             source_label = get_source(args.source).commit_label
-        last_cl = get_last_changelog_commit(_SCRIPT_DIR, source_label)
+        last_cl = get_last_changelog_commit(
+            _SCRIPT_DIR, source_label, max_age_days=args.max_search_days,
+        )
         if last_cl:
             old_ref = last_cl
             print(f"Using last changelog commit as base: {old_ref[:8]}")
         else:
             print(
-                "No previous changelog commit found (within 7 days), using HEAD~1",
+                f"No previous changelog commit found (within {args.max_search_days} days), using HEAD~1",
                 file=sys.stderr,
             )
     elif args.since:
         since_commit = _get_commit_for_date(_SCRIPT_DIR, args.since)
         if since_commit:
-            old_ref = f"{since_commit}~1" if since_commit else "HEAD~1"
+            old_ref = f"{since_commit}~1"
         else:
             print(
                 f"WARNING: No commits found since {args.since}",

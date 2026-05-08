@@ -348,7 +348,7 @@ def get_full_diff(
 def get_last_changelog_commit(
     repo_dir: Path,
     source_name: str | None = None,
-    max_age_days: int = 7,
+    max_age_days: int = 30,
 ) -> str | None:
     """Find the commit that last added a changelog for this source.
 

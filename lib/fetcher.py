@@ -16,6 +16,18 @@ from urllib.parse import urlparse
 
 from playwright.async_api import async_playwright, Page
 
+# Minimum content length (bytes) to consider a fetched page valid
+MIN_CONTENT_LENGTH = 100
+
+# Default retry attempts per page fetch
+DEFAULT_RETRIES = 3
+
+# Playwright navigation timeout (ms)
+PAGE_TIMEOUT_MS = 30_000
+
+# Failure rate threshold — warn when exceeded
+FAILURE_RATE_ALERT_THRESHOLD = 0.20
+
 
 @dataclass
 class FetchResult:
@@ -64,8 +76,14 @@ def extract_relative_path(url: str, base_url: str) -> str:
     if en_match:
         return en_match.group(1)
 
-    # Fallback: just use the filename
-    return path.split("/")[-1]
+    # Fallback: preserve path structure relative to base_url
+    parsed_base = urlparse(base_url)
+    base_path = parsed_base.path.rstrip("/")
+    if path.startswith(base_path) and len(path) > len(base_path):
+        return path[len(base_path) :].lstrip("/")
+
+    # Last resort: full path without leading slash
+    return path.lstrip("/")
 
 
 async def fetch_index(page: Page, index_url: str, url_pattern: str) -> list[str]:
@@ -79,7 +97,7 @@ async def fetch_index(page: Page, index_url: str, url_pattern: str) -> list[str]
     Returns:
         List of full URLs to .md files
     """
-    response = await page.goto(index_url)
+    response = await page.goto(index_url, timeout=PAGE_TIMEOUT_MS)
     if not response or response.status != 200:
         raise RuntimeError(
             f"Failed to fetch index: HTTP {response.status if response else 'no response'}"
@@ -107,7 +125,7 @@ async def fetch_index(page: Page, index_url: str, url_pattern: str) -> list[str]
 
 
 async def fetch_page(
-    page: Page, url: str, base_url: str, retries: int = 3
+    page: Page, url: str, base_url: str, retries: int = DEFAULT_RETRIES
 ) -> FetchResult:
     """Fetch a single markdown page.
 
@@ -124,7 +142,7 @@ async def fetch_page(
 
     for attempt in range(retries):
         try:
-            response = await page.goto(url, wait_until="networkidle")
+            response = await page.goto(url, wait_until="networkidle", timeout=PAGE_TIMEOUT_MS)
 
             if not response:
                 continue
@@ -154,7 +172,7 @@ async def fetch_page(
             content = await page.inner_text("body")
 
             # Validate it looks like markdown
-            if not content or len(content) < 100:
+            if not content or len(content) < MIN_CONTENT_LENGTH:
                 if attempt < retries - 1:
                     await asyncio.sleep(1)
                     continue

@@ -24,11 +24,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.fetcher import fetch_all_pages, FetchSummary
+from lib.fetcher import fetch_all_pages, FetchSummary, FAILURE_RATE_ALERT_THRESHOLD
 from sources import get_source, get_all_sources, Source
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _DOCS_DIR = _SCRIPT_DIR / "docs"
+
+# Default cooldown between fetches (hours)
+COOLDOWN_HOURS = 1
 
 
 def _print_progress(current: int, total: int, message: str) -> None:
@@ -78,11 +81,66 @@ def _git_has_changes(source: Source) -> bool:
     return bool(result.stdout.strip())
 
 
+def _update_failed_pages_manifest(source: Source, summary: FetchSummary) -> None:
+    """Write failed_pages.json tracking persistent failures for investigation.
+
+    Records which pages failed in this run and how many consecutive runs
+    they've been failing (by comparing against the previous manifest).
+    """
+    source_dir, _, _ = _get_source_dirs(source)
+    manifest_path = source_dir / "failed_pages.json"
+
+    # Load previous manifest to detect persistent failures
+    previous: dict[str, int] = {}
+    if manifest_path.exists():
+        try:
+            prev_data = json.loads(manifest_path.read_text())
+            for entry in prev_data.get("pages", []):
+                previous[entry["url"]] = entry.get("consecutive_failures", 1)
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    # Build current failure list
+    failed_entries = []
+    for result in summary.results:
+        if not result.success:
+            consecutive = previous.get(result.url, 0) + 1
+            failed_entries.append({
+                "url": result.url,
+                "relative_path": result.relative_path,
+                "error": result.error,
+                "consecutive_failures": consecutive,
+            })
+
+    manifest = {
+        "last_updated": datetime.now(timezone.utc).isoformat(),
+        "total_failed": len(failed_entries),
+        "persistent_failures": sum(
+            1 for e in failed_entries if e["consecutive_failures"] >= 3
+        ),
+        "pages": sorted(
+            failed_entries,
+            key=lambda e: e["consecutive_failures"],
+            reverse=True,
+        ),
+    }
+
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+
+    persistent = manifest["persistent_failures"]
+    if persistent > 0:
+        print(
+            f"\n  {persistent} page(s) failing for 3+ consecutive runs "
+            f"— see {manifest_path.name}"
+        )
+
+
 def _fetch_source(
     source: Source,
     force: bool = False,
     check: bool = False,
     rate_limit: float = 1.0,
+    cooldown_hours: float = COOLDOWN_HOURS,
 ) -> bool:
     """Fetch a single source.
 
@@ -103,7 +161,7 @@ def _fetch_source(
         now = datetime.now(timezone.utc)
         hours_since = (now - last_dt).total_seconds() / 3600
 
-        if hours_since < 1:
+        if hours_since < cooldown_hours:
             print(
                 f"Last run was {hours_since:.1f} hours ago. Use --force to run anyway."
             )
@@ -141,6 +199,17 @@ def _fetch_source(
             if not result.success:
                 print(f"  - {result.relative_path}: {result.error}")
 
+    # Alert on high failure rate
+    if summary.total_pages > 0:
+        failure_rate = summary.failed / summary.total_pages
+        if failure_rate > FAILURE_RATE_ALERT_THRESHOLD:
+            print(
+                f"\n  WARNING: {failure_rate:.0%} failure rate "
+                f"({summary.failed}/{summary.total_pages}) exceeds "
+                f"{FAILURE_RATE_ALERT_THRESHOLD:.0%} threshold",
+                file=sys.stderr,
+            )
+
     # If dry run, just report what would happen
     if check:
         print("\n[Dry run - no files written]")
@@ -152,6 +221,9 @@ def _fetch_source(
     metadata["successful"] = summary.successful
     metadata["failed"] = summary.failed
     _save_metadata(source, metadata)
+
+    # Write failed-pages manifest for tracking persistent failures
+    _update_failed_pages_manifest(source, summary)
 
     # Report if changes were detected
     has_changes = _git_has_changes(source)
@@ -190,6 +262,12 @@ def main() -> None:
         default=1.0,
         help="Seconds between requests (default: 1.0)",
     )
+    parser.add_argument(
+        "--cooldown-hours",
+        type=float,
+        default=COOLDOWN_HOURS,
+        help=f"Minimum hours between fetches (default: {COOLDOWN_HOURS})",
+    )
     args = parser.parse_args()
 
     # Determine which sources to fetch
@@ -209,6 +287,7 @@ def main() -> None:
             force=args.force,
             check=args.check,
             rate_limit=args.rate_limit,
+            cooldown_hours=args.cooldown_hours,
         )
         any_changes = any_changes or has_changes
 
