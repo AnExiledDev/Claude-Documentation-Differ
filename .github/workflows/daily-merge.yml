@@ -8,8 +8,9 @@ on:
 permissions:
   contents: write
 
+# Shared concurrency group serializes all differ pushes to prevent rebase conflicts
 concurrency:
-  group: daily-merge
+  group: differ-push
   cancel-in-progress: false
 
 jobs:
@@ -28,7 +29,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install -r requirements.txt
 
       - name: Configure Git
@@ -36,8 +37,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.133
 
       - name: Merge Claude Code daily changelog
         id: merge_claude_code
@@ -63,12 +69,21 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
+      # Note: commit squashing is deferred to a future phase.
+      # The shared concurrency group (differ-push) is the prerequisite safeguard
+      # that must be in place before squashing can be safely implemented.
       - name: Commit and push
         if: steps.merge_claude_code.outputs.merged == 'true' || steps.merge_api.outputs.merged == 'true'
         run: |
           git add output/
           TODAY=$(date -u +%Y-%m-%d)
-          git commit -m "Add daily changelog merge for ${TODAY}" || true
+
+          if git diff --cached --quiet; then
+            echo "::warning::Merge reported output but no files changed"
+            exit 0
+          fi
+
+          git commit -m "Add daily changelog merge for ${TODAY}"
           for i in 1 2 3; do
             git pull --rebase origin main && git push && break
             echo "Push attempt $i failed, retrying in 5s..."

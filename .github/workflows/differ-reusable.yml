@@ -1,0 +1,152 @@
+name: Documentation Differ (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      source:
+        required: true
+        type: string
+        description: 'Source key (e.g., claude-code, api)'
+      source_display_name:
+        required: true
+        type: string
+        description: 'Display name for commit messages (e.g., Claude Code, Claude API)'
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-and-diff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch documentation
+        run: python3 fetch.py --source ${{ inputs.source }} --force
+
+      - name: Check for content changes
+        id: check_changes
+        run: |
+          SOURCE="${{ inputs.source }}"
+          # Only detect actual .md file changes, not metadata.json timestamp updates
+          MD_CHANGES=$(git diff --name-only -- "docs/${SOURCE}/en/*.md" "docs/${SOURCE}/en/**/*.md" | wc -l)
+          STAGED_MD=$(git diff --staged --name-only -- "docs/${SOURCE}/en/*.md" "docs/${SOURCE}/en/**/*.md" | wc -l)
+          TOTAL=$((MD_CHANGES + STAGED_MD))
+
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "count=$TOTAL" >> $GITHUB_OUTPUT
+            echo "Found $TOTAL changed .md files"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "count=0" >> $GITHUB_OUTPUT
+            echo "No .md file changes detected (metadata-only update)"
+          fi
+
+      - name: Count change types
+        if: steps.check_changes.outputs.changes == 'true'
+        id: count_changes
+        run: |
+          SOURCE="${{ inputs.source }}"
+          NEW=$(git diff --name-only --diff-filter=A -- "docs/${SOURCE}/en/*.md" "docs/${SOURCE}/en/**/*.md" | wc -l)
+          MODIFIED=$(git diff --name-only --diff-filter=M -- "docs/${SOURCE}/en/*.md" "docs/${SOURCE}/en/**/*.md" | wc -l)
+          DELETED=$(git diff --name-only --diff-filter=D -- "docs/${SOURCE}/en/*.md" "docs/${SOURCE}/en/**/*.md" | wc -l)
+          echo "new=$NEW" >> $GITHUB_OUTPUT
+          echo "modified=$MODIFIED" >> $GITHUB_OUTPUT
+          echo "deleted=$DELETED" >> $GITHUB_OUTPUT
+
+      - name: Commit documentation changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          SOURCE="${{ inputs.source }}"
+          DISPLAY="${{ inputs.source_display_name }}"
+          git add "docs/${SOURCE}/"
+          NEW=${{ steps.count_changes.outputs.new || 0 }}
+          MOD=${{ steps.count_changes.outputs.modified || 0 }}
+          DEL=${{ steps.count_changes.outputs.deleted || 0 }}
+          git commit -m "${DISPLAY} docs update: $(date -u +%Y-%m-%d\ %H:%M\ UTC) (${MOD} modified, ${NEW} new, ${DEL} removed)"
+
+      - name: Set up Node.js
+        if: steps.check_changes.outputs.changes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        if: steps.check_changes.outputs.changes == 'true'
+        run: npm install -g @anthropic-ai/claude-code@2.1.133
+
+      - name: Generate changelog
+        if: steps.check_changes.outputs.changes == 'true'
+        run: python3 diff.py --source ${{ inputs.source }} --changelog --force --since-last-changelog
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Commit changelog and push
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          SOURCE="${{ inputs.source }}"
+          DISPLAY="${{ inputs.source_display_name }}"
+          TODAY=$(date -u +%Y-%m-%d)
+          HOUR=$(date -u +%Hh)
+
+          git add "output/${SOURCE}/"
+
+          if git diff --cached --quiet; then
+            echo "::warning::No changelog output to commit"
+            exit 0
+          fi
+
+          git commit -m "Add ${DISPLAY} changelog for ${TODAY} (${HOUR})"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+
+      - name: Summary
+        run: |
+          SOURCE="${{ inputs.source }}"
+          DISPLAY="${{ inputs.source_display_name }}"
+          if [ "${{ steps.check_changes.outputs.changes }}" == "true" ]; then
+            echo "## ${DISPLAY} Documentation Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**${{ steps.check_changes.outputs.count }}** pages changed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            TODAY=$(date -u +%Y-%m-%d)
+            CHANGELOG=$(ls "output/${SOURCE}/${TODAY}/"partial_*_changelog.md 2>/dev/null | tail -1)
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(ls "output/${SOURCE}/${TODAY}/"*_changelog.md 2>/dev/null | head -1)
+            fi
+            if [ -n "$CHANGELOG" ]; then
+              echo "### Latest Changelog" >> $GITHUB_STEP_SUMMARY
+              head -100 "$CHANGELOG" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "## No Content Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "${DISPLAY} documentation content is up to date." >> $GITHUB_STEP_SUMMARY
+          fi

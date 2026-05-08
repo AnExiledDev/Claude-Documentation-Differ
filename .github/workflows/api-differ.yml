@@ -6,136 +6,17 @@ on:
     # API docs are ~10x larger (539 pages vs 54), so less frequent updates
     - cron: '0 0 1-31/2 * *'
   workflow_dispatch:
-    # Allow manual triggering
 
-permissions:
-  contents: write
-
+# Shared concurrency group serializes all differ pushes to prevent rebase conflicts
 concurrency:
-  group: api-differ
+  group: differ-push
   cancel-in-progress: false
 
 jobs:
-  fetch-and-diff:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          # Need full history for diffing
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          playwright install chromium
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Fetch Claude API documentation
-        run: python3 fetch.py --source api --force
-
-      - name: Check for content changes
-        id: check_changes
-        run: |
-          # Only detect actual .md file changes, not metadata.json timestamp updates
-          MD_CHANGES=$(git diff --name-only -- 'docs/api/en/*.md' 'docs/api/en/**/*.md' | wc -l)
-          STAGED_MD=$(git diff --staged --name-only -- 'docs/api/en/*.md' 'docs/api/en/**/*.md' | wc -l)
-          TOTAL=$((MD_CHANGES + STAGED_MD))
-
-          if [ "$TOTAL" -gt 0 ]; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-            echo "count=$TOTAL" >> $GITHUB_OUTPUT
-            echo "Found $TOTAL changed .md files"
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
-            echo "count=0" >> $GITHUB_OUTPUT
-            echo "No .md file changes detected (metadata-only update)"
-          fi
-
-      - name: Count change types
-        if: steps.check_changes.outputs.changes == 'true'
-        id: count_changes
-        run: |
-          NEW=$(git diff --name-only --diff-filter=A -- 'docs/api/en/*.md' 'docs/api/en/**/*.md' | wc -l)
-          MODIFIED=$(git diff --name-only --diff-filter=M -- 'docs/api/en/*.md' 'docs/api/en/**/*.md' | wc -l)
-          DELETED=$(git diff --name-only --diff-filter=D -- 'docs/api/en/*.md' 'docs/api/en/**/*.md' | wc -l)
-          echo "new=$NEW" >> $GITHUB_OUTPUT
-          echo "modified=$MODIFIED" >> $GITHUB_OUTPUT
-          echo "deleted=$DELETED" >> $GITHUB_OUTPUT
-
-      - name: Commit documentation changes
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git add docs/api/
-          NEW=${{ steps.count_changes.outputs.new || 0 }}
-          MOD=${{ steps.count_changes.outputs.modified || 0 }}
-          DEL=${{ steps.count_changes.outputs.deleted || 0 }}
-          git commit -m "Claude API docs update: $(date -u +%Y-%m-%d\ %H:%M\ UTC) (${MOD} modified, ${NEW} new, ${DEL} removed)"
-
-      - name: Install Claude Code CLI
-        if: steps.check_changes.outputs.changes == 'true'
-        run: npm install -g @anthropic-ai/claude-code
-
-      - name: Generate changelog
-        if: steps.check_changes.outputs.changes == 'true'
-        run: python3 diff.py --source api --changelog --force --since-last-changelog
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-      - name: Commit changelog and push
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git add output/api/ || true
-          git commit -m "Add API changelog for $(date -u +%Y-%m-%d)" || true
-          for i in 1 2 3; do
-            git pull --rebase origin main && git push && break
-            echo "Push attempt $i failed, retrying in 5s..."
-            sleep 5
-          done
-
-      - name: Push metadata-only update
-        if: steps.check_changes.outputs.changes == 'false'
-        run: |
-          # Commit metadata.json separately so it doesn't pollute the changelog history
-          if ! git diff --quiet docs/api/metadata.json; then
-            git add docs/api/metadata.json
-            git commit -m "Update API metadata: $(date -u +%Y-%m-%d\ %H:%M\ UTC) (no content changes)"
-            for i in 1 2 3; do
-              git pull --rebase origin main && git push && break
-              echo "Push attempt $i failed, retrying in 5s..."
-              sleep 5
-            done
-          fi
-
-      - name: Summary
-        run: |
-          if [ "${{ steps.check_changes.outputs.changes }}" == "true" ]; then
-            echo "## Claude API Documentation Changes Detected" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**${{ steps.check_changes.outputs.count }}** pages changed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            TODAY=$(date -u +%Y-%m-%d)
-            CHANGELOG=$(ls output/api/$TODAY/changelog.md 2>/dev/null)
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(ls output/api/$TODAY/*_changelog.md 2>/dev/null | head -1)
-            fi
-            if [ -n "$CHANGELOG" ]; then
-              echo "### Latest Changelog" >> $GITHUB_STEP_SUMMARY
-              head -100 "$CHANGELOG" >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "## No Content Changes Detected" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Claude API documentation content is up to date. Metadata timestamp updated." >> $GITHUB_STEP_SUMMARY
-          fi
+  differ:
+    uses: ./.github/workflows/differ-reusable.yml
+    with:
+      source: api
+      source_display_name: Claude API
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
