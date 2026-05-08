@@ -1,0 +1,108 @@
+name: Daily Changelog Merge
+
+on:
+  schedule:
+    - cron: '55 23 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-merge
+  cancel-in-progress: false
+
+jobs:
+  merge-daily:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Merge Claude Code daily changelog
+        id: merge_claude_code
+        run: |
+          python3 merge_daily.py --source claude-code 2>&1 | tee /tmp/merge_cc.log
+          if grep -q "Written: daily.md" /tmp/merge_cc.log; then
+            echo "merged=true" >> $GITHUB_OUTPUT
+          else
+            echo "merged=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Merge API daily changelog
+        id: merge_api
+        run: |
+          python3 merge_daily.py --source api 2>&1 | tee /tmp/merge_api.log
+          if grep -q "Written: daily.md" /tmp/merge_api.log; then
+            echo "merged=true" >> $GITHUB_OUTPUT
+          else
+            echo "merged=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Commit and push
+        if: steps.merge_claude_code.outputs.merged == 'true' || steps.merge_api.outputs.merged == 'true'
+        run: |
+          git add output/
+          TODAY=$(date -u +%Y-%m-%d)
+          git commit -m "Add daily changelog merge for ${TODAY}" || true
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+
+      - name: Summary
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "## Daily Changelog Merge — ${TODAY}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.merge_claude_code.outputs.merged }}" == "true" ]; then
+            echo "- **Claude Code**: Daily changelog merged" >> $GITHUB_STEP_SUMMARY
+            DAILY="output/claude-code/${TODAY}/daily.md"
+            if [ -f "$DAILY" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Claude Code Daily Summary" >> $GITHUB_STEP_SUMMARY
+              head -50 "$DAILY" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **Claude Code**: No partials to merge" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.merge_api.outputs.merged }}" == "true" ]; then
+            echo "- **API**: Daily changelog merged" >> $GITHUB_STEP_SUMMARY
+            DAILY="output/api/${TODAY}/daily.md"
+            if [ -f "$DAILY" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### API Daily Summary" >> $GITHUB_STEP_SUMMARY
+              head -50 "$DAILY" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **API**: No partials to merge" >> $GITHUB_STEP_SUMMARY
+          fi

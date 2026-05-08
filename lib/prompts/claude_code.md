@@ -9,10 +9,26 @@ You will receive a workspace path containing:
 - `full_diff.txt`: Complete unified diff of all changes
 - `report.md`: Human-readable summary of changes
 - `url_manifest.json`: Maps file paths to their documentation source URLs
+- `triage.json` (if present): Pre-classified change significance from rule-based triage
 - `new_pages/`: Full content of newly added documentation pages
 - `modified_pages/`: Current content of modified pages (sorted by change magnitude)
 
 Read ALL workspace files before writing. Start with `report.md` for an overview, then `full_diff.txt` for detail, then `url_manifest.json` for source links, and finally any `new_pages/` or `modified_pages/` content.
+
+# Triage
+
+If `triage.json` exists in the workspace, read it first before analyzing changes. It contains rule-based pre-classifications that help you prioritize your analysis.
+
+Each entry in `triage.json` has:
+- A `classification`: one of `SIGNIFICANT`, `MINOR`, or `SKIP`
+- A `reason` explaining the classification (e.g., `"rule: new_page"`, `"rule: line_count<5"`)
+
+How to use triage classifications:
+- **Respect the rule-based classifications** unless you have strong reason to override them. If you override a classification, note it inline with `[AI override: reason]`.
+- **SIGNIFICANT** changes get full analysis in the "Significant Changes" section — category grouping, quotes, implications, source links.
+- **MINOR** changes go in the "Minor Changes" bullet list — brief, no deep analysis needed.
+- **SKIP** changes can be omitted entirely from the changelog.
+- If `triage.json` doesn't exist, classify changes yourself using your judgment (backward compatibility).
 
 # Your Task
 
@@ -38,7 +54,7 @@ Write a markdown changelog following this structure. Omit any section that has n
 [2-3 factual sentences. State what changed concisely. No hype.]
 
 ## Significant Changes
-[Group by category: Features, Configuration, Integrations, etc.]
+[Group by category: Features, Configuration, Integrations, etc. Only changes classified as SIGNIFICANT (or your own judgment if no triage).]
 
 ### [Category Name]
 
@@ -47,22 +63,31 @@ Write a markdown changelog following this structure. Omit any section that has n
   - *Implication*: Brief note on developer impact
   - *Source*: [Page Name](source_url_from_manifest)
 
+## Minor Changes
+[Brief bullet list. Changes classified as MINOR — no deep analysis needed.]
+
+- **[page-name.md]**: Brief one-line description of what changed (+N/-M lines)
+
 ## New Pages
 [Only if new pages were added]
-- **[page-name.md]** — Brief description of what this page covers. [View](source_url)
+- **[page-name.md]** — Brief description. [View](source_url)
 
 ## Removed Pages
 [Only if pages were removed]
 - **[page-name.md]** — What was removed
 
+## Migration Notes
+[Only if breaking changes or deprecations detected]
+- **[Change]**: What to update and how
+
 ## Notable Details
 [Subtle but meaningful changes that are easy to miss — version bumps, default changes, wording shifts that indicate direction. Be specific and grounded in the diff.]
 
 ## Changes by Page
-| Page | Type | Lines Changed | Summary |
-|------|------|---------------|---------|
-| page.md | Modified | +5/-3 | Brief description |
-| new-page.md | New | +120 | What this page covers |
+| Page | Type | Triage | Lines Changed | Summary |
+|------|------|--------|---------------|---------|
+| page.md | Modified | SIGNIFICANT | +5/-3 | Brief description |
+| other.md | Modified | MINOR | +2/-1 | Brief description |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on [date]*
@@ -77,6 +102,7 @@ Write a markdown changelog following this structure. Omit any section that has n
 - **Don't duplicate**: Each change should appear once, in its most relevant section
 - **Skip noise**: Typo fixes, whitespace changes, and trivial rewording don't need coverage
 - **Be proportional**: Small changes get a bullet point, large changes get subsections
+- **Use triage classifications to guide depth of analysis** — significant changes get full treatment, minor changes get a bullet
 - **If nothing interesting changed**: Say so in 2 lines in the Summary, include the Changes by Page table, and stop. Don't pad.
 
 # Tone

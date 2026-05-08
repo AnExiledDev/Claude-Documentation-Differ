@@ -35,6 +35,7 @@ from lib.differ import (
     DiffReport,
     API_CATEGORIES,
 )
+from lib.triage import classify_changes
 from sources import get_source, get_all_sources, Source
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -192,6 +193,14 @@ def _prepare_changelog_workspace(
                 safe_name = rel.replace("/", "_")
                 out = modified_pages_dir / safe_name
                 out.write_text(_truncate_content(content))
+
+    # Write triage classification
+    try:
+        triage = classify_changes(report, source.key)
+        triage_path = workspace_dir / "triage.json"
+        triage_path.write_text(json.dumps(triage, indent=2))
+    except Exception as e:
+        print(f"  WARNING: Triage classification failed: {e}", file=sys.stderr)
 
 
 def _generate_changelog(

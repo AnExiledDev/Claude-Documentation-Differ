@@ -7,6 +7,7 @@ venv/
 
 # Output (changelogs can be committed selectively)
 output/.changelog_workspace/
+output/.merge_workspace/
 
 # OS
 .DS_Store
