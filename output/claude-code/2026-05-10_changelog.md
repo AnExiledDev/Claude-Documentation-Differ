@@ -2,51 +2,44 @@
 
 ## Summary
 
-One page was modified: the error reference expanded the "Auto mode cannot determine the safety of an action" section from a single failure case (classifier overloaded) to three distinct failure cases. Two new error messages were added to the quick-lookup table, and recovery instructions were added for each new case.
+One page was modified today: the hooks guide received a new dedicated section explaining how Claude Code merges results when multiple hooks match the same event. The change replaces a two-line inline note with a full subsection that includes parallel execution semantics, merge precedence rules, and a worked example.
 
 ## Significant Changes
 
-### Error Reference
+### Configuration — Hooks
 
-- **Auto mode classifier failure: three cases now documented**: The section previously described only one failure mode (classifier model overloaded). It now covers three separate failure scenarios with distinct error messages, explanations, and remediation steps.
-  > The model that auto mode uses to classify actions could not produce a decision, so auto mode did not approve the action automatically. The message you see depends on why the classifier failed.
-  - *Implication*: Developers debugging stalled auto mode workflows can now identify which of the three failure modes they are hitting and apply the correct fix, rather than assuming it is always a transient overload.
-  - *Source*: [Error reference](https://code.claude.com/docs/en/errors.md)
+- **New "Combine results from multiple hooks" section**: The hooks guide previously described multi-hook result merging in two inline sentences placed before the hook type list. Those sentences have been removed and replaced with a dedicated subsection that substantially expands coverage (+32/-2 lines).
 
-- **New error: unparseable classifier response**: Documents a new error message for when the classifier returns a response that cannot be parsed.
-  > ```
-  > Auto mode could not evaluate this action and is blocking it for safety — run with --debug for details
-  > ```
-  > **What to do:**
-  > * Retry the action; this usually succeeds on the next attempt
-  > * Run `claude --debug` and repeat the action to see the underlying classifier response in the debug log
-  - *Implication*: `--debug` is now the recommended first diagnostic step for this failure mode, exposing the raw classifier output.
-  - *Source*: [Error reference](https://code.claude.com/docs/en/errors.md)
+  Three key points are now explicitly documented:
 
-- **New error: classifier context window exceeded**: Documents a new error message for when the conversation transcript has grown larger than the classifier's context window.
-  > ```
-  > Auto mode classifier transcript exceeded context window — falling back to manual approval (try /compact to reduce conversation size)
-  > ```
-  > In an interactive session, auto mode falls back to a normal permission prompt for that action so you can approve or deny it manually. In non-interactive mode the run aborts because the transcript only grows and retrying cannot succeed.
-  - *Implication*: This is a deterministic failure in headless/non-interactive mode — the run aborts and cannot recover without reducing conversation size. The fix is to run `/compact` before the context window is exhausted. This is especially relevant for long-running agentic sessions.
-  - *Source*: [Error reference](https://code.claude.com/docs/en/errors.md)
+  1. **All matching hooks run to completion** — a `deny` from one hook does not short-circuit sibling hooks:
 
-- **"Skip the classifier" note broadened**: The clarification that reads, searches, and edits inside the working directory bypass the auto mode classifier was previously scoped to "during the outage" (the overload case only). It now reads "in all of these cases", applying to all three failure modes.
-  > Reads, searches, and edits inside your working directory skip the classifier, so they keep working in all of these cases.
-  - *Implication*: File read/search/edit operations remain unblocked even when the classifier fails for any reason, not just during API overloads.
-  - *Source*: [Error reference](https://code.claude.com/docs/en/errors.md)
+     > When multiple hooks match the same event, every hook's command runs to completion before Claude Code merges the results. One hook returning `deny` does not stop sibling hooks from executing. Don't rely on one hook's `deny` to suppress side effects in another hook.
+
+     - *Implication*: Developers who assumed an early `deny` would prevent side effects (e.g., audit logging or network calls) in co-registered hooks need to revisit their hook designs.
+
+  2. **Merge precedence is now explicit**: `deny` overrides `ask`, which overrides `allow`. `additionalContext` from every hook is accumulated and forwarded to Claude together.
+
+     > After all matching hooks finish, Claude Code combines their outputs. For `PreToolUse` permission decisions, the most restrictive answer wins: `deny` overrides `ask`, which overrides `allow`. Text from `additionalContext` is kept from every hook and passed to Claude together.
+
+  3. **Worked example added**: The section includes a concrete JSON configuration registering two `PreToolUse` hooks on `Bash` — one for audit logging (exits 0) and one for blocking `rm -rf` (exits 2) — and walks through the parallel execution outcome:
+
+     > When Claude tries to run `rm -rf /tmp/build`, both hooks execute in parallel. The logging hook writes the command to `~/.claude/bash.log` and exits 0, which reports no decision. The guardrail hook exits 2, which denies the tool call. The deny wins, so Claude Code blocks the command and shows Claude the guardrail's stderr. The log entry is still written because the logging hook already ran.
+
+     - *Implication*: This is now the canonical pattern for combining observability hooks with enforcement hooks. Both concerns can be implemented as independent, decoupled hooks without needing to merge their logic.
+
+  - *Source*: [Hooks Guide](https://code.claude.com/docs/en/hooks-guide.md)
 
 ## Notable Details
 
-- The section introduction was reworded from "auto mode blocked the action instead of approving it unchecked" to "auto mode did not approve the action automatically." This is a more neutral and accurate description of the classifier's role.
-- The error lookup table at the top of the page now has two additional rows for the new messages, giving users a direct jump link to the relevant section. Previously only the overloaded-model variant was listed.
-- The non-interactive (headless) mode behavior is explicitly called out for the context-window case: the run aborts rather than falling back to a prompt. This is a meaningful behavioral distinction for CI/automation users.
+- The removed two-line inline note was positioned immediately before the hook type table, which may have caused it to be overlooked. Moving this content into its own named section with a `###` heading makes it directly linkable and easier to find in the table of contents.
+- The new section explicitly states hooks within a matcher run **in parallel**, not sequentially — a previously undocumented execution detail with significant implications for hook authors who care about ordering or isolation.
 
 ## Changes by Page
 
 | Page | Type | Lines Changed | Summary |
 |------|------|---------------|---------|
-| errors.md | Modified | +31 / -3 | Expanded auto mode classifier failure documentation to cover three distinct error cases: overloaded model (existing), unparseable response (new), and context window exceeded (new) |
+| hooks-guide.md | Modified | +32 / -2 | New "Combine results from multiple hooks" subsection replaces a two-sentence inline note; adds parallel execution semantics, merge precedence rules, and a two-hook worked example |
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-05-10*
