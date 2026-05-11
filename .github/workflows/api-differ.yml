@@ -7,6 +7,9 @@ on:
     - cron: '0 0 1-31/2 * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 # Shared concurrency group serializes all differ pushes to prevent rebase conflicts
 concurrency:
   group: differ-push
