@@ -1,56 +1,32 @@
 # Documentation Diff Report
 
-**Comparing:** `8896dd9a77fab0d506be67c7f667d658e6c16a00` → `HEAD`
-**Generated:** 2026-05-12T00:36:17.016504+00:00
+**Comparing:** `888bfc98146ebca478fdfe0763edfe37228e5545` → `HEAD`
+**Generated:** 2026-05-12T07:01:15.642558+00:00
 
 ## Summary
 
 - New pages: 0
 - Removed pages: 0
-- Modified pages: 11
+- Modified pages: 5
 
 ## Modified Pages
 
-### `docs/claude-code/en/channels-reference.md`
-
-+7 / -1 lines
-
-### `docs/claude-code/en/channels.md`
-
-+2 / -0 lines
-
 ### `docs/claude-code/en/claude-directory.md`
-
-+7 / -5 lines
-
-### `docs/claude-code/en/env-vars.md`
-
-+1 / -1 lines
-
-### `docs/claude-code/en/google-vertex-ai.md`
-
-+1 / -1 lines
-
-### `docs/claude-code/en/interactive-mode.md`
 
 +1 / -0 lines
 
-### `docs/claude-code/en/mcp.md`
+### `docs/claude-code/en/hooks-guide.md`
 
-+10 / -8 lines
++1 / -1 lines
 
-### `docs/claude-code/en/model-config.md`
+### `docs/claude-code/en/hooks.md`
 
-+2 / -0 lines
++11 / -6 lines
 
 ### `docs/claude-code/en/permission-modes.md`
 
-+2 / -0 lines
++8 / -0 lines
 
-### `docs/claude-code/en/permissions.md`
+### `docs/claude-code/en/plugins-reference.md`
 
-+5 / -1 lines
-
-### `docs/claude-code/en/quickstart.md`
-
-+5 / -5 lines
++1 / -1 lines
