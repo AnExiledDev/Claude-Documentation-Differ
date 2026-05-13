@@ -3,6 +3,7 @@
 ## 2026-05-13
 
 - [diff.md](2026-05-13/diff.md)
+- [partial_07h_changelog.md](2026-05-13/partial_07h_changelog.md)
 
 ## 2026-05-12
 
