@@ -1,24 +1,36 @@
 # Documentation Diff Report
 
-**Comparing:** `65811c1e1ea8324043cdbc18ea8336eb5e4dcd86` → `HEAD`
-**Generated:** 2026-05-13T07:05:08.314209+00:00
+**Comparing:** `bd924463b3bc37bac0d64ea6882af3a1a4b15b38` → `HEAD`
+**Generated:** 2026-05-13T18:40:59.630200+00:00
 
 ## Summary
 
 - New pages: 0
 - Removed pages: 0
-- Modified pages: 3
+- Modified pages: 6
 
 ## Modified Pages
 
-### `docs/claude-code/en/claude-code-on-the-web.md`
+### `docs/claude-code/en/authentication.md`
 
-+2 / -0 lines
++4 / -0 lines
 
-### `docs/claude-code/en/model-config.md`
+### `docs/claude-code/en/commands.md`
 
 +1 / -1 lines
 
-### `docs/claude-code/en/server-managed-settings.md`
+### `docs/claude-code/en/fast-mode.md`
 
-+9 / -7 lines
++1 / -1 lines
+
+### `docs/claude-code/en/headless.md`
+
++4 / -4 lines
+
+### `docs/claude-code/en/legal-and-compliance.md`
+
++4 / -0 lines
+
+### `docs/claude-code/en/ultrareview.md`
+
++6 / -6 lines
