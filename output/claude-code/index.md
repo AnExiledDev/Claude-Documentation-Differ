@@ -4,6 +4,7 @@
 
 - [diff.md](2026-05-15/diff.md)
 - [partial_00h_changelog.md](2026-05-15/partial_00h_changelog.md)
+- [partial_07h_changelog.md](2026-05-15/partial_07h_changelog.md)
 
 ## 2026-05-14
 

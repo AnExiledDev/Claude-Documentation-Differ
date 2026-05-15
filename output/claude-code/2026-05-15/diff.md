@@ -1,20 +1,28 @@
 # Documentation Diff Report
 
-**Comparing:** `a31c0b296b387015ba9cdf20ae79afa5d9245258` → `HEAD`
-**Generated:** 2026-05-15T00:38:52.175661+00:00
+**Comparing:** `3fcb34fafd7d7d6634807212a509a02bcb821485` → `HEAD`
+**Generated:** 2026-05-15T07:09:46.520254+00:00
 
 ## Summary
 
 - New pages: 0
 - Removed pages: 0
-- Modified pages: 2
+- Modified pages: 4
 
 ## Modified Pages
 
-### `docs/claude-code/en/agent-view.md`
+### `docs/claude-code/en/env-vars.md`
 
-+6 / -0 lines
++2 / -1 lines
 
-### `docs/claude-code/en/changelog.md`
+### `docs/claude-code/en/goal.md`
 
-+27 / -0 lines
++4 / -0 lines
+
+### `docs/claude-code/en/hooks.md`
+
++14 / -0 lines
+
+### `docs/claude-code/en/settings.md`
+
++3 / -1 lines
