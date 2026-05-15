@@ -1,7 +1,7 @@
 # Documentation Diff Report
 
-**Comparing:** `3fcb34fafd7d7d6634807212a509a02bcb821485` → `HEAD`
-**Generated:** 2026-05-15T07:09:46.520254+00:00
+**Comparing:** `06fbcad583970b1d4c88021bfdbe5ce4beedd5d0` → `HEAD`
+**Generated:** 2026-05-15T18:35:40.558283+00:00
 
 ## Summary
 
@@ -11,18 +11,27 @@
 
 ## Modified Pages
 
+### `docs/claude-code/en/amazon-bedrock.md`
+
++6 / -3 lines
+
+**New sections:**
+- # Optional: Override the AWS region for the small/fast model (Bedrock and Mantle).
+- # On Bedrock, has no effect without ANTHROPIC_DEFAULT_HAIKU_MODEL
+- # or the deprecated ANTHROPIC_SMALL_FAST_MODEL set.
+
+**Removed sections:**
+- # Optional: Override the region for the small/fast model (Haiku).
+- # Also applies to Bedrock Mantle.
+
 ### `docs/claude-code/en/env-vars.md`
 
-+2 / -1 lines
++1 / -1 lines
 
-### `docs/claude-code/en/goal.md`
-
-+4 / -0 lines
-
-### `docs/claude-code/en/hooks.md`
-
-+14 / -0 lines
-
-### `docs/claude-code/en/settings.md`
+### `docs/claude-code/en/google-vertex-ai.md`
 
 +3 / -1 lines
+
+### `docs/claude-code/en/microsoft-foundry.md`
+
++2 / -0 lines
