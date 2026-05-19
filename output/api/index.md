@@ -1,5 +1,13 @@
 # Claude API Changelog Index
 
+## 2026-05-19
+
+- [agents-and-tools_changelog.md](2026-05-19/agents-and-tools_changelog.md)
+- [build-with-claude_changelog.md](2026-05-19/build-with-claude_changelog.md)
+- [changelog.md](2026-05-19/changelog.md)
+- [diff.md](2026-05-19/diff.md)
+- [manage-claude_changelog.md](2026-05-19/manage-claude_changelog.md)
+
 ## 2026-05-17
 
 - [diff.md](2026-05-17/diff.md)
