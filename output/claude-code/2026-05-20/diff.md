@@ -1,38 +1,78 @@
 # Documentation Diff Report
 
-**Comparing:** `5b74e1afb34d189c03d665a633d10b53ba891b9c` → `HEAD`
-**Generated:** 2026-05-20T00:43:18.827682+00:00
+**Comparing:** `9dcfe06811886e8be1f2358196a746d3756acd7d` → `HEAD`
+**Generated:** 2026-05-20T07:16:07.107212+00:00
 
 ## Summary
 
 - New pages: 0
 - Removed pages: 0
-- Modified pages: 5
+- Modified pages: 15
 
 ## Modified Pages
 
-### `docs/claude-code/en/changelog.md`
+### `docs/claude-code/en/agent-view.md`
 
-+23 / -2 lines
++3 / -0 lines
 
-### `docs/claude-code/en/permissions.md`
+### `docs/claude-code/en/cli-reference.md`
 
-+3 / -1 lines
++28 / -28 lines
 
-### `docs/claude-code/en/prompt-caching.md`
+### `docs/claude-code/en/commands.md`
 
-+7 / -0 lines
++3 / -0 lines
 
-**New sections:**
-- ### Denying an entire tool
+### `docs/claude-code/en/discover-plugins.md`
 
-### `docs/claude-code/en/routines.md`
++6 / -2 lines
+
+### `docs/claude-code/en/env-vars.md`
+
++2 / -2 lines
+
+### `docs/claude-code/en/fullscreen.md`
 
 +1 / -0 lines
 
-### `docs/claude-code/en/settings.md`
+### `docs/claude-code/en/hooks.md`
 
-+9 / -0 lines
++51 / -3 lines
+
+### `docs/claude-code/en/interactive-mode.md`
+
++1 / -2 lines
+
+### `docs/claude-code/en/monitoring-usage.md`
+
++11 / -9 lines
+
+### `docs/claude-code/en/output-styles.md`
+
++2 / -2 lines
+
+### `docs/claude-code/en/permission-modes.md`
+
++1 / -1 lines
+
+### `docs/claude-code/en/plugins-reference.md`
+
++25 / -0 lines
 
 **New sections:**
-- ### When edits take effect
+- ### Unrecognized fields
+
+### `docs/claude-code/en/skills.md`
+
++18 / -0 lines
+
+**New sections:**
+- ### Run and verify your app
+
+### `docs/claude-code/en/statusline.md`
+
++16 / -1 lines
+
+### `docs/claude-code/en/tools-reference.md`
+
++1 / -1 lines

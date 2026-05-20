@@ -2,6 +2,8 @@
 
 ## 2026-05-20
 
+- [_root_changelog.md](2026-05-20/_root_changelog.md)
+- [changelog.md](2026-05-20/changelog.md)
 - [diff.md](2026-05-20/diff.md)
 - [partial_00h_changelog.md](2026-05-20/partial_00h_changelog.md)
 
