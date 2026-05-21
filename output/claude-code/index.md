@@ -1,5 +1,10 @@
 # Claude Code CLI Changelog Index
 
+## 2026-05-21
+
+- [diff.md](2026-05-21/diff.md)
+- [partial_00h_changelog.md](2026-05-21/partial_00h_changelog.md)
+
 ## 2026-05-20
 
 - [_root_changelog.md](2026-05-20/_root_changelog.md)
