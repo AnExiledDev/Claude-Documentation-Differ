@@ -51,7 +51,7 @@ dotnet add package Anthropic.Foundry
 <Tabs>
 <Tab title="Gradle">
 ```kotlin
-implementation("com.anthropic:anthropic-java-foundry:2.32.0")
+implementation("com.anthropic:anthropic-java-foundry:2.33.0")
 ```
 </Tab>
 <Tab title="Maven">
@@ -59,7 +59,7 @@ implementation("com.anthropic:anthropic-java-foundry:2.32.0")
 <dependency>
     <groupId>com.anthropic</groupId>
     <artifactId>anthropic-java-foundry</artifactId>
-    <version>2.32.0</version>
+    <version>2.33.0</version>
 </dependency>
 ```
 </Tab>
@@ -500,10 +500,10 @@ Claude Opus 4.7, Claude Opus 4.6, and Claude Sonnet 4.6 have a [1M-token context
 
 ### Features not supported
 
-- Admin API (`/v1/organizations/*` endpoints)
-- Compliance API (`/v1/compliance/*` endpoints)
-- Models API (`/v1/models`)
-- Message Batches API (`/v1/messages/batches`)
+- Admin API
+- Compliance API
+- Models API
+- Message Batches API
 
 ## API responses
 
@@ -526,6 +526,10 @@ The following Claude models are available through Foundry. The latest generation
 | Claude Haiku 4.5  | `claude-haiku-4-5`          |
 
 By default, deployment names match the model IDs shown in the preceding table. However, you can create custom deployments with different names in the Foundry portal to manage different configurations, versions, or rate limits. Use the deployment name (not necessarily the model ID) in your API requests.
+
+<Tip>
+Upgrading to a newer Claude model? In Claude Code, run `/claude-api migrate` to apply model ID swaps and breaking parameter changes across your codebase. The skill detects which cloud platform your code targets and adjusts model ID formats and feature changes for that platform. See [Migrating to a newer Claude model](/docs/en/agents-and-tools/agent-skills/claude-api-skill#migrating-to-a-newer-claude-model).
+</Tip>
 
 ## Monitoring and logging
 

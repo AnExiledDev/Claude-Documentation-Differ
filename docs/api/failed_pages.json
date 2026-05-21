@@ -1,1495 +1,1615 @@
 {
-  "last_updated": "2026-05-19T01:54:38.266482+00:00",
-  "total_failed": 248,
+  "last_updated": "2026-05-21T02:03:17.468554+00:00",
+  "total_failed": 268,
   "persistent_failures": 248,
   "pages": [
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/resources/add.md",
       "relative_path": "en/api/php/beta/sessions/resources/add.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/resources/add.md",
       "relative_path": "en/api/terraform/beta/sessions/resources/add.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents.md",
       "relative_path": "en/api/php/beta/agents.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents.md",
       "relative_path": "en/api/terraform/beta/agents.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/archive.md",
       "relative_path": "en/api/php/beta/memory_stores/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/archive.md",
       "relative_path": "en/api/terraform/beta/memory_stores/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents/archive.md",
       "relative_path": "en/api/php/beta/agents/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents/archive.md",
       "relative_path": "en/api/terraform/beta/agents/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials/archive.md",
       "relative_path": "en/api/php/beta/vaults/credentials/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials/archive.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/environments/archive.md",
       "relative_path": "en/api/php/beta/environments/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/archive.md",
       "relative_path": "en/api/terraform/beta/environments/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/archive.md",
       "relative_path": "en/api/php/beta/sessions/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/archive.md",
       "relative_path": "en/api/terraform/beta/sessions/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/threads/archive.md",
       "relative_path": "en/api/php/beta/sessions/threads/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/threads/archive.md",
       "relative_path": "en/api/terraform/beta/sessions/threads/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/archive.md",
       "relative_path": "en/api/php/beta/vaults/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/archive.md",
       "relative_path": "en/api/terraform/beta/vaults/archive.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/batches.md",
       "relative_path": "en/api/php/beta/messages/batches.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/batches.md",
       "relative_path": "en/api/terraform/beta/messages/batches.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/batches.md",
       "relative_path": "en/api/php/messages/batches.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/batches.md",
       "relative_path": "en/api/terraform/messages/batches.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta.md",
       "relative_path": "en/api/php/beta.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta.md",
       "relative_path": "en/api/terraform/beta.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/batches/cancel.md",
       "relative_path": "en/api/php/beta/messages/batches/cancel.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/batches/cancel.md",
       "relative_path": "en/api/terraform/beta/messages/batches/cancel.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/batches/cancel.md",
       "relative_path": "en/api/php/messages/batches/cancel.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/batches/cancel.md",
       "relative_path": "en/api/terraform/messages/batches/cancel.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/csharp/completions.md",
       "relative_path": "en/api/csharp/completions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/completions.md",
       "relative_path": "en/api/php/completions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/completions.md",
       "relative_path": "en/api/terraform/completions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/count_tokens.md",
       "relative_path": "en/api/php/beta/messages/count_tokens.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/count_tokens.md",
       "relative_path": "en/api/terraform/beta/messages/count_tokens.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/count_tokens.md",
       "relative_path": "en/api/php/messages/count_tokens.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/count_tokens.md",
       "relative_path": "en/api/terraform/messages/count_tokens.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memories/create.md",
       "relative_path": "en/api/php/beta/memory_stores/memories/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memories/create.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memories/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/create.md",
       "relative_path": "en/api/php/beta/memory_stores/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/create.md",
       "relative_path": "en/api/terraform/beta/memory_stores/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/create.md",
       "relative_path": "en/api/php/beta/messages/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/create.md",
       "relative_path": "en/api/terraform/beta/messages/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/create.md",
       "relative_path": "en/api/php/messages/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/create.md",
       "relative_path": "en/api/terraform/messages/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/batches/create.md",
       "relative_path": "en/api/php/beta/messages/batches/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/batches/create.md",
       "relative_path": "en/api/terraform/beta/messages/batches/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/batches/create.md",
       "relative_path": "en/api/php/messages/batches/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/batches/create.md",
       "relative_path": "en/api/terraform/messages/batches/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/csharp/completions/create.md",
       "relative_path": "en/api/csharp/completions/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/completions/create.md",
       "relative_path": "en/api/php/completions/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/completions/create.md",
       "relative_path": "en/api/terraform/completions/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents/create.md",
       "relative_path": "en/api/php/beta/agents/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents/create.md",
       "relative_path": "en/api/terraform/beta/agents/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials/create.md",
       "relative_path": "en/api/php/beta/vaults/credentials/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials/create.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/user_profiles/create_enrollment_url.md",
       "relative_path": "en/api/php/beta/user_profiles/create_enrollment_url.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/user_profiles/create_enrollment_url.md",
       "relative_path": "en/api/terraform/beta/user_profiles/create_enrollment_url.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/environments/create.md",
       "relative_path": "en/api/php/beta/environments/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/create.md",
       "relative_path": "en/api/terraform/beta/environments/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/create.md",
       "relative_path": "en/api/php/beta/sessions/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/create.md",
       "relative_path": "en/api/terraform/beta/sessions/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/create.md",
       "relative_path": "en/api/php/beta/skills/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/create.md",
       "relative_path": "en/api/terraform/beta/skills/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/versions/create.md",
       "relative_path": "en/api/php/beta/skills/versions/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/versions/create.md",
       "relative_path": "en/api/terraform/beta/skills/versions/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/user_profiles/create.md",
       "relative_path": "en/api/php/beta/user_profiles/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/user_profiles/create.md",
       "relative_path": "en/api/terraform/beta/user_profiles/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/create.md",
       "relative_path": "en/api/php/beta/vaults/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/create.md",
       "relative_path": "en/api/terraform/beta/vaults/create.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials.md",
       "relative_path": "en/api/php/beta/vaults/credentials.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memories/delete.md",
       "relative_path": "en/api/php/beta/memory_stores/memories/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memories/delete.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memories/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/delete.md",
       "relative_path": "en/api/php/beta/memory_stores/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/delete.md",
       "relative_path": "en/api/terraform/beta/memory_stores/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/batches/delete.md",
       "relative_path": "en/api/php/beta/messages/batches/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/batches/delete.md",
       "relative_path": "en/api/terraform/beta/messages/batches/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/batches/delete.md",
       "relative_path": "en/api/php/messages/batches/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/batches/delete.md",
       "relative_path": "en/api/terraform/messages/batches/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials/delete.md",
       "relative_path": "en/api/php/beta/vaults/credentials/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials/delete.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/environments/delete.md",
       "relative_path": "en/api/php/beta/environments/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/delete.md",
       "relative_path": "en/api/terraform/beta/environments/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/files/delete.md",
       "relative_path": "en/api/php/beta/files/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/files/delete.md",
       "relative_path": "en/api/terraform/beta/files/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/delete.md",
       "relative_path": "en/api/php/beta/sessions/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/delete.md",
       "relative_path": "en/api/terraform/beta/sessions/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/resources/delete.md",
       "relative_path": "en/api/php/beta/sessions/resources/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/resources/delete.md",
       "relative_path": "en/api/terraform/beta/sessions/resources/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/delete.md",
       "relative_path": "en/api/php/beta/skills/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/delete.md",
       "relative_path": "en/api/terraform/beta/skills/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/versions/delete.md",
       "relative_path": "en/api/php/beta/skills/versions/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/versions/delete.md",
       "relative_path": "en/api/terraform/beta/skills/versions/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/delete.md",
       "relative_path": "en/api/php/beta/vaults/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/delete.md",
       "relative_path": "en/api/terraform/beta/vaults/delete.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/files/download.md",
       "relative_path": "en/api/php/beta/files/download.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/files/download.md",
       "relative_path": "en/api/terraform/beta/files/download.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/environments.md",
       "relative_path": "en/api/php/beta/environments.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments.md",
       "relative_path": "en/api/terraform/beta/environments.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/events.md",
       "relative_path": "en/api/php/beta/sessions/events.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/threads/events.md",
       "relative_path": "en/api/php/beta/sessions/threads/events.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/events.md",
       "relative_path": "en/api/terraform/beta/sessions/events.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/threads/events.md",
       "relative_path": "en/api/terraform/beta/sessions/threads/events.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/files.md",
       "relative_path": "en/api/php/beta/files.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/files.md",
       "relative_path": "en/api/terraform/beta/files.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/models/retrieve.md",
       "relative_path": "en/api/php/beta/models/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/models/retrieve.md",
       "relative_path": "en/api/terraform/beta/models/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/models/retrieve.md",
       "relative_path": "en/api/php/models/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/models/retrieve.md",
       "relative_path": "en/api/terraform/models/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents/retrieve.md",
       "relative_path": "en/api/php/beta/agents/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents/retrieve.md",
       "relative_path": "en/api/terraform/beta/agents/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials/retrieve.md",
       "relative_path": "en/api/php/beta/vaults/credentials/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials/retrieve.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/environments/retrieve.md",
       "relative_path": "en/api/php/beta/environments/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/retrieve.md",
       "relative_path": "en/api/terraform/beta/environments/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/files/retrieve_metadata.md",
       "relative_path": "en/api/php/beta/files/retrieve_metadata.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/files/retrieve_metadata.md",
       "relative_path": "en/api/terraform/beta/files/retrieve_metadata.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/retrieve.md",
       "relative_path": "en/api/php/beta/sessions/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/retrieve.md",
       "relative_path": "en/api/terraform/beta/sessions/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/resources/retrieve.md",
       "relative_path": "en/api/php/beta/sessions/resources/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/resources/retrieve.md",
       "relative_path": "en/api/terraform/beta/sessions/resources/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/threads/retrieve.md",
       "relative_path": "en/api/php/beta/sessions/threads/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/threads/retrieve.md",
       "relative_path": "en/api/terraform/beta/sessions/threads/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/retrieve.md",
       "relative_path": "en/api/php/beta/skills/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/retrieve.md",
       "relative_path": "en/api/terraform/beta/skills/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/versions/retrieve.md",
       "relative_path": "en/api/php/beta/skills/versions/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/versions/retrieve.md",
       "relative_path": "en/api/terraform/beta/skills/versions/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/user_profiles/retrieve.md",
       "relative_path": "en/api/php/beta/user_profiles/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/user_profiles/retrieve.md",
       "relative_path": "en/api/terraform/beta/user_profiles/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/retrieve.md",
       "relative_path": "en/api/php/beta/vaults/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/retrieve.md",
       "relative_path": "en/api/terraform/beta/vaults/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents/versions/list.md",
       "relative_path": "en/api/php/beta/agents/versions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents/versions/list.md",
       "relative_path": "en/api/terraform/beta/agents/versions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents/list.md",
       "relative_path": "en/api/php/beta/agents/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents/list.md",
       "relative_path": "en/api/terraform/beta/agents/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials/list.md",
       "relative_path": "en/api/php/beta/vaults/credentials/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials/list.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/environments/list.md",
       "relative_path": "en/api/php/beta/environments/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/list.md",
       "relative_path": "en/api/terraform/beta/environments/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/events/list.md",
       "relative_path": "en/api/php/beta/sessions/events/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/events/list.md",
       "relative_path": "en/api/terraform/beta/sessions/events/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/files/list.md",
       "relative_path": "en/api/php/beta/files/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/files/list.md",
       "relative_path": "en/api/terraform/beta/files/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memories/list.md",
       "relative_path": "en/api/php/beta/memory_stores/memories/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memories/list.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memories/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/list.md",
       "relative_path": "en/api/php/beta/memory_stores/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/list.md",
       "relative_path": "en/api/terraform/beta/memory_stores/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memory_versions/list.md",
       "relative_path": "en/api/php/beta/memory_stores/memory_versions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memory_versions/list.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memory_versions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/batches/list.md",
       "relative_path": "en/api/php/beta/messages/batches/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/batches/list.md",
       "relative_path": "en/api/terraform/beta/messages/batches/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/batches/list.md",
       "relative_path": "en/api/php/messages/batches/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/batches/list.md",
       "relative_path": "en/api/terraform/messages/batches/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/models/list.md",
       "relative_path": "en/api/php/beta/models/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/models/list.md",
       "relative_path": "en/api/terraform/beta/models/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/models/list.md",
       "relative_path": "en/api/php/models/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/models/list.md",
       "relative_path": "en/api/terraform/models/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/resources/list.md",
       "relative_path": "en/api/php/beta/sessions/resources/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/resources/list.md",
       "relative_path": "en/api/terraform/beta/sessions/resources/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/threads/events/list.md",
       "relative_path": "en/api/php/beta/sessions/threads/events/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/threads/events/list.md",
       "relative_path": "en/api/terraform/beta/sessions/threads/events/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/threads/list.md",
       "relative_path": "en/api/php/beta/sessions/threads/list.md",
-      "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "error": "HTTP 503",
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/threads/list.md",
       "relative_path": "en/api/terraform/beta/sessions/threads/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/list.md",
       "relative_path": "en/api/php/beta/sessions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/list.md",
       "relative_path": "en/api/terraform/beta/sessions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/versions/list.md",
       "relative_path": "en/api/php/beta/skills/versions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/versions/list.md",
       "relative_path": "en/api/terraform/beta/skills/versions/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/list.md",
       "relative_path": "en/api/php/beta/skills/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/list.md",
       "relative_path": "en/api/terraform/beta/skills/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/user_profiles/list.md",
       "relative_path": "en/api/php/beta/user_profiles/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/user_profiles/list.md",
       "relative_path": "en/api/terraform/beta/user_profiles/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/list.md",
       "relative_path": "en/api/php/beta/vaults/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/list.md",
       "relative_path": "en/api/terraform/beta/vaults/list.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memories.md",
       "relative_path": "en/api/php/beta/memory_stores/memories.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memories.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memories.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores.md",
       "relative_path": "en/api/php/beta/memory_stores.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores.md",
       "relative_path": "en/api/terraform/beta/memory_stores.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memory_versions.md",
       "relative_path": "en/api/php/beta/memory_stores/memory_versions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memory_versions.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memory_versions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages.md",
       "relative_path": "en/api/php/beta/messages.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages.md",
       "relative_path": "en/api/terraform/beta/messages.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages.md",
       "relative_path": "en/api/php/messages.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages.md",
       "relative_path": "en/api/terraform/messages.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/models.md",
       "relative_path": "en/api/php/beta/models.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/models.md",
       "relative_path": "en/api/terraform/beta/models.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/models.md",
       "relative_path": "en/api/php/models.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/models.md",
       "relative_path": "en/api/terraform/models.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memory_versions/redact.md",
       "relative_path": "en/api/php/beta/memory_stores/memory_versions/redact.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memory_versions/redact.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memory_versions/redact.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/resources.md",
       "relative_path": "en/api/php/beta/sessions/resources.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/resources.md",
       "relative_path": "en/api/terraform/beta/sessions/resources.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memories/retrieve.md",
       "relative_path": "en/api/php/beta/memory_stores/memories/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memories/retrieve.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memories/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/retrieve.md",
       "relative_path": "en/api/php/beta/memory_stores/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/retrieve.md",
       "relative_path": "en/api/terraform/beta/memory_stores/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memory_versions/retrieve.md",
       "relative_path": "en/api/php/beta/memory_stores/memory_versions/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memory_versions/retrieve.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memory_versions/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/batches/retrieve.md",
       "relative_path": "en/api/php/beta/messages/batches/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/batches/retrieve.md",
       "relative_path": "en/api/terraform/beta/messages/batches/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/batches/retrieve.md",
       "relative_path": "en/api/php/messages/batches/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/batches/retrieve.md",
       "relative_path": "en/api/terraform/messages/batches/retrieve.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/messages/batches/results.md",
       "relative_path": "en/api/php/beta/messages/batches/results.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/messages/batches/results.md",
       "relative_path": "en/api/terraform/beta/messages/batches/results.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/messages/batches/results.md",
       "relative_path": "en/api/php/messages/batches/results.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/messages/batches/results.md",
       "relative_path": "en/api/terraform/messages/batches/results.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/events/send.md",
       "relative_path": "en/api/php/beta/sessions/events/send.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/events/send.md",
       "relative_path": "en/api/terraform/beta/sessions/events/send.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions.md",
       "relative_path": "en/api/php/beta/sessions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions.md",
       "relative_path": "en/api/terraform/beta/sessions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills.md",
       "relative_path": "en/api/php/beta/skills.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills.md",
       "relative_path": "en/api/terraform/beta/skills.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/events/stream.md",
       "relative_path": "en/api/php/beta/sessions/events/stream.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/events/stream.md",
       "relative_path": "en/api/terraform/beta/sessions/events/stream.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/threads/events/stream.md",
       "relative_path": "en/api/php/beta/sessions/threads/events/stream.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/threads/events/stream.md",
       "relative_path": "en/api/terraform/beta/sessions/threads/events/stream.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/threads.md",
       "relative_path": "en/api/php/beta/sessions/threads.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/threads.md",
       "relative_path": "en/api/terraform/beta/sessions/threads.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/memories/update.md",
       "relative_path": "en/api/php/beta/memory_stores/memories/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/memories/update.md",
       "relative_path": "en/api/terraform/beta/memory_stores/memories/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/memory_stores/update.md",
       "relative_path": "en/api/php/beta/memory_stores/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/memory_stores/update.md",
       "relative_path": "en/api/terraform/beta/memory_stores/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents/update.md",
       "relative_path": "en/api/php/beta/agents/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents/update.md",
       "relative_path": "en/api/terraform/beta/agents/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials/update.md",
       "relative_path": "en/api/php/beta/vaults/credentials/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials/update.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/environments/update.md",
       "relative_path": "en/api/php/beta/environments/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/update.md",
       "relative_path": "en/api/terraform/beta/environments/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/update.md",
       "relative_path": "en/api/php/beta/sessions/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/update.md",
       "relative_path": "en/api/terraform/beta/sessions/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/sessions/resources/update.md",
       "relative_path": "en/api/php/beta/sessions/resources/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/sessions/resources/update.md",
       "relative_path": "en/api/terraform/beta/sessions/resources/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/user_profiles/update.md",
       "relative_path": "en/api/php/beta/user_profiles/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/user_profiles/update.md",
       "relative_path": "en/api/terraform/beta/user_profiles/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/update.md",
       "relative_path": "en/api/php/beta/vaults/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/update.md",
       "relative_path": "en/api/terraform/beta/vaults/update.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/files/upload.md",
       "relative_path": "en/api/php/beta/files/upload.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/files/upload.md",
       "relative_path": "en/api/terraform/beta/files/upload.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/user_profiles.md",
       "relative_path": "en/api/php/beta/user_profiles.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/user_profiles.md",
       "relative_path": "en/api/terraform/beta/user_profiles.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults/credentials/mcp_oauth_validate.md",
       "relative_path": "en/api/php/beta/vaults/credentials/mcp_oauth_validate.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults/credentials/mcp_oauth_validate.md",
       "relative_path": "en/api/terraform/beta/vaults/credentials/mcp_oauth_validate.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/vaults.md",
       "relative_path": "en/api/php/beta/vaults.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/vaults.md",
       "relative_path": "en/api/terraform/beta/vaults.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/agents/versions.md",
       "relative_path": "en/api/php/beta/agents/versions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/skills/versions.md",
       "relative_path": "en/api/php/beta/skills/versions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/agents/versions.md",
       "relative_path": "en/api/terraform/beta/agents/versions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/versions.md",
       "relative_path": "en/api/terraform/beta/skills/versions.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/php/beta/webhooks.md",
       "relative_path": "en/api/php/beta/webhooks.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
     },
     {
       "url": "https://platform.claude.com/docs/en/api/terraform/beta/webhooks.md",
       "relative_path": "en/api/terraform/beta/webhooks.md",
       "error": "Content too short or empty",
-      "consecutive_failures": 4
+      "consecutive_failures": 5
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/ack.md",
+      "relative_path": "en/api/php/beta/environments/work/ack.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/ack.md",
+      "relative_path": "en/api/terraform/beta/environments/work/ack.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/skills/versions/download.md",
+      "relative_path": "en/api/php/beta/skills/versions/download.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/skills/versions/download.md",
+      "relative_path": "en/api/terraform/beta/skills/versions/download.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/stats.md",
+      "relative_path": "en/api/php/beta/environments/work/stats.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/stats.md",
+      "relative_path": "en/api/terraform/beta/environments/work/stats.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/retrieve.md",
+      "relative_path": "en/api/php/beta/environments/work/retrieve.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/retrieve.md",
+      "relative_path": "en/api/terraform/beta/environments/work/retrieve.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/list.md",
+      "relative_path": "en/api/php/beta/environments/work/list.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/list.md",
+      "relative_path": "en/api/terraform/beta/environments/work/list.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/poll.md",
+      "relative_path": "en/api/php/beta/environments/work/poll.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/poll.md",
+      "relative_path": "en/api/terraform/beta/environments/work/poll.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/heartbeat.md",
+      "relative_path": "en/api/php/beta/environments/work/heartbeat.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/heartbeat.md",
+      "relative_path": "en/api/terraform/beta/environments/work/heartbeat.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/stop.md",
+      "relative_path": "en/api/php/beta/environments/work/stop.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/stop.md",
+      "relative_path": "en/api/terraform/beta/environments/work/stop.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work/update.md",
+      "relative_path": "en/api/php/beta/environments/work/update.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work/update.md",
+      "relative_path": "en/api/terraform/beta/environments/work/update.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/php/beta/environments/work.md",
+      "relative_path": "en/api/php/beta/environments/work.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/terraform/beta/environments/work.md",
+      "relative_path": "en/api/terraform/beta/environments/work.md",
+      "error": "Content too short or empty",
+      "consecutive_failures": 1
     }
   ]
 }

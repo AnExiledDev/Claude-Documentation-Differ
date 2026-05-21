@@ -28,6 +28,7 @@ Event type strings follow a `{domain}.{action}` naming convention.
 | `user.custom_tool_result` | Response to a custom tool call from the agent. |
 | `user.tool_confirmation` | Approve or deny an agent or MCP tool call when a permission policy requires confirmation. |
 | `user.define_outcome` | Define an [outcome](/docs/en/managed-agents/define-outcomes) for the agent to work toward.  |
+| `user.tool_result` | For sessions with `self_hosted` [environments](/docs/en/managed-agents/self-hosted-sandboxes) only, your integration is responsible for providing `agent_toolset` results. The SDK helpers and CLI do this automatically. |
 
   </Tab>
   <Tab title="Agent events">
@@ -54,6 +55,7 @@ Event type strings follow a `{domain}.{action}` naming convention.
 | `session.status_idle` | Agent finished its current task and is waiting for input. Includes a `stop_reason` indicating why the agent stopped. |
 | `session.status_rescheduled` | A transient error occurred and the session is retrying automatically. |
 | `session.status_terminated` | Session ended due to an unrecoverable error. |
+| `session.updated` | Session update request changed at least one field. Includes only the fields that changed. Updates apply on the next turn. |
 | `session.error` | An error occurred during processing. Includes a typed `error` object with a `retry_status`. |
 | `session.thread_created` | A [multiagent](/docs/en/managed-agents/multi-agent) thread was created. |
 | `session.thread_status_running` | A [multiagent](/docs/en/managed-agents/multi-agent) thread started activity. |
@@ -611,7 +613,7 @@ await foreach (var streamEvent in stream.Enumerate())
 	defer stream.Close()
 
 	if _, err := client.Beta.Sessions.Events.Send(ctx, session.ID, anthropic.BetaSessionEventSendParams{
-		Events: []anthropic.SendEventsParamsUnion{{
+		Events: []anthropic.BetaManagedAgentsEventParamsUnion{{
 			OfUserMessage: &anthropic.BetaManagedAgentsUserMessageEventParams{
 				Type: anthropic.BetaManagedAgentsUserMessageEventParamsTypeUserMessage,
 				Content: []anthropic.BetaManagedAgentsUserMessageEventParamsContentUnion{{
@@ -659,7 +661,7 @@ try (var stream = client.beta().sessions().events().streamStreaming(session.id()
             .build()
     );
 
-    for (var event : (Iterable<StreamEvents>) stream.stream()::iterator) {
+    for (var event : (Iterable<BetaManagedAgentsStreamSessionEvents>) stream.stream()::iterator) {
         if (event.isAgentMessage()) {
             event.asAgentMessage().content().forEach(block -> IO.print(block.text()));
         } else if (event.isSessionStatusIdle()) {
@@ -923,7 +925,7 @@ try (var stream = client.beta().sessions().events().streamStreaming(session.id()
     }
 
     // Tail live events, skipping anything already seen
-    for (var event : (Iterable<StreamEvents>) stream.stream()::iterator) {
+    for (var event : (Iterable<BetaManagedAgentsStreamSessionEvents>) stream.stream()::iterator) {
         Optional<Map<String, JsonValue>> obj = event._json().orElseThrow().asObject();
         if (!seenEventIds.add(obj.orElseThrow().get("id").asStringOrThrow())) continue;
         if (event.isAgentMessage()) {
@@ -1395,7 +1397,7 @@ loop:
   
 ````java
 try (var stream = client.beta().sessions().events().streamStreaming(session.id())) {
-    for (var event : (Iterable<StreamEvents>) stream.stream()::iterator) {
+    for (var event : (Iterable<BetaManagedAgentsStreamSessionEvents>) stream.stream()::iterator) {
         if (!event.isSessionStatusIdle()) continue;
         var stopReason = event.asSessionStatusIdle().stopReason().orElseThrow();
         if (stopReason.isRequiresAction()) {
@@ -1659,7 +1661,7 @@ loop:
   
 ````java
 try (var stream = client.beta().sessions().events().streamStreaming(session.id())) {
-    for (var event : (Iterable<StreamEvents>) stream.stream()::iterator) {
+    for (var event : (Iterable<BetaManagedAgentsStreamSessionEvents>) stream.stream()::iterator) {
         if (!event.isSessionStatusIdle()) continue;
         var stopReason = event.asSessionStatusIdle().stopReason().orElseThrow();
         if (stopReason.isRequiresAction()) {
