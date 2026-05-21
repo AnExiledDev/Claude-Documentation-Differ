@@ -1,40 +1,39 @@
 # Documentation Diff Report
 
-**Comparing:** `661807da9bc2447d14d71a1cd85dbb60b1080a1f` → `HEAD`
-**Generated:** 2026-05-21T00:43:27.388665+00:00
+**Comparing:** `1868d0121e260bb991dda7b4fc2fd68521d1f1ec` → `HEAD`
+**Generated:** 2026-05-21T07:19:49.400046+00:00
 
 ## Summary
 
 - New pages: 0
 - Removed pages: 0
-- Modified pages: 7
+- Modified pages: 6
 
 ## Modified Pages
 
-### `docs/claude-code/en/commands.md`
+### `docs/claude-code/en/admin-setup.md`
+
++12 / -11 lines
+
+### `docs/claude-code/en/changelog.md`
+
++19 / -0 lines
+
+### `docs/claude-code/en/hooks-guide.md`
 
 +3 / -3 lines
 
-### `docs/claude-code/en/desktop-quickstart.md`
-
-+1 / -1 lines
-
-### `docs/claude-code/en/desktop.md`
-
-+2 / -2 lines
-
 ### `docs/claude-code/en/hooks.md`
 
-+1 / -1 lines
++34 / -28 lines
 
-### `docs/claude-code/en/how-claude-code-works.md`
+### `docs/claude-code/en/permissions.md`
 
-+4 / -1 lines
++15 / -14 lines
 
-### `docs/claude-code/en/scheduled-tasks.md`
+### `docs/claude-code/en/settings.md`
 
-+5 / -1 lines
++28 / -0 lines
 
-### `docs/claude-code/en/tools-reference.md`
-
-+42 / -41 lines
+**New sections:**
+- #### `strictPluginOnlyCustomization`
