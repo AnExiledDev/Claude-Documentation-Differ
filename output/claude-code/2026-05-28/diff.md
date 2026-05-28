@@ -1,56 +1,100 @@
 # Documentation Diff Report
 
-**Comparing:** `0990753968fb4ad27ca86a0ca4853efa4454edb1` → `HEAD`
-**Generated:** 2026-05-28T07:23:38.923840+00:00
+**Comparing:** `d4068afd3d2531c0bf5334425f81e93210844dc0` → `HEAD`
+**Generated:** 2026-05-28T18:55:55.460493+00:00
 
 ## Summary
 
-- New pages: 0
+- New pages: 1
 - Removed pages: 0
-- Modified pages: 11
+- Modified pages: 20
+
+## New Pages
+
+- `docs/claude-code/en/workflows.md`
 
 ## Modified Pages
 
 ### `docs/claude-code/en/agent-view.md`
 
-+10 / -10 lines
++2 / -2 lines
 
-### `docs/claude-code/en/changelog.md`
+### `docs/claude-code/en/agents.md`
 
-+39 / -0 lines
++25 / -11 lines
+
+### `docs/claude-code/en/amazon-bedrock.md`
+
++3 / -3 lines
+
+### `docs/claude-code/en/best-practices.md`
+
++10 / -5 lines
+
+### `docs/claude-code/en/claude-directory.md`
+
++42 / -18 lines
 
 ### `docs/claude-code/en/commands.md`
 
-+1 / -1 lines
++9 / -2 lines
+
+### `docs/claude-code/en/desktop.md`
+
++3 / -3 lines
 
 ### `docs/claude-code/en/env-vars.md`
 
++5 / -4 lines
+
+### `docs/claude-code/en/fast-mode.md`
+
++16 / -11 lines
+
+### `docs/claude-code/en/github-actions.md`
+
 +1 / -1 lines
 
-### `docs/claude-code/en/keybindings.md`
+### `docs/claude-code/en/glossary.md`
 
-+5 / -5 lines
++9 / -1 lines
+
+**New sections:**
+- ## V
+- ### Verification loop
+
+### `docs/claude-code/en/google-vertex-ai.md`
+
++4 / -4 lines
+
+### `docs/claude-code/en/hooks.md`
+
++8 / -8 lines
+
+### `docs/claude-code/en/microsoft-foundry.md`
+
++2 / -2 lines
 
 ### `docs/claude-code/en/model-config.md`
 
-+10 / -3 lines
++30 / -28 lines
 
-### `docs/claude-code/en/monitoring-usage.md`
+### `docs/claude-code/en/permission-modes.md`
 
-+1 / -0 lines
++1 / -1 lines
 
 ### `docs/claude-code/en/settings.md`
 
 +2 / -0 lines
 
-### `docs/claude-code/en/setup.md`
+### `docs/claude-code/en/skills.md`
 
-+4 / -0 lines
++1 / -1 lines
 
 ### `docs/claude-code/en/statusline.md`
 
-+4 / -0 lines
++37 / -37 lines
 
 ### `docs/claude-code/en/sub-agents.md`
 
-+10 / -0 lines
++2 / -2 lines

@@ -2,12 +2,12 @@
 
 ## Summary
 
-- **11** total changes across **1** categories
-- 0 new pages, 0 removed, 11 modified
+- **21** total changes across **1** categories
+- 1 new pages, 0 removed, 20 modified
 
 ## Category Changelogs
 
-- **[_Root](_root_changelog.md)**: 11 changes (0 new, 11 modified)
+- **[_Root](_root_changelog.md)**: 21 changes (1 new, 20 modified)
 
 ---
 *Generated from Claude Code CLI documentation changes detected on 2026-05-28*
