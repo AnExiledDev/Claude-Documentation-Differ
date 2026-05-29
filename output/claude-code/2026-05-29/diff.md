@@ -1,16 +1,23 @@
 # Documentation Diff Report
 
-**Comparing:** `2f948d1b2cd4804c522b252c2977d701267885d0` → `HEAD`
-**Generated:** 2026-05-29T07:23:50.958864+00:00
+**Comparing:** `22993e9bd12a2526a33416a902ddaff8ef558576` → `HEAD`
+**Generated:** 2026-05-29T18:55:47.146190+00:00
 
 ## Summary
 
 - New pages: 0
 - Removed pages: 0
-- Modified pages: 1
+- Modified pages: 2
 
 ## Modified Pages
 
-### `docs/claude-code/en/changelog.md`
+### `docs/claude-code/en/mcp.md`
 
-+4 / -0 lines
++15 / -2 lines
+
+**New sections:**
+- ### Option 4: Add a remote WebSocket server
+
+### `docs/claude-code/en/plugin-marketplaces.md`
+
++5 / -5 lines
